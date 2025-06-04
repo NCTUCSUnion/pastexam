@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center code-background">
+  <div class="h-full flex items-center justify-center code-background">
     <div class="text-left px-4 w-full max-w-2xl">
       <div class="title-container mb-8">
         <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-wide">
@@ -11,173 +11,249 @@
       <div class="code-container mt-8">
         <pre
           class="font-mono text-sm sm:text-base md:text-lg"
-        ><span class="typewriter">{{ displayedText }}</span></pre>
+        ><code class="typewriter" v-html="highlightedCode"></code></pre>
+
+        <div class="language-badge">{{ language }}</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watchEffect } from "vue";
+import hljs from "highlight.js";
+import "highlight.js/styles/atom-one-dark.css"; // You can choose different themes
 
 const codeMemes = [
-  `while (!coffee) {
+  {
+    code: `while (!coffee) {
   printf("Need more C0FF33\\n");
   productivity--;
   stress++;
 }`,
+    language: "c",
+  },
+  {
+    code: `# Python developers be like
+import solution
+from stackoverflow import code
 
-  `// My code works - I don't know why
-// My code doesn't work - I don't know why
-// Programming in a nutshell`,
-
-  `try {
+def actual_work():
+    pass  # TODO: Implement later`,
+    language: "python",
+  },
+  {
+    code: `try {
   life();
 } catch (err) {
   coffee.drink();
   life.retry();
 }`,
-
-  `function programmer() {
-  eat();
-  sleep();
-  code();
-  repeat();
+    language: "javascript",
+  },
+  {
+    code: `/* CSS: The blessing and curse */
+#submit-button {
+  display: block;
+  margin: 0 auto;
+  position: relative !important;
+  z-index: 999; /* Please work */
 }`,
-
-  `// 99 bugs in the code
+    language: "css",
+  },
+  {
+    code: `// 99 bugs in the code
 // Take one down, patch it around
 // 127 bugs in the code`,
-
-  `if (brain.available()) {
+    language: "javascript",
+  },
+  {
+    code: `def time_estimate(task):
+    """Estimates completion time"""
+    realistic = calculate_hours(task)
+    return realistic * 3  # Developer's constant`,
+    language: "python",
+  },
+  {
+    code: `if (brain.available()) {
   code.write();
 } else {
   coffee.consume();
 }`,
-
-  `// Two states of every programmer:
-// 1. "I'm a coding genius"
-// 2. "I have no idea what I'm doing"`,
-
-  `class Student {
+    language: "javascript",
+  },
+  {
+    code: `class Student {
   constructor() {
     this.sleep = 0;
     this.stress = 100;
   }
 }`,
-
-  `// Debugging steps:
-// 1. Cry
-// 2. Google the error
-// 3. Question career choices`,
-
-  `const examTime = () => {
+    language: "javascript",
+  },
+  {
+    code: `SELECT motivation
+FROM student
+WHERE deadline < CURRENT_DATE
+AND hours_slept > 3
+-- Returns empty set`,
+    language: "sql",
+  },
+  {
+    code: `const examTime = () => {
   panic();
   cram();
   return "Somehow passed";
 };`,
-
-  `// Elements of debugging:
-// 20% skill
-// 20% patience 
-// 60% wondering how this ever worked`,
-
-  `for (let i = 0; i < problems.length; i++) {
-  if (problems[i].difficult) {
-    return "I'll do it tomorrow";
-  }
+    language: "javascript",
+  },
+  {
+    code: `fn main() {
+    let code_quality = 100;
+    let deadline = true;
+    
+    if deadline {
+        println!("Who needs clean code anyway?");
+        code_quality -= 80;
+    }
 }`,
+    language: "rust",
+  },
+  {
+    code: `// Bash script for finals week
+#!/bin/bash
 
-  `switch (mood) {
+while true; do
+  if [ "$(coffee_level)" -lt 50 ]; then
+    echo "CRITICAL: Coffee low!"
+    make_coffee
+  fi
+done`,
+    language: "bash",
+  },
+  {
+    code: `switch (mood) {
   case "happy": 
     code.works();
     break;
   default: // 99% of the time
     code.breaks();
 }`,
+    language: "javascript",
+  },
+  {
+    code: `package main
 
-  `// Comment your code
-// Because what you write today,
-// You won't understand tomorrow`,
+import "fmt"
 
-  `let grades = [];
-if (studyHours > 0) {
-  grades.push("Pass");
-} else {
-  grades.push("Stack Overflow saves me");
+func main() {
+    expectations := []string{"Easy A"}
+    reality := []string{"Curve graded", "All-nighter"}
+    fmt.Println("Gap:", len(reality) - len(expectations))
 }`,
-
-  `function sleep() {
+    language: "go",
+  },
+  {
+    code: `class MyCat < Pet
+  def initialize
+    @helps_coding = false
+  end
+  
+  def sit_on_keyboard
+    puts "kjasdhIHDIhaoiy87yh" # Commit this
+  end
+end`,
+    language: "ruby",
+  },
+  {
+    code: `function sleep() {
   return new Promise((resolve) => {
     // Never resolves for CS students
   });
 }`,
+    language: "javascript",
+  },
+  {
+    code: `<!-- Types of HTML elements -->
+<div>What I wanted</div>
+<div style="position:absolute;top:-500px;">
+  What the designer wanted
+</div>
+<marquee>What the client asked for</marquee>`,
+    language: "html",
+  },
+  {
+    code: `#include <iostream>
 
-  `// Why programmers prefer dark mode:
-// 1. Less eye strain
-// 2. Feels more "hacker-like"
-// 3. Hides the tears`,
-
-  `if (project.deadline.isToday()) {
-  caffeine.consume(Infinity);
-  efficiency.increase(100);
-  sleep.disable();
+void debugCode() {
+  std::cout << "This should work..." << std::endl;
+  std::cout << "WHY doesn't it work?" << std::endl;
+  std::cout << "Oh, semicolon missing" << std::endl;
 }`,
-
-  `class Assignment extends Torture {
-  constructor() {
-    super();
-    this.deadline = "yesterday";
-    this.complexity = "nightmare";
-  }
-}`,
-
-  `// Types of errors:
+    language: "cpp",
+  },
+  {
+    code: `<?php
+// The official debugging technique
+@$result = dangerous_function();
+echo $result ?? "It broke again!";
+// Add more @ symbols until it works
+?>`,
+    language: "php",
+  },
+  {
+    code: `// Types of errors:
 // 1. Syntax errors
-// 2. Logic errors
+// 2. Logic errors 
 // 3. "It worked on my machine" errors`,
-
-  `// Documentation is like good health insurance
-// You hope you never need it,
-// But you're glad it exists when you do`,
-
-  `// Evolution of a programmer:
-// Year 1: "I can solve anything!"
-// Year 2: "I should plan before coding"
-// Year 5: "Let's check Stack Overflow first"`,
-
-  `const variable_names = [
-  "temp", 
-  "temp2", 
-  "temp2Final",
-  "temp2FinalREALLYFINAL",
-  "temp2FinalREALLYFINAL_v2"
-];`,
-
-  `// Found in production code:
+    language: "javascript",
+  },
+  {
+    code: `fun main() {
+    val states = listOf("It works!", "It doesn't work", 
+                      "WHY doesn't it work??")
+    println("Current: \${states.random()}")
+}`,
+    language: "kotlin",
+  },
+  {
+    code: `// Found in production code:
 // Dear future me,
 // I am sorry.
 // Sincerely, past me.`,
-
-  `let motivation = new Promise((resolve) => {
+    language: "javascript",
+  },
+  {
+    code: `let motivation = new Promise((resolve) => {
   setTimeout(resolve, Infinity);
   // Pending since 2020
 });`,
-
-  `// Before exam: "I got this!"
-// During exam: "SELECT * FROM brain WHERE knowledge != NULL"
-// After exam: "DROP TABLE sanity;"`,
-
-  `function estimateProjectTime(hours) {
+    language: "javascript",
+  },
+  {
+    code: `-- SQL: Debugging in production
+BEGIN TRANSACTION;
+UPDATE users SET admin = TRUE;
+-- TODO: Add WHERE clause
+-- ...forgot to add it
+COMMIT;`,
+    language: "sql",
+  },
+  {
+    code: `function estimateProjectTime(hours) {
   return hours * 3; // The developer's constant
 }`,
+    language: "javascript",
+  },
 ];
 
 const selectedMeme = ref(
   codeMemes[Math.floor(Math.random() * codeMemes.length)]
 );
 const displayedText = ref("");
-const fullText = computed(() => selectedMeme.value);
+const highlightedCode = ref("");
+const fullText = computed(() => selectedMeme.value.code);
+const language = computed(() => selectedMeme.value.language);
 
 let charIndex = 0;
 let typingInterval;
@@ -190,11 +266,16 @@ function startTypewriter() {
   clearInterval(typingInterval);
   charIndex = 0;
   displayedText.value = "";
+  highlightedCode.value = "";
 
   typingInterval = setInterval(() => {
     if (charIndex < fullText.value.length) {
       displayedText.value += fullText.value.charAt(charIndex);
       charIndex++;
+
+      highlightedCode.value = hljs.highlight(displayedText.value, {
+        language: language.value,
+      }).value;
     } else {
       clearInterval(typingInterval);
     }
@@ -240,6 +321,7 @@ function startTypewriter() {
   height: 180px;
   display: flex;
   align-items: flex-start;
+  position: relative;
 }
 
 pre {
@@ -253,12 +335,31 @@ pre {
   width: 100%;
   overflow: hidden;
   opacity: 0.8;
-  color: rgba(248, 248, 242, 0.85);
 }
 
-.typewriter {
+.typewriter::after {
+  content: "";
   border-right: 3px solid rgba(248, 248, 242, 0.7);
   animation: blink 0.75s step-end infinite;
+}
+
+.language-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0.7;
+  padding: 2px 8px;
+  border-radius: 0 0.5rem 0 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+:deep(.hljs) {
+  background-color: transparent !important;
+  padding: 0 !important;
 }
 
 @keyframes blink {
