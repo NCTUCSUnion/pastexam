@@ -3,6 +3,7 @@ import PrimeVue from "primevue/config";
 import Aura from "@primeuix/themes/aura";
 import "./style.css";
 import "primeicons/primeicons.css";
+import "primeflex/primeflex.css";
 
 import App from "./App.vue";
 import router from "./router";

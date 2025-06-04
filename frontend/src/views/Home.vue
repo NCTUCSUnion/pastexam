@@ -1,19 +1,27 @@
 <template>
-  <div class="h-full flex items-center justify-center code-background">
-    <div class="text-left px-4 w-full max-w-2xl">
-      <div class="title-container mb-8">
+  <div
+    class="h-full flex align-items-center justify-content-center code-background relative text-gray-100"
+  >
+    <div class="text-left px-4 w-full max-w-2xl relative z-1">
+      <div
+        class="title-container mb-4 w-full overflow-x-auto overflow-y-hidden text-center"
+      >
         <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-wide">
-          <span class="code-comment">/*</span>
-          <span class="title-text">交大資工考古題系統</span>
-          <span class="code-comment">*/</span>
+          <span class="code-comment text-gray-500">/*</span>
+          <span class="title-text px-2">交大資工考古題系統</span>
+          <span class="code-comment text-gray-500">*/</span>
         </h1>
       </div>
-      <div class="code-container mt-8">
+      <div class="code-container mt-5 flex align-items-start relative">
         <pre
-          class="font-mono text-sm sm:text-base md:text-lg"
+          class="font-mono text-sm sm:text-base md:text-lg whitespace-pre-wrap text-left bg-gray-900 p-4 border-round shadow-2 m-0 w-full overflow-hidden opacity-80"
         ><code class="typewriter" v-html="highlightedCode"></code></pre>
 
-        <div class="language-badge">{{ language }}</div>
+        <div
+          class="language-badge absolute top-0 right-0 bg-white-alpha-10 text-white-alpha-70 py-1 px-2 text-xs uppercase tracking-wider"
+        >
+          {{ language }}
+        </div>
       </div>
     </div>
   </div>
@@ -22,245 +30,49 @@
 <script setup>
 import { ref, onMounted, computed, watchEffect } from "vue";
 import hljs from "highlight.js";
-import "highlight.js/styles/atom-one-dark.css"; // You can choose different themes
+import "highlight.js/styles/atom-one-dark.css";
+import axios from "axios";
 
-const codeMemes = [
-  {
-    code: `while (!coffee) {
-  printf("Need more C0FF33\\n");
-  productivity--;
-  stress++;
-}`,
-    language: "c",
-  },
-  {
-    code: `# Python developers be like
-import solution
-from stackoverflow import code
-
-def actual_work():
-    pass  # TODO: Implement later`,
-    language: "python",
-  },
-  {
-    code: `try {
-  life();
-} catch (err) {
-  coffee.drink();
-  life.retry();
-}`,
-    language: "javascript",
-  },
-  {
-    code: `/* CSS: The blessing and curse */
-#submit-button {
-  display: block;
-  margin: 0 auto;
-  position: relative !important;
-  z-index: 999; /* Please work */
-}`,
-    language: "css",
-  },
-  {
-    code: `// 99 bugs in the code
-// Take one down, patch it around
-// 127 bugs in the code`,
-    language: "javascript",
-  },
-  {
-    code: `def time_estimate(task):
-    """Estimates completion time"""
-    realistic = calculate_hours(task)
-    return realistic * 3  # Developer's constant`,
-    language: "python",
-  },
-  {
-    code: `if (brain.available()) {
-  code.write();
-} else {
-  coffee.consume();
-}`,
-    language: "javascript",
-  },
-  {
-    code: `class Student {
-  constructor() {
-    this.sleep = 0;
-    this.stress = 100;
-  }
-}`,
-    language: "javascript",
-  },
-  {
-    code: `SELECT motivation
-FROM student
-WHERE deadline < CURRENT_DATE
-AND hours_slept > 3
--- Returns empty set`,
-    language: "sql",
-  },
-  {
-    code: `const examTime = () => {
-  panic();
-  cram();
-  return "Somehow passed";
-};`,
-    language: "javascript",
-  },
-  {
-    code: `fn main() {
-    let code_quality = 100;
-    let deadline = true;
-    
-    if deadline {
-        println!("Who needs clean code anyway?");
-        code_quality -= 80;
-    }
-}`,
-    language: "rust",
-  },
-  {
-    code: `// Bash script for finals week
-#!/bin/bash
-
-while true; do
-  if [ "$(coffee_level)" -lt 50 ]; then
-    echo "CRITICAL: Coffee low!"
-    make_coffee
-  fi
-done`,
-    language: "bash",
-  },
-  {
-    code: `switch (mood) {
-  case "happy": 
-    code.works();
-    break;
-  default: // 99% of the time
-    code.breaks();
-}`,
-    language: "javascript",
-  },
-  {
-    code: `package main
-
-import "fmt"
-
-func main() {
-    expectations := []string{"Easy A"}
-    reality := []string{"Curve graded", "All-nighter"}
-    fmt.Println("Gap:", len(reality) - len(expectations))
-}`,
-    language: "go",
-  },
-  {
-    code: `class MyCat < Pet
-  def initialize
-    @helps_coding = false
-  end
-  
-  def sit_on_keyboard
-    puts "kjasdhIHDIhaoiy87yh" # Commit this
-  end
-end`,
-    language: "ruby",
-  },
-  {
-    code: `function sleep() {
-  return new Promise((resolve) => {
-    // Never resolves for CS students
-  });
-}`,
-    language: "javascript",
-  },
-  {
-    code: `<!-- Types of HTML elements -->
-<div>What I wanted</div>
-<div style="position:absolute;top:-500px;">
-  What the designer wanted
-</div>
-<marquee>What the client asked for</marquee>`,
-    language: "html",
-  },
-  {
-    code: `#include <iostream>
-
-void debugCode() {
-  std::cout << "This should work..." << std::endl;
-  std::cout << "WHY doesn't it work?" << std::endl;
-  std::cout << "Oh, semicolon missing" << std::endl;
-}`,
-    language: "cpp",
-  },
-  {
-    code: `<?php
-// The official debugging technique
-@$result = dangerous_function();
-echo $result ?? "It broke again!";
-// Add more @ symbols until it works
-?>`,
-    language: "php",
-  },
-  {
-    code: `// Types of errors:
-// 1. Syntax errors
-// 2. Logic errors 
-// 3. "It worked on my machine" errors`,
-    language: "javascript",
-  },
-  {
-    code: `fun main() {
-    val states = listOf("It works!", "It doesn't work", 
-                      "WHY doesn't it work??")
-    println("Current: \${states.random()}")
-}`,
-    language: "kotlin",
-  },
-  {
-    code: `// Found in production code:
-// Dear future me,
-// I am sorry.
-// Sincerely, past me.`,
-    language: "javascript",
-  },
-  {
-    code: `let motivation = new Promise((resolve) => {
-  setTimeout(resolve, Infinity);
-  // Pending since 2020
-});`,
-    language: "javascript",
-  },
-  {
-    code: `-- SQL: Debugging in production
-BEGIN TRANSACTION;
-UPDATE users SET admin = TRUE;
--- TODO: Add WHERE clause
--- ...forgot to add it
-COMMIT;`,
-    language: "sql",
-  },
-  {
-    code: `function estimateProjectTime(hours) {
-  return hours * 3; // The developer's constant
-}`,
-    language: "javascript",
-  },
-];
-
-const selectedMeme = ref(
-  codeMemes[Math.floor(Math.random() * codeMemes.length)]
-);
 const displayedText = ref("");
 const highlightedCode = ref("");
+const selectedMeme = ref({ code: "", language: "" });
 const fullText = computed(() => selectedMeme.value.code);
 const language = computed(() => selectedMeme.value.language);
 
 let charIndex = 0;
 let typingInterval;
 
-onMounted(() => {
-  startTypewriter();
+onMounted(async () => {
+  await fetchRandomMeme();
 });
+
+async function fetchRandomMeme() {
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_BASE_URL}/meme`
+    );
+
+    if (response.data && response.data.content && response.data.language) {
+      selectedMeme.value = {
+        code: response.data.content,
+        language: response.data.language,
+      };
+      // console.log("API response:", response.data);
+    } else {
+      console.error("Invalid API response format:", response.data);
+      throw new Error("Invalid API response format");
+    }
+
+    startTypewriter();
+  } catch (error) {
+    console.error("Error fetching meme:", error);
+    selectedMeme.value = {
+      code: "console.log('API connection failed');",
+      language: "javascript",
+    };
+    startTypewriter();
+  }
+}
 
 function startTypewriter() {
   clearInterval(typingInterval);
@@ -268,25 +80,29 @@ function startTypewriter() {
   displayedText.value = "";
   highlightedCode.value = "";
 
+  if (!fullText.value) {
+    console.error("fullText.value is undefined or empty");
+    return;
+  }
+
   typingInterval = setInterval(() => {
     if (charIndex < fullText.value.length) {
       displayedText.value += fullText.value.charAt(charIndex);
       charIndex++;
 
       highlightedCode.value = hljs.highlight(displayedText.value, {
-        language: language.value,
+        language: language.value || "plaintext",
       }).value;
     } else {
       clearInterval(typingInterval);
     }
-  }, 50);
+  }, 30);
 }
 </script>
 
 <style scoped>
 .code-background {
   background-color: #1e1e1e;
-  color: #f8f8f2;
   position: relative;
 }
 
@@ -312,29 +128,8 @@ function startTypewriter() {
   }
 }
 
-.code-background > * {
-  position: relative;
-  z-index: 1;
-}
-
 .code-container {
   height: 180px;
-  display: flex;
-  align-items: flex-start;
-  position: relative;
-}
-
-pre {
-  white-space: pre-wrap;
-  text-align: left;
-  background-color: #25272f;
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin: 0;
-  width: 100%;
-  overflow: hidden;
-  opacity: 0.8;
 }
 
 .typewriter::after {
@@ -344,17 +139,10 @@ pre {
 }
 
 .language-badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
-  opacity: 0.7;
-  padding: 2px 8px;
-  border-radius: 0 0.5rem 0 0.5rem;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  border-top-right-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  border-top-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 :deep(.hljs) {
@@ -373,11 +161,6 @@ pre {
 }
 
 .title-container {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  margin-bottom: 2rem;
-  text-align: center;
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
@@ -386,15 +169,10 @@ pre {
   display: none;
 }
 
-.code-comment {
-  color: #7c839b;
-}
-
 .title-text {
   background: linear-gradient(to right, #a2a9b0, #d5d9e0);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  padding: 0 0.5rem;
 }
 </style>

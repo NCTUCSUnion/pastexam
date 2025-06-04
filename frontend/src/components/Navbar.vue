@@ -7,7 +7,20 @@
         >
       </template>
       <template #end>
+        <div v-if="isAuthenticated" class="flex align-items-center gap-2">
+          <span class="user-name flex align-items-center text-gray-300">{{
+            userData?.name || "User"
+          }}</span>
+          <Button
+            icon="pi pi-sign-out"
+            @click="handleLogout"
+            text
+            rounded
+            aria-label="Logout"
+          />
+        </div>
         <Button
+          v-else
           icon="pi pi-sign-in"
           @click="openLoginDialog"
           text
@@ -22,6 +35,7 @@
       header="Login"
       :modal="true"
       :closable="true"
+      :draggable="false"
       :style="{ width: '350px' }"
     >
       <div class="p-fluid w-full">
@@ -58,12 +72,8 @@
           <Button
             icon="pi pi-graduation-cap"
             label="NYCU OAuth"
-            class="p-button-secondary p-button-outlined w-full mr-3"
-          />
-          <Button
-            icon="pi pi-building"
-            label="CSIT OAuth"
             class="p-button-secondary p-button-outlined w-full"
+            @click="handleOAuthLogin"
           />
         </div>
       </div>
@@ -72,6 +82,8 @@
 </template>
 
 <script>
+import { getCurrentUser, isAuthenticated } from "../utils/auth.js";
+
 export default {
   data() {
     return {
@@ -79,11 +91,53 @@ export default {
       loginVisible: false,
       username: "",
       password: "",
+      isAuthenticated: false,
+      userData: null,
     };
+  },
+  mounted() {
+    this.checkAuthentication();
+  },
+
+  watch: {
+    $route: {
+      immediate: true,
+      handler() {
+        this.checkAuthentication();
+      },
+    },
   },
   methods: {
     openLoginDialog() {
       this.loginVisible = true;
+    },
+
+    handleOAuthLogin() {
+      this.loginVisible = false;
+      window.location.href = `${import.meta.env.VITE_API_BASE_URL}/oauth/login`;
+    },
+
+    checkAuthentication() {
+      this.isAuthenticated = isAuthenticated();
+      if (this.isAuthenticated) {
+        const user = getCurrentUser();
+        if (user) {
+          this.userData = user;
+        } else {
+          this.isAuthenticated = false;
+          this.userData = null;
+        }
+      } else {
+        this.isAuthenticated = false;
+        this.userData = null;
+      }
+    },
+
+    handleLogout() {
+      localStorage.removeItem("authToken");
+      this.isAuthenticated = false;
+      this.userData = null;
+      this.$router.push("/");
     },
   },
 };
@@ -102,21 +156,28 @@ export default {
   padding: 0 0.5rem;
 }
 
-.oauth-icon {
-  width: 24px;
-  height: 24px;
-  display: inline-block;
-  vertical-align: middle;
-}
-
 .card {
   height: var(--navbar-height);
   display: flex;
   align-items: center;
 }
 
+.user-name {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  margin: auto 0;
+}
+
+:deep(.p-menubar-end) > div {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
 :deep(.p-menubar) {
   width: 100%;
+  padding: 0.5rem 1rem;
 }
 
 :deep(.p-password) {
