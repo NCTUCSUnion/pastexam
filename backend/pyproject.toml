@@ -1,0 +1,17 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Past Exam API"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "sqlmodel",
+  "asyncpg",
+  "python-jose[cryptography]",
+  "httpx",
+  "minio",
+  "itsdangerous>=2.2.0",
+  "python-multipart>=0.0.20",
+]

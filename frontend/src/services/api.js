@@ -5,6 +5,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 export const api = axios.create({
   baseURL: apiBaseUrl,
+  withCredentials: true,
 });
 
 api.interceptors.request.use(
@@ -33,3 +34,27 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const courseService = {
+  listCourses() {
+    return api.get('/courses');
+  },
+
+  getCourseArchives(courseId) {
+    return api.get(`/courses/${courseId}/archives`);
+  },
+
+  getArchiveDownloadUrl(courseId, archiveId) {
+    return api.get(
+      `/courses/${courseId}/archives/download-url?archive_id=${archiveId}`
+    );
+  },
+
+  uploadArchive(courseId, formData) {
+    return api.post(`/courses/${courseId}/archives/upload`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+};
