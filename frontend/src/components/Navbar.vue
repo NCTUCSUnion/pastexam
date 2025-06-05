@@ -34,8 +34,9 @@
       v-model:visible="loginVisible"
       header="Login"
       :modal="true"
-      :closable="true"
       :draggable="false"
+      :dismissableMask="true"
+      :closeOnEscape="true"
       :style="{ width: '350px' }"
     >
       <div class="p-fluid w-full">

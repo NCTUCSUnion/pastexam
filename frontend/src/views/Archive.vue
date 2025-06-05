@@ -1,4 +1,5 @@
 <template>
+  <Toast position="bottom-right" />
   <div class="flex h-full">
     <div class="w-80 h-full border-r border-solid surface-border p-3 shrink-0">
       <PanelMenu :model="menuItems" class="w-full" />
@@ -67,6 +68,11 @@
                 <AccordionHeader>{{ group.year }} 年</AccordionHeader>
                 <AccordionContent>
                   <DataTable :value="group.list">
+                    <Column
+                      header="教授"
+                      field="professor"
+                      style="width: 10%"
+                    ></Column>
                     <Column header="類型" style="width: 10%">
                       <template #body="{ data }">
                         <Tag
@@ -81,12 +87,7 @@
                       </template>
                     </Column>
                     <Column
-                      header="教授"
-                      field="professor"
-                      style="width: 10%"
-                    ></Column>
-                    <Column
-                      header="檔名"
+                      header="考試名稱"
                       field="name"
                       style="width: 15%"
                     ></Column>
@@ -135,12 +136,13 @@
 
         <Dialog
           v-model:visible="showPreview"
-          modal
           :style="{ width: '90vw', height: '90vh' }"
           :contentStyle="{ height: '80vh' }"
-          :maximizable="true"
+          :modal="true"
+          :draggable="false"
           :dismissableMask="true"
           :closeOnEscape="true"
+          :maximizable="true"
           @hide="closePreview"
         >
           <template #header>
@@ -196,7 +198,10 @@
 
         <Dialog
           v-model:visible="showUploadDialog"
-          modal
+          :modal="true"
+          :draggable="false"
+          :dismissableMask="true"
+          :closeOnEscape="true"
           header="上傳考古題"
           :style="{ width: '50vw' }"
         >
@@ -221,40 +226,57 @@
             </div>
 
             <div class="flex flex-column gap-2">
-              <label>年份</label>
-              <InputNumber
-                v-model="uploadForm.academicYear"
-                :min="2000"
-                :max="9999"
-                placeholder="請輸入年份（例：2023）"
-                class="w-full"
-              />
-            </div>
-
-            <div class="flex flex-column gap-2">
               <label>科目名稱</label>
-              <InputText
+              <Select
                 v-model="uploadForm.subject"
-                placeholder="輸入科目名稱"
+                :options="availableSubjects"
+                optionLabel="name"
+                optionValue="name"
+                placeholder="選擇科目"
                 class="w-full"
+                :disabled="!uploadForm.category"
+                filter
+                editable
               />
             </div>
 
             <div class="flex flex-column gap-2">
               <label>教授</label>
-              <InputText
+              <Select
                 v-model="uploadForm.professor"
-                placeholder="輸入教授姓名"
+                :options="availableProfessors"
+                optionLabel="name"
+                optionValue="code"
+                placeholder="選擇教授"
                 class="w-full"
+                :disabled="!uploadForm.subject"
+                filter
+                editable
               />
             </div>
 
             <div class="flex flex-column gap-2">
-              <label>檔案標題</label>
-              <InputText
-                v-model="uploadForm.filename"
-                placeholder="輸入檔案標題（如：111學年度上學期期中考）"
+              <label>年份</label>
+              <DatePicker
+                v-model="uploadForm.academicYear"
+                view="year"
+                dateFormat="yy"
+                :showIcon="true"
+                placeholder="選擇年份"
                 class="w-full"
+                :maxDate="new Date()"
+                :minDate="new Date(2000, 0, 1)"
+              />
+            </div>
+
+            <div class="flex flex-column gap-2">
+              <label for="filename-input">考試名稱</label>
+              <InputText
+                id="filename-input"
+                v-model="uploadForm.filename"
+                placeholder="輸入考試名稱（如：midterm1）"
+                class="w-full"
+                :maxlength="30"
               />
             </div>
 
@@ -313,7 +335,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { courseService, archiveService } from "../services/api";
 import { useToast } from "primevue/usetoast";
 
@@ -343,6 +365,8 @@ const uploadForm = ref({
   academicYear: null,
   file: null,
 });
+
+const uploadFormProfessors = ref([]);
 
 const coursesList = ref({
   freshman: [],
@@ -574,7 +598,21 @@ async function downloadArchive(archive) {
       selectedCourse.value,
       archive.id
     );
-    window.open(data.download_url, "_blank");
+
+    const response = await fetch(data.download_url);
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    const fileName = `${selectedSubject.value}_${archive.professor}_${archive.name}.pdf`;
+    link.download = fileName;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    window.URL.revokeObjectURL(url);
+    link.remove();
   } catch (error) {
     console.error("Download error:", error);
     toast.add({
@@ -656,25 +694,17 @@ const handleUpload = async () => {
     formData.append("archive_type", uploadForm.value.type);
     formData.append("has_answers", uploadForm.value.hasAnswers);
     formData.append("filename", uploadForm.value.filename);
-    formData.append("academic_year", uploadForm.value.academicYear);
+    const year = new Date(uploadForm.value.academicYear).getFullYear();
+    formData.append("academic_year", year);
 
-    // Upload file metadata and get presigned URL
     const { data } = await archiveService.uploadArchive(formData);
 
-    // Upload file to MinIO using presigned URL
     await fetch(data.upload_url, {
       method: "PUT",
       body: uploadForm.value.file,
       headers: {
         "Content-Type": uploadForm.value.file.type,
       },
-    });
-
-    toast.add({
-      severity: "success",
-      summary: "上傳成功",
-      detail: "考題已成功上傳",
-      life: 3000,
     });
 
     showUploadDialog.value = false;
@@ -687,6 +717,18 @@ const handleUpload = async () => {
       hasAnswers: false,
       file: null,
     };
+
+    await fetchCourses();
+    if (selectedCourse.value) {
+      await fetchArchives();
+    }
+
+    toast.add({
+      severity: "success",
+      summary: "上傳成功",
+      detail: "考題已成功上傳",
+      life: 3000,
+    });
 
     if (selectedSubject.value === uploadForm.value.subject) {
       await fetchArchives();
@@ -705,6 +747,81 @@ const handleUpload = async () => {
 const onFileSelect = (event) => {
   uploadForm.value.file = event.files[0];
 };
+
+const availableSubjects = computed(() => {
+  if (!uploadForm.value.category) return [];
+
+  const subjects = coursesList.value[uploadForm.value.category] || [];
+  return subjects
+    .map((course) => ({
+      name: course.name,
+      code: course.id,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+});
+
+const availableProfessors = computed(() => {
+  if (!uploadForm.value.subject) return [];
+  return uploadFormProfessors.value;
+});
+
+async function fetchProfessorsForSubject(subject) {
+  if (!subject) return;
+
+  try {
+    let courseId = null;
+    const category = uploadForm.value.category;
+
+    if (category && coursesList.value[category]) {
+      const course = coursesList.value[category].find(
+        (c) => c.name === subject
+      );
+      if (course) {
+        courseId = course.id;
+      }
+    }
+
+    if (!courseId) return;
+
+    const response = await courseService.getCourseArchives(courseId);
+    const archiveData = response.data;
+
+    const uniqueProfessors = new Set();
+    archiveData.forEach((archive) => {
+      if (archive.professor) uniqueProfessors.add(archive.professor);
+    });
+
+    uploadFormProfessors.value = Array.from(uniqueProfessors)
+      .sort()
+      .map((professor) => ({
+        name: professor,
+        code: professor,
+      }));
+  } catch (error) {
+    console.error("Error fetching professors for subject:", error);
+    uploadFormProfessors.value = [];
+  }
+}
+
+watch(
+  () => uploadForm.value.subject,
+  (newSubject) => {
+    uploadForm.value.professor = "";
+    if (newSubject) {
+      fetchProfessorsForSubject(newSubject);
+    } else {
+      uploadFormProfessors.value = [];
+    }
+  }
+);
+
+watch(
+  () => uploadForm.value.category,
+  () => {
+    uploadForm.value.subject = "";
+    uploadForm.value.professor = "";
+  }
+);
 
 onMounted(async () => {
   await fetchCourses();
