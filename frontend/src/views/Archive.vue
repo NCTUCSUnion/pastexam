@@ -31,7 +31,7 @@
               />
               <Select
                 v-model="filters.type"
-                :options="examTypes"
+                :options="archiveTypes"
                 optionLabel="name"
                 optionValue="code"
                 placeholder="選擇類型"
@@ -56,42 +56,44 @@
           <div v-if="selectedSubject">
             <Accordion
               :value="
-                groupedExams.length ? groupedExams[0].year.toString() : ''
+                groupedArchives.length ? groupedArchives[0].year.toString() : ''
               "
             >
               <AccordionPanel
-                v-for="group in groupedExams"
+                v-for="group in groupedArchives"
                 :key="group.year"
                 :value="group.year.toString()"
               >
                 <AccordionHeader>{{ group.year }} 年</AccordionHeader>
                 <AccordionContent>
                   <DataTable :value="group.list">
-                    <Column header="類型" style="width: 15%">
+                    <Column header="類型" style="width: 10%">
                       <template #body="{ data }">
                         <Tag
                           :severity="
-                            data.type === '期中考'
-                              ? 'info'
-                              : data.type === '期末考'
-                              ? 'warning'
-                              : 'secondary'
+                            archiveTypeConfig[data.type]?.severity ||
+                            'secondary'
                           "
                           class="text-sm"
                         >
-                          {{ data.type }}
+                          {{ archiveTypeConfig[data.type]?.name || data.type }}
                         </Tag>
                       </template>
                     </Column>
                     <Column
                       header="教授"
                       field="professor"
-                      style="width: 20%"
+                      style="width: 10%"
                     ></Column>
-                    <Column header="解答" style="width: 15%">
+                    <Column
+                      header="檔名"
+                      field="name"
+                      style="width: 15%"
+                    ></Column>
+                    <Column header="解答" style="width: 10%">
                       <template #body="{ data }">
                         <Tag
-                          :severity="data.hasAnswers ? 'success' : 'warning'"
+                          :severity="data.hasAnswers ? 'info' : 'secondary'"
                           class="text-sm"
                         >
                           {{ data.hasAnswers ? "附解答" : "僅題目" }}
@@ -103,14 +105,14 @@
                         <div class="flex gap-2.5">
                           <Button
                             icon="pi pi-eye"
-                            @click="previewExam(data)"
+                            @click="previewArchive(data)"
                             size="small"
                             severity="secondary"
                             label="預覽"
                           />
                           <Button
                             icon="pi pi-download"
-                            @click="downloadExam(data)"
+                            @click="downloadArchive(data)"
                             size="small"
                             severity="success"
                             label="下載"
@@ -123,24 +125,73 @@
               </AccordionPanel>
             </Accordion>
           </div>
-          <div v-else class="flex align-items-center justify-content-center">
+          <div
+            v-else
+            class="flex align-items-center justify-content-center mt-4"
+          >
             請從左側選單選擇科目
           </div>
         </div>
 
-        <!-- Preview Dialog -->
         <Dialog
           v-model:visible="showPreview"
-          :modal="true"
+          modal
           :style="{ width: '90vw', height: '90vh' }"
+          :contentStyle="{ height: '80vh' }"
           :maximizable="true"
+          :dismissableMask="true"
+          :closeOnEscape="true"
+          @hide="closePreview"
         >
-          <iframe
-            v-if="selectedExam"
-            :src="selectedExam.previewUrl"
-            class="w-full h-full"
-            frameborder="0"
-          />
+          <template #header>
+            <div class="flex align-items-center gap-2">
+              <i class="pi pi-file-pdf text-2xl" />
+              <span class="text-xl">{{ selectedArchive?.name }}</span>
+            </div>
+          </template>
+
+          <div class="w-full h-full flex flex-column">
+            <div
+              v-if="previewLoading"
+              class="flex-1 flex align-items-center justify-content-center"
+            >
+              <ProgressSpinner />
+            </div>
+
+            <div
+              v-else-if="previewError"
+              class="flex-1 flex flex-column align-items-center justify-content-center gap-4"
+            >
+              <i class="pi pi-exclamation-circle text-6xl text-red-500" />
+              <div class="text-xl">無法載入預覽</div>
+              <div class="text-sm text-gray-600">請嘗試下載檔案查看</div>
+            </div>
+
+            <div
+              v-else-if="selectedArchive?.previewUrl"
+              class="flex-1 relative"
+            >
+              <iframe
+                :src="selectedArchive.previewUrl"
+                class="absolute top-0 left-0 w-full h-full"
+                frameborder="0"
+                @load="handlePreviewLoad"
+                @error="handlePreviewError"
+                allow="fullscreen"
+                referrerpolicy="no-referrer"
+              />
+            </div>
+          </div>
+
+          <template #footer>
+            <Button
+              v-if="selectedArchive"
+              label="下載"
+              icon="pi pi-download"
+              @click="downloadArchive(selectedArchive)"
+              severity="success"
+            />
+          </template>
         </Dialog>
 
         <Dialog
@@ -151,53 +202,95 @@
         >
           <div class="flex flex-column gap-4">
             <div class="flex flex-column gap-2">
-              <label>科目</label>
+              <label>類別</label>
               <Select
-                v-model="uploadForm.subject"
-                :options="allSubjects"
+                v-model="uploadForm.category"
+                :options="[
+                  { name: '大一課程', value: 'freshman' },
+                  { name: '大二課程', value: 'sophomore' },
+                  { name: '大三課程', value: 'junior' },
+                  { name: '大四課程', value: 'senior' },
+                  { name: '研究所課程', value: 'graduate' },
+                  { name: '跨領域課程', value: 'interdisciplinary' },
+                ]"
                 optionLabel="name"
-                placeholder="選擇科目"
+                optionValue="value"
+                placeholder="選擇課程類別"
                 class="w-full"
-                filter
-                editable
               />
             </div>
+
+            <div class="flex flex-column gap-2">
+              <label>年份</label>
+              <InputNumber
+                v-model="uploadForm.academicYear"
+                :min="2000"
+                :max="9999"
+                placeholder="請輸入年份（例：2023）"
+                class="w-full"
+              />
+            </div>
+
+            <div class="flex flex-column gap-2">
+              <label>科目名稱</label>
+              <InputText
+                v-model="uploadForm.subject"
+                placeholder="輸入科目名稱"
+                class="w-full"
+              />
+            </div>
+
             <div class="flex flex-column gap-2">
               <label>教授</label>
-              <Select
+              <InputText
                 v-model="uploadForm.professor"
                 placeholder="輸入教授姓名"
                 class="w-full"
-                filter
-                editable
               />
             </div>
+
+            <div class="flex flex-column gap-2">
+              <label>檔案標題</label>
+              <InputText
+                v-model="uploadForm.filename"
+                placeholder="輸入檔案標題（如：111學年度上學期期中考）"
+                class="w-full"
+              />
+            </div>
+
             <div class="flex flex-column gap-2">
               <label>考試類型</label>
               <Select
                 v-model="uploadForm.type"
                 :options="[
-                  { name: '期中考', value: '期中考' },
-                  { name: '期末考', value: '期末考' },
-                  { name: '小考', value: '小考' },
+                  { name: '期中考', value: 'midterm' },
+                  { name: '期末考', value: 'final' },
+                  { name: '小考', value: 'quiz' },
+                  { name: '其他', value: 'other' },
                 ]"
                 optionLabel="name"
+                optionValue="value"
                 placeholder="選擇考試類型"
                 class="w-full"
               />
             </div>
+
             <div class="flex align-items-center gap-2">
               <Checkbox v-model="uploadForm.hasAnswers" :binary="true" />
               <label>附解答</label>
             </div>
-            <FileUpload
-              mode="basic"
-              accept="application/pdf"
-              :maxFileSize="10000000"
-              chooseLabel="選擇 PDF 檔案"
-              class="w-full"
-              @select="onFileSelect"
-            />
+
+            <div class="flex flex-column gap-2">
+              <label>上傳檔案 (PDF)</label>
+              <FileUpload
+                mode="basic"
+                accept="application/pdf"
+                :maxFileSize="10000000"
+                chooseLabel="選擇 PDF 檔案"
+                class="w-full"
+                @select="onFileSelect"
+              />
+            </div>
           </div>
           <template #footer>
             <Button
@@ -221,12 +314,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { courseService } from "../services/api";
+import { courseService, archiveService } from "../services/api";
 import { useToast } from "primevue/usetoast";
 
 const toast = useToast();
 
-const exams = ref([]);
+const archives = ref([]);
 const loading = ref(true);
 const filters = ref({
   year: "",
@@ -236,15 +329,18 @@ const filters = ref({
 });
 
 const showPreview = ref(false);
-const selectedExam = ref(null);
+const selectedArchive = ref(null);
 const selectedSubject = ref(null);
 const selectedCourse = ref(null);
 const showUploadDialog = ref(false);
 const uploadForm = ref({
-  subject: null,
+  category: null,
+  subject: "",
   professor: "",
+  filename: "",
   type: null,
   hasAnswers: false,
+  academicYear: null,
   file: null,
 });
 
@@ -257,9 +353,28 @@ const coursesList = ref({
   interdisciplinary: [],
 });
 
+const archiveTypeConfig = {
+  midterm: {
+    name: "期中考",
+    severity: "secondary",
+  },
+  final: {
+    name: "期末考",
+    severity: "secondary",
+  },
+  quiz: {
+    name: "小考",
+    severity: "secondary",
+  },
+  other: {
+    name: "其他",
+    severity: "secondary",
+  },
+};
+
 const years = ref([]);
 const professors = ref([]);
-const examTypes = ref([]);
+const archiveTypes = ref([]);
 
 const menuItems = computed(() => {
   const items = [];
@@ -337,28 +452,31 @@ const menuItems = computed(() => {
   return items;
 });
 
-const groupedExams = computed(() => {
-  if (!exams.value) return [];
+const groupedArchives = computed(() => {
+  if (!archives.value) return [];
 
-  const filteredExams = exams.value.filter((exam) => {
-    if (filters.value.year && exam.year.toString() !== filters.value.year)
+  const filteredArchives = archives.value.filter((archive) => {
+    if (filters.value.year && archive.year.toString() !== filters.value.year)
       return false;
-    if (filters.value.professor && exam.professor !== filters.value.professor)
+    if (
+      filters.value.professor &&
+      archive.professor !== filters.value.professor
+    )
       return false;
-    if (filters.value.type && exam.type !== filters.value.type) return false;
-    if (filters.value.hasAnswers && !exam.hasAnswers) return false;
+    if (filters.value.type && archive.type !== filters.value.type) return false;
+    if (filters.value.hasAnswers && !archive.hasAnswers) return false;
     return true;
   });
 
   const groups = {};
-  filteredExams.forEach((exam) => {
-    if (!groups[exam.year]) {
-      groups[exam.year] = {
-        year: exam.year,
+  filteredArchives.forEach((archive) => {
+    if (!groups[archive.year]) {
+      groups[archive.year] = {
+        year: archive.year,
         list: [],
       };
     }
-    groups[exam.year].list.push(exam);
+    groups[archive.year].list.push(archive);
   });
 
   return Object.values(groups).sort((a, b) => b.year - a.year);
@@ -388,21 +506,22 @@ function filterBySubject(course) {
   filters.value.professor = "";
   filters.value.year = "";
   filters.value.type = "";
-  fetchExams();
+  fetchArchives();
 }
 
-async function fetchExams() {
+async function fetchArchives() {
   try {
     loading.value = true;
     const response = await courseService.getCourseArchives(
       selectedCourse.value
     );
-    exams.value = response.data.map((exam) => ({
-      id: exam.id,
-      year: exam.academic_year,
-      type: exam.archive_type,
-      professor: exam.professor,
-      hasAnswers: exam.has_answers,
+    archives.value = response.data.map((archive) => ({
+      id: archive.id,
+      year: archive.academic_year,
+      name: archive.name,
+      type: archive.archive_type,
+      professor: archive.professor,
+      hasAnswers: archive.has_answers,
       subject: selectedSubject.value,
     }));
 
@@ -410,10 +529,10 @@ async function fetchExams() {
     const uniqueProfessors = new Set();
     const uniqueTypes = new Set();
 
-    exams.value.forEach((exam) => {
-      if (exam.year) uniqueYears.add(exam.year.toString());
-      if (exam.professor) uniqueProfessors.add(exam.professor);
-      if (exam.type) uniqueTypes.add(exam.type);
+    archives.value.forEach((archive) => {
+      if (archive.year) uniqueYears.add(archive.year.toString());
+      if (archive.professor) uniqueProfessors.add(archive.professor);
+      if (archive.type) uniqueTypes.add(archive.type);
     });
 
     years.value = Array.from(uniqueYears)
@@ -430,14 +549,14 @@ async function fetchExams() {
         code: professor,
       }));
 
-    examTypes.value = Array.from(uniqueTypes)
+    archiveTypes.value = Array.from(uniqueTypes)
       .sort()
       .map((type) => ({
-        name: type,
+        name: archiveTypeConfig[type]?.name || type,
         code: type,
       }));
   } catch (error) {
-    console.error("Error fetching exams:", error);
+    console.error("Error fetching archives:", error);
     toast.add({
       severity: "error",
       summary: "載入失敗",
@@ -449,13 +568,13 @@ async function fetchExams() {
   }
 }
 
-async function downloadExam(exam) {
+async function downloadArchive(archive) {
   try {
-    const response = await courseService.getArchiveDownloadUrl(
+    const { data } = await archiveService.getArchiveUrl(
       selectedCourse.value,
-      exam.id
+      archive.id
     );
-    window.open(response.data.download_url, "_blank");
+    window.open(data.download_url, "_blank");
   } catch (error) {
     console.error("Download error:", error);
     toast.add({
@@ -467,37 +586,89 @@ async function downloadExam(exam) {
   }
 }
 
-async function previewExam(exam) {
+const previewLoading = ref(false);
+const previewError = ref(false);
+
+async function previewArchive(archive) {
   try {
-    const response = await courseService.getArchiveDownloadUrl(
-      selectedCourse.value,
-      exam.id
-    );
-    selectedExam.value = {
-      ...exam,
-      previewUrl: response.data.preview_url,
-    };
+    previewLoading.value = true;
+    previewError.value = false;
     showPreview.value = true;
+
+    const { data } = await archiveService.getArchiveUrl(
+      selectedCourse.value,
+      archive.id
+    );
+
+    selectedArchive.value = {
+      ...archive,
+      previewUrl: data.preview_url,
+    };
   } catch (error) {
     console.error("Preview error:", error);
+    previewError.value = true;
     toast.add({
       severity: "error",
       summary: "預覽失敗",
       detail: "無法取得預覽連結",
       life: 3000,
     });
+  } finally {
+    previewLoading.value = false;
   }
+}
+
+function handlePreviewError() {
+  previewError.value = true;
+}
+
+function closePreview() {
+  showPreview.value = false;
+  selectedArchive.value = null;
+  previewError.value = false;
 }
 
 const handleUpload = async () => {
   try {
+    if (
+      !uploadForm.value.category ||
+      !uploadForm.value.subject ||
+      !uploadForm.value.professor ||
+      !uploadForm.value.filename ||
+      !uploadForm.value.type ||
+      !uploadForm.value.academicYear ||
+      !uploadForm.value.file
+    ) {
+      toast.add({
+        severity: "error",
+        summary: "資料不完整",
+        detail: "請填寫所有必要欄位",
+        life: 3000,
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", uploadForm.value.file);
+    formData.append("subject", uploadForm.value.subject);
+    formData.append("category", uploadForm.value.category);
     formData.append("professor", uploadForm.value.professor);
-    formData.append("exam_type", uploadForm.value.type.value);
+    formData.append("archive_type", uploadForm.value.type);
     formData.append("has_answers", uploadForm.value.hasAnswers);
+    formData.append("filename", uploadForm.value.filename);
+    formData.append("academic_year", uploadForm.value.academicYear);
 
-    await courseService.uploadArchive(selectedCourse.value, formData);
+    // Upload file metadata and get presigned URL
+    const { data } = await archiveService.uploadArchive(formData);
+
+    // Upload file to MinIO using presigned URL
+    await fetch(data.upload_url, {
+      method: "PUT",
+      body: uploadForm.value.file,
+      headers: {
+        "Content-Type": uploadForm.value.file.type,
+      },
+    });
 
     toast.add({
       severity: "success",
@@ -505,8 +676,21 @@ const handleUpload = async () => {
       detail: "考題已成功上傳",
       life: 3000,
     });
+
     showUploadDialog.value = false;
-    await fetchExams();
+    uploadForm.value = {
+      category: null,
+      subject: "",
+      professor: "",
+      filename: "",
+      type: null,
+      hasAnswers: false,
+      file: null,
+    };
+
+    if (selectedSubject.value === uploadForm.value.subject) {
+      await fetchArchives();
+    }
   } catch (error) {
     console.error("Upload error:", error);
     toast.add({
@@ -516,6 +700,10 @@ const handleUpload = async () => {
       life: 3000,
     });
   }
+};
+
+const onFileSelect = (event) => {
+  uploadForm.value.file = event.files[0];
 };
 
 onMounted(async () => {

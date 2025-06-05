@@ -11,7 +11,6 @@ AsyncSessionLocal = sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False
 )
 
-
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -49,7 +48,7 @@ async def init_db():
                     archive_type=ArchiveType.MIDTERM,
                     professor="黃凱揚",
                     has_answers=True,
-                    pdf_object_name="samples/algo_mid_2024.pdf"
+                    object_name="samples/algo_mid_2024.pdf"
                 ),
                 Archive(
                     name="演算法期末考 2024",  # Add name
@@ -58,7 +57,25 @@ async def init_db():
                     archive_type=ArchiveType.FINAL,
                     professor="黃凱揚",
                     has_answers=True,
-                    pdf_object_name="samples/algo_final_2024.pdf"
+                    object_name="samples/algo_final_2024.pdf"
+                ),
+                 Archive(
+                    name="演算法期中考 2024",
+                    course_id=1,  # 演算法
+                    academic_year=2024,
+                    archive_type=ArchiveType.OTHER,
+                    professor="黃凱揚",
+                    has_answers=False,
+                    object_name="samples/algo_mid_2024.pdf"
+                ),
+                Archive(
+                    name="演算法期末考 2024",  # Add name
+                    course_id=1,  # 演算法
+                    academic_year=2024,  # Add academic_year
+                    archive_type=ArchiveType.QUIZ,
+                    professor="黃凱揚",
+                    has_answers=True,
+                    object_name="samples/algo_final_2024.pdf"
                 ),
                 Archive(
                     name="演算法期末考 2023",  # Add name
@@ -67,7 +84,7 @@ async def init_db():
                     archive_type=ArchiveType.FINAL,
                     professor="黃凱強",
                     has_answers=True,
-                    pdf_object_name="samples/algo_final_2024.pdf"
+                    object_name="samples/algo_final_2024.pdf"
                 ),
                 Archive(
                     name="演算法期末考 2024",  # Add name
@@ -77,7 +94,7 @@ async def init_db():
                     archive_type=ArchiveType.QUIZ,
                     professor="黃凱揚",
                     has_answers=True,
-                    pdf_object_name="samples/algo_final_2024.pdf"
+                    object_name="samples/algo_final_2024.pdf"
                 ),
                 Archive(
                     name="作業系統期中考 2024",  # Add name
@@ -86,7 +103,7 @@ async def init_db():
                     archive_type=ArchiveType.MIDTERM,
                     professor="虞竹平",
                     has_answers=True,
-                    pdf_object_name="samples/os_mid_2024.pdf"
+                    object_name="samples/os_mid_2024.pdf"
                 ),
           ]
 

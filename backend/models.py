@@ -53,7 +53,7 @@ class Archive(SQLModel, table=True):
     professor: str = Field(index=True)
     has_answers: bool = False
     
-    pdf_object_name: str
+    object_name: str
     
     uploader_id: Optional[int] = Field(default=None, foreign_key="users.id")
     uploader: Optional["User"] = Relationship(back_populates="archives")

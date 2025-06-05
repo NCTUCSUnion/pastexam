@@ -85,8 +85,8 @@ def get_minio_client() -> Minio:
     if _minio_client is None:
         _minio_client = Minio(
             endpoint=settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
+            access_key=settings.MINIO_ROOT_USER,
+            secret_key=settings.MINIO_ROOT_PASSWORD,
             secure=False,
         )
         if not _minio_client.bucket_exists(settings.MINIO_BUCKET_NAME):

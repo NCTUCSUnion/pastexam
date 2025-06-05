@@ -37,24 +37,24 @@ api.interceptors.response.use(
 
 export const courseService = {
   listCourses() {
-    return api.get('/courses');
+    return api.get("/courses");
   },
 
   getCourseArchives(courseId) {
     return api.get(`/courses/${courseId}/archives`);
   },
+};
 
-  getArchiveDownloadUrl(courseId, archiveId) {
-    return api.get(
-      `/courses/${courseId}/archives/download-url?archive_id=${archiveId}`
-    );
-  },
-
-  uploadArchive(courseId, formData) {
-    return api.post(`/courses/${courseId}/archives/upload`, formData, {
+export const archiveService = {
+  uploadArchive(formData) {
+    return api.post("/archives/upload", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
+  },
+
+  getArchiveUrl(courseId, archiveId) {
+    return api.get(`/courses/${courseId}/archives/${archiveId}/url`);
   },
 };
