@@ -8,9 +8,9 @@
         <p class="text-gray-300">驗證中...</p>
       </div>
       <div v-else-if="errorMessage">
-        <Card class="bg-gray-800 border-round shadow-2">
+        <Card class="bg-gray-900 border-round shadow-2">
           <template #title>
-            <div class="text-red-400 text-xl">登入失敗</div>
+            <div class="text-red-400 text-xl mb-1">登入失敗</div>
           </template>
           <template #content>
             <p class="text-gray-300 mb-4">{{ errorMessage }}</p>
@@ -64,8 +64,6 @@ export default {
 
 <style scoped>
 .code-background {
-  background-color: #1e1e1e;
-  color: #f8f8f2;
   position: relative;
 }
 

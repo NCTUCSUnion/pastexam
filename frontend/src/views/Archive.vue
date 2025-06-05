@@ -1,6 +1,6 @@
 <template>
   <Toast position="bottom-right" />
-  <div class="flex h-full">
+  <div class="flex h-full code-background relative">
     <div class="w-80 h-full border-r border-solid surface-border p-3 shrink-0">
       <PanelMenu :model="menuItems" class="w-full" />
     </div>
@@ -981,4 +981,42 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.code-background {
+  position: relative;
+}
+
+.code-background::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><text x="20" y="30" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">{}</text><text x="170" y="80" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">for()</text><text x="60" y="150" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">if()</text><text x="200" y="200" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">while</text><text x="120" y="240" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">;</text><text x="40" y="100" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">==</text></svg>');
+  animation: scrollBackground 120s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes scrollBackground {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 300% 300%;
+  }
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  background-color: var(--surface-card);
+}
+
+.surface-border {
+  position: relative;
+  z-index: 1;
+  background-color: var(--surface-card);
+}
+</style>

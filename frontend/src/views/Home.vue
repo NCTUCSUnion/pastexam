@@ -102,7 +102,6 @@ function startTypewriter() {
 
 <style scoped>
 .code-background {
-  background-color: #1e1e1e;
   position: relative;
 }
 
