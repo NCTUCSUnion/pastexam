@@ -705,7 +705,7 @@ async function downloadArchive(archive) {
     const link = document.createElement("a");
     link.href = url;
 
-    const fileName = `${selectedSubject.value}_${archive.professor}_${archive.name}.pdf`;
+    const fileName = `${archive.year}_${selectedSubject.value}_${archive.professor}_${archive.name}.pdf`;
     link.download = fileName;
     link.style.display = "none";
 
