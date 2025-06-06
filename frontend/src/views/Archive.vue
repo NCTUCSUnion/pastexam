@@ -306,10 +306,10 @@
                       v-if="uploadForm.filename && !isFilenameValid"
                       class="p-error"
                     >
-                      名稱格式必須是小寫英文在前面，數字在後面（如：midterm1、final2、quiz3）
+                      名稱格式必須是小寫英文，如需加入數字需加在結尾（如：midterm1、final、quiz3）
                     </small>
                     <small v-else class="text-gray-500">
-                      請輸入小寫英文字母開頭，數字結尾的名稱（如：midterm1、final2、quiz3）
+                      請輸入小寫英文，如需加入數字需加在結尾（如：midterm1、final、quiz3）
                     </small>
                   </div>
 
@@ -786,7 +786,7 @@ async function downloadArchive(archive) {
 const previewLoading = ref(false);
 const previewError = ref(false);
 const showUploadPreview = ref(false);
-const uploadPreviewUrl = ref('');
+const uploadPreviewUrl = ref("");
 const uploadPreviewLoading = ref(false);
 const uploadPreviewError = ref(false);
 
@@ -843,7 +843,7 @@ const canGoToStep2 = computed(() => {
 const isFilenameValid = ref(false);
 
 function validateFilename() {
-  const regex = /^[a-z]+[0-9]+$/;
+  const regex = /^[a-z]+[0-9]*$/;
   isFilenameValid.value = regex.test(uploadForm.value.filename);
 }
 
@@ -1083,10 +1083,10 @@ function previewUploadFile() {
 
   uploadPreviewLoading.value = true;
   uploadPreviewError.value = false;
-  
+
   try {
     const fileUrl = URL.createObjectURL(
-      new Blob([uploadForm.value.file], { type: 'application/pdf' })
+      new Blob([uploadForm.value.file], { type: "application/pdf" })
     );
     uploadPreviewUrl.value = fileUrl;
     showUploadPreview.value = true;
@@ -1112,7 +1112,7 @@ function closeUploadPreview() {
   showUploadPreview.value = false;
   if (uploadPreviewUrl.value) {
     URL.revokeObjectURL(uploadPreviewUrl.value);
-    uploadPreviewUrl.value = '';
+    uploadPreviewUrl.value = "";
   }
   uploadPreviewError.value = false;
 }
