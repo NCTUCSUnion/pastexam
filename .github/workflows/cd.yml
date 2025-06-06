@@ -51,5 +51,5 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/nctucsunion/pastexam:backend_flow
-            ghcr.io/nctucsunion/pastexam:backend_flow-${{ github.sha }}
+            ghcr.io/nctucsunion/pastexam:backend
+            ghcr.io/nctucsunion/pastexam:backend-${{ github.sha }}
