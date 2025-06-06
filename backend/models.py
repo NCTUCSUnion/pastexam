@@ -31,6 +31,7 @@ class User(SQLModel, table=True):
     oauth_sub: str
     email: str
     name: Optional[str] = None
+    is_admin: bool = Field(default=False)
 
     archives: List["Archive"] = Relationship(back_populates="uploader")
 
@@ -96,6 +97,7 @@ class UserRead(BaseModel):
 
 class UserRoles(BaseModel):
     user_id: int
+    is_admin: bool = False
     
     class Config:
         from_attributes = True

@@ -28,13 +28,13 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Depends(oauth2_
             options={"verify_signature": False},
         )
         user_id: int = payload.get("uid")
+        is_admin: bool = payload.get("is_admin", False)
         if user_id is None:
             raise credentials_exception
-        return UserRoles(user_id=user_id)
+        return UserRoles(user_id=user_id, is_admin=is_admin)
     except JWTError:
         raise credentials_exception
 
-# 2. OAuth2 callback (Exchange code for token, get userinfo, and sign JWT)
 async def oauth_callback(code: str, state: str = None, stored_state: str = None):
     """
     Verify CSRF token and handle OAuth callback for NYCU OAuth

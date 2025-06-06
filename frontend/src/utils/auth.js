@@ -29,6 +29,7 @@ export function getCurrentUser() {
     id: decoded.uid,
     email: decoded.email,
     name: decoded.name,
+    is_admin: decoded.is_admin || false,
     avatar: decoded.avatar_url,
     roles: decoded.realm_roles || {},
   };

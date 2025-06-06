@@ -1,5 +1,6 @@
 <template>
   <Toast position="bottom-right" />
+  <ConfirmDialog />
   <div class="flex h-full code-background relative">
     <div
       class="w-[20vw] h-full border-r border-solid surface-border p-3 shrink-0"
@@ -57,12 +58,7 @@
 
         <div v-else>
           <div v-if="selectedSubject">
-            <Accordion
-              :value="
-                groupedArchives.length ? [groupedArchives[0].year.toString()] : []
-              "
-              multiple
-            >
+            <Accordion :value="expandedPanels" multiple>
               <AccordionPanel
                 v-for="group in groupedArchives"
                 :key="group.year"
@@ -104,7 +100,7 @@
                         </Tag>
                       </template>
                     </Column>
-                    <Column header="操作" style="width: 20%">
+                    <Column header="操作" style="width: 30%">
                       <template #body="{ data }">
                         <div class="flex gap-2.5">
                           <Button
@@ -120,6 +116,22 @@
                             size="small"
                             severity="success"
                             label="下載"
+                          />
+                          <Button
+                            v-if="canEditArchive(data)"
+                            icon="pi pi-pencil"
+                            @click="openEditDialog(data)"
+                            size="small"
+                            severity="warning"
+                            label="編輯"
+                          />
+                          <Button
+                            v-if="canDeleteArchive(data)"
+                            icon="pi pi-trash"
+                            @click="confirmDelete(data)"
+                            size="small"
+                            severity="danger"
+                            label="刪除"
                           />
                         </div>
                       </template>
@@ -488,6 +500,77 @@
             </StepPanels>
           </Stepper>
         </Dialog>
+
+        <Dialog
+          v-model:visible="showEditDialog"
+          :modal="true"
+          :draggable="false"
+          :dismissableMask="true"
+          :closeOnEscape="true"
+          header="編輯考古題資訊"
+          :style="{ width: '50vw' }"
+        >
+          <div class="flex flex-column gap-4">
+            <div class="flex flex-column gap-2">
+              <label>考古題名稱</label>
+              <InputText
+                v-model="editForm.name"
+                placeholder="輸入考古題名稱"
+                class="w-full"
+              />
+            </div>
+
+            <div class="flex flex-column gap-2">
+              <label>教授</label>
+              <Select
+                v-model="editForm.professor"
+                :options="availableProfessors"
+                optionLabel="name"
+                optionValue="code"
+                placeholder="選擇教授"
+                class="w-full"
+                filter
+                editable
+              />
+            </div>
+
+            <div class="flex flex-column gap-2">
+              <label>考試類型</label>
+              <Select
+                v-model="editForm.type"
+                :options="[
+                  { name: '期中考', value: 'midterm' },
+                  { name: '期末考', value: 'final' },
+                  { name: '小考', value: 'quiz' },
+                  { name: '其他', value: 'other' },
+                ]"
+                optionLabel="name"
+                optionValue="value"
+                placeholder="選擇考試類型"
+                class="w-full"
+              />
+            </div>
+
+            <div class="flex align-items-center gap-2">
+              <Checkbox v-model="editForm.hasAnswers" :binary="true" />
+              <label>附解答</label>
+            </div>
+          </div>
+          <div class="flex pt-6 justify-end gap-2">
+            <Button
+              label="取消"
+              icon="pi pi-times"
+              severity="secondary"
+              @click="showEditDialog = false"
+            />
+            <Button
+              label="儲存"
+              icon="pi pi-check"
+              severity="success"
+              @click="handleEdit"
+            />
+          </div>
+        </Dialog>
       </div>
     </div>
   </div>
@@ -497,9 +580,12 @@
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { courseService, archiveService } from "../services/api";
 import { useToast } from "primevue/usetoast";
+import { useConfirm } from "primevue/useconfirm";
 import PdfPreviewModal from "../components/PdfPreviewModal.vue";
+import { getCurrentUser } from "../utils/auth";
 
 const toast = useToast();
+const confirm = useConfirm();
 
 const archives = ref([]);
 const loading = ref(true);
@@ -527,6 +613,7 @@ const uploadForm = ref({
 });
 
 const uploadFormProfessors = ref([]);
+const expandedPanels = ref([]);
 
 const coursesList = ref({
   freshman: [],
@@ -995,7 +1082,6 @@ const availableSubjects = computed(() => {
 });
 
 const availableProfessors = computed(() => {
-  if (!uploadForm.value.subject) return [];
   return uploadFormProfessors.value;
 });
 
@@ -1057,7 +1143,143 @@ watch(
   }
 );
 
+watch(
+  () => groupedArchives.value,
+  (newGroups) => {
+    if (newGroups.length) {
+      // expandedPanels.value = [newGroups[0].year.toString()];
+      expandedPanels.value = newGroups
+        .slice(0, 3)
+        .map((group) => group.year.toString());
+      // expandedPanels.value = newGroups.map((group) => group.year.toString());
+    }
+  },
+  { immediate: true }
+);
+
+const isAdmin = ref(false);
+const showEditDialog = ref(false);
+const editForm = ref({
+  id: null,
+  name: "",
+  professor: "",
+  type: "",
+  hasAnswers: false,
+});
+
+const canDeleteArchive = (archive) => {
+  return isAdmin.value || archive.uploader_id === getCurrentUser()?.uid;
+};
+
+const canEditArchive = (archive) => {
+  return isAdmin.value;
+};
+
+const confirmDelete = (archive) => {
+  confirm.require({
+    message: "確定要刪除此考古題嗎？",
+    header: "確認刪除",
+    icon: "pi pi-exclamation-triangle",
+    accept: () => {
+      deleteArchive(archive);
+    },
+  });
+};
+
+const deleteArchive = async (archive) => {
+  try {
+    await archiveService.deleteArchive(selectedCourse.value, archive.id);
+    await fetchArchives();
+    toast.add({
+      severity: "success",
+      summary: "刪除成功",
+      detail: "考古題已成功刪除",
+      life: 3000,
+    });
+  } catch (error) {
+    console.error("Delete error:", error);
+    toast.add({
+      severity: "error",
+      summary: "刪除失敗",
+      detail: error.response?.data?.detail || "請稍後再試",
+      life: 3000,
+    });
+  }
+};
+
+const openEditDialog = async (archive) => {
+  try {
+    const response = await courseService.getCourseArchives(
+      selectedCourse.value
+    );
+    const archiveData = response.data;
+
+    const uniqueProfessors = new Set();
+    archiveData.forEach((archive) => {
+      if (archive.professor) uniqueProfessors.add(archive.professor);
+    });
+
+    uploadFormProfessors.value = Array.from(uniqueProfessors)
+      .sort()
+      .map((professor) => ({
+        name: professor,
+        code: professor,
+      }));
+
+    editForm.value = {
+      id: archive.id,
+      name: archive.name,
+      professor: archive.professor,
+      type: archive.type,
+      hasAnswers: archive.hasAnswers,
+    };
+
+    showEditDialog.value = true;
+  } catch (error) {
+    console.error("Error fetching professors:", error);
+    toast.add({
+      severity: "error",
+      summary: "載入失敗",
+      detail: "無法載入教授清單",
+      life: 3000,
+    });
+  }
+};
+
+const handleEdit = async () => {
+  try {
+    await archiveService.updateArchive(
+      selectedCourse.value,
+      editForm.value.id,
+      {
+        name: editForm.value.name,
+        professor: editForm.value.professor,
+        archive_type: editForm.value.type,
+        has_answers: editForm.value.hasAnswers,
+      }
+    );
+    await fetchArchives();
+    showEditDialog.value = false;
+    toast.add({
+      severity: "success",
+      summary: "更新成功",
+      detail: "考古題資訊已更新",
+      life: 3000,
+    });
+  } catch (error) {
+    console.error("Update error:", error);
+    toast.add({
+      severity: "error",
+      summary: "更新失敗",
+      detail: error.response?.data?.detail || "請稍後再試",
+      life: 3000,
+    });
+  }
+};
+
 onMounted(async () => {
+  const user = getCurrentUser();
+  isAdmin.value = user?.is_admin || false;
   await fetchCourses();
 });
 

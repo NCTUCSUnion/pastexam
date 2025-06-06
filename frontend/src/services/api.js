@@ -57,4 +57,16 @@ export const archiveService = {
   getArchiveUrl(courseId, archiveId) {
     return api.get(`/courses/${courseId}/archives/${archiveId}/url`);
   },
+
+  deleteArchive(courseId, archiveId) {
+    return api.delete(`/courses/${courseId}/archives/${archiveId}`);
+  },
+
+  updateArchive(courseId, archiveId, data) {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    return api.patch(`/courses/${courseId}/archives/${archiveId}`, formData);
+  },
 };

@@ -13,7 +13,7 @@ import os
 
 from db import get_db
 from models import (
-    User, UserRoles, Meme, MemeRead, Course, CourseCategory, CourseInfo, CoursesByCategory, Archive, ArchiveRead
+    User, UserRoles, Meme, MemeRead, Course, CourseCategory, CourseInfo, CoursesByCategory, Archive, ArchiveRead, ArchiveType
 )
 from utils import get_current_user, oauth_callback, presigned_put_url, presigned_get_url
 from utils import jwt
@@ -78,6 +78,7 @@ async def auth_callback_endpoint(
         "uid": user.id,
         "email": user.email,
         "name": user.name,
+        "is_admin": user.is_admin,
         "exp": int(datetime.now(timezone.utc).timestamp() + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
         "iat": int(datetime.now(timezone.utc).timestamp())
     }
@@ -251,3 +252,97 @@ async def upload_archive(
             "created_at": archive.created_at,
         }
     }
+
+@router.delete("/courses/{course_id}/archives/{archive_id}")
+async def delete_archive(
+    course_id: int,
+    archive_id: int,
+    current_user: UserRoles = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete an archive. Users can only delete their own uploads.
+    Admins can delete any archive.
+    """
+    query = select(Archive).where(
+        Archive.course_id == course_id,
+        Archive.id == archive_id
+    )
+    result = await db.execute(query)
+    archive = result.scalar_one_or_none()
+    
+    if not archive:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archive not found"
+        )
+
+    if not current_user.is_admin and archive.uploader_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to delete this archive"
+        )
+
+    try:
+        # Add your storage deletion logic here
+        # Example: await storage.delete_file(archive.object_name)
+        pass
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete file from storage"
+        )
+
+    await db.delete(archive)
+    await db.commit()
+    
+    return {"message": "Archive deleted successfully"}
+
+@router.patch("/courses/{course_id}/archives/{archive_id}")
+async def update_archive(
+    course_id: int,
+    archive_id: int,
+    name: str = Form(None),
+    professor: str = Form(None),
+    archive_type: ArchiveType = Form(None),
+    has_answers: bool = Form(None),
+    current_user: UserRoles = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update archive information. Only admins can update archives.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can update archives"
+        )
+
+    query = select(Archive).where(
+        Archive.course_id == course_id,
+        Archive.id == archive_id
+    )
+    result = await db.execute(query)
+    archive = result.scalar_one_or_none()
+    
+    if not archive:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archive not found"
+        )
+
+    if name is not None:
+        archive.name = name
+    if professor is not None:
+        archive.professor = professor
+    if archive_type is not None:
+        archive.archive_type = archive_type
+    if has_answers is not None:
+        archive.has_answers = has_answers
+
+    archive.updated_at = datetime.now(timezone.utc)
+    
+    await db.commit()
+    await db.refresh(archive)
+    
+    return archive
