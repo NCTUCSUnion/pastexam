@@ -1,7 +1,9 @@
 <template>
   <Toast position="bottom-right" />
   <div class="flex h-full code-background relative">
-    <div class="w-80 h-full border-r border-solid surface-border p-3 shrink-0">
+    <div
+      class="w-[20vw] h-full border-r border-solid surface-border p-3 shrink-0"
+    >
       <PanelMenu :model="menuItems" class="w-full" />
     </div>
 
@@ -344,17 +346,78 @@
 
               <StepPanel v-slot="{ activateCallback }" value="3">
                 <div class="flex flex-column gap-4">
-                  <div class="flex flex-column gap-2">
-                    <FileUpload
-                      ref="fileUpload"
-                      mode="basic"
-                      accept="application/pdf"
-                      :maxFileSize="10000000"
-                      chooseLabel="選擇 PDF 檔案"
-                      class="w-full"
-                      @select="onFileSelect"
-                    />
-                  </div>
+                  <FileUpload
+                    ref="fileUpload"
+                    accept="application/pdf"
+                    :maxFileSize="10 * 1024 * 1024"
+                    class="w-full"
+                    @select="onFileSelect"
+                    :multiple="false"
+                    :auto="false"
+                  >
+                    <template #header="{ chooseCallback }">
+                      <div
+                        class="flex justify-between items-center flex-1 gap-4"
+                      >
+                        <div class="flex gap-2">
+                          <Button
+                            @click="chooseCallback()"
+                            icon="pi pi-file-pdf"
+                            rounded
+                            outlined
+                            severity="secondary"
+                            label="選擇檔案"
+                          ></Button>
+                        </div>
+                        <div v-if="uploadForm.file" class="text-sm text-500">
+                          {{ formatFileSize(uploadForm.file.size) }} / 10MB
+                        </div>
+                      </div>
+                    </template>
+
+                    <template #content="{ files, removeFileCallback }">
+                      <div v-if="uploadForm.file" class="flex flex-col gap">
+                        <div class="p-4 surface-50 border-1 border-round">
+                          <div class="flex align-items-center gap-3">
+                            <i class="pi pi-file-pdf text-2xl"></i>
+                            <div class="flex-1">
+                              <div
+                                class="font-semibold text-overflow-ellipsis overflow-hidden"
+                              >
+                                {{ uploadForm.file.name }}
+                              </div>
+                              <div class="text-sm text-500">
+                                {{ formatFileSize(uploadForm.file.size) }}
+                              </div>
+                            </div>
+                            <Button
+                              icon="pi pi-times"
+                              @click="clearSelectedFile(removeFileCallback)"
+                              outlined
+                              rounded
+                              severity="danger"
+                              size="small"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+
+                    <template #empty>
+                      <div
+                        v-if="!uploadForm.file"
+                        class="flex align-items-center justify-content-center flex-column p-5 border-1 border-dashed border-round"
+                      >
+                        <i
+                          class="pi pi-cloud-upload border-2 border-round p-5 text-4xl text-500 mb-3"
+                        ></i>
+                        <p class="m-0 text-600">將 PDF 檔案拖放至此處以上傳</p>
+                        <p class="m-0 text-sm text-500 mt-2">
+                          僅接受 PDF 檔案，檔案大小最大 10MB
+                        </p>
+                      </div>
+                    </template>
+                  </FileUpload>
                 </div>
                 <div class="flex pt-6 justify-between">
                   <Button
@@ -435,7 +498,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { courseService, archiveService } from "../services/api";
 import { useToast } from "primevue/usetoast";
 
@@ -898,7 +961,16 @@ const handleUpload = async () => {
 };
 
 const onFileSelect = (event) => {
-  uploadForm.value.file = event.files[0];
+  const newFile = event.files[0];
+
+  if (fileUpload.value) {
+    fileUpload.value.clear();
+  }
+  uploadForm.value.file = null;
+
+  nextTick(() => {
+    uploadForm.value.file = newFile;
+  });
 };
 
 const availableSubjects = computed(() => {
@@ -979,6 +1051,24 @@ watch(
 onMounted(async () => {
   await fetchCourses();
 });
+
+function formatFileSize(bytes) {
+  if (bytes === 0) return "0 Bytes";
+
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+function clearSelectedFile(removeFileCallback) {
+  if (removeFileCallback) removeFileCallback(0);
+  uploadForm.value.file = null;
+  if (fileUpload.value) {
+    fileUpload.value.clear();
+  }
+}
 </script>
 
 <style scoped>
