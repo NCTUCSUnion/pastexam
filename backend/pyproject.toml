@@ -5,13 +5,15 @@ description = "Past Exam API"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-  "fastapi",
-  "uvicorn[standard]",
-  "sqlmodel",
-  "asyncpg",
-  "python-jose[cryptography]",
-  "httpx",
-  "minio",
-  "itsdangerous>=2.2.0",
-  "python-multipart>=0.0.20",
+    "asyncpg>=0.30.0",
+    "fastapi[standard]>=0.115.12",
+    "greenlet>=3.2.3",
+    "httpx>=0.28.1",
+    "itsdangerous>=2.2.0",
+    "minio>=7.2.15",
+    "pydantic-settings>=2.9.1",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.20",
+    "sqlmodel>=0.0.24",
+    "uvicorn[standard]>=0.34.3",
 ]

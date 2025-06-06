@@ -4,7 +4,7 @@
     <div
       class="w-[20vw] h-full border-r border-solid surface-border p-3 shrink-0"
     >
-      <PanelMenu :model="menuItems" class="w-full" />
+      <PanelMenu :model="menuItems" multiple class="w-full" />
     </div>
 
     <div class="flex-1 h-full overflow-auto">
@@ -159,7 +159,7 @@
         <PdfPreviewModal
           v-model:visible="showUploadPreview"
           :previewUrl="uploadPreviewUrl"
-          :title="uploadForm.file ? `預覽: ${uploadForm.file.name}` : '上傳前預覽'"
+          :title="uploadForm.file ? uploadForm.file.name : ''"
           :loading="uploadPreviewLoading"
           :error="uploadPreviewError"
           @hide="closeUploadPreview"

@@ -203,7 +203,6 @@ async def upload_archive(
             detail="User not found"
         )
 
-    # Course query
     query = select(Course).where(
         Course.name == subject,
         Course.category == category
@@ -232,7 +231,7 @@ async def upload_archive(
         has_answers=has_answers,
         object_name=object_name,
         academic_year=academic_year,
-        uploader_id=current_user.user_id  # Make sure current_user.user_id exists in users table
+        uploader_id=current_user.user_id
     )
     
     db.add(archive)

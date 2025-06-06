@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     MINIO_ROOT_USER: str
     MINIO_ROOT_PASSWORD: str
     MINIO_BUCKET_NAME: str
+    EXTERNAL_ENDPOINT: str
 
     class Config:
         env_file = ".env"

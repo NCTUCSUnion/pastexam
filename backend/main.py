@@ -8,13 +8,13 @@ from config import settings
 
 app = FastAPI(title="Past Exam API")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://localhost:5173"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 app.add_middleware(
     SessionMiddleware,
@@ -26,4 +26,7 @@ app.add_middleware(
 async def on_startup():
     await init_db()
 
-app.include_router(router, prefix="/api")
+app.include_router(router)
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
