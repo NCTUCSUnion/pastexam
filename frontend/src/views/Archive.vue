@@ -136,57 +136,15 @@
           </div>
         </div>
 
-        <Dialog
+        <PdfPreviewModal
           v-model:visible="showPreview"
-          :style="{ width: '90vw', height: '90vh' }"
-          :contentStyle="{ height: '80vh' }"
-          :modal="true"
-          :draggable="false"
-          :dismissableMask="true"
-          :closeOnEscape="true"
-          :maximizable="true"
+          :previewUrl="selectedArchive?.previewUrl"
+          :title="selectedArchive?.name || ''"
+          :loading="previewLoading"
+          :error="previewError"
           @hide="closePreview"
+          @error="handlePreviewError"
         >
-          <template #header>
-            <div class="flex align-items-center gap-2">
-              <i class="pi pi-file-pdf text-2xl" />
-              <span class="text-xl">{{ selectedArchive?.name }}</span>
-            </div>
-          </template>
-
-          <div class="w-full h-full flex flex-column">
-            <div
-              v-if="previewLoading"
-              class="flex-1 flex align-items-center justify-content-center"
-            >
-              <ProgressSpinner />
-            </div>
-
-            <div
-              v-else-if="previewError"
-              class="flex-1 flex flex-column align-items-center justify-content-center gap-4"
-            >
-              <i class="pi pi-exclamation-circle text-6xl text-red-500" />
-              <div class="text-xl">無法載入預覽</div>
-              <div class="text-sm text-gray-600">請嘗試下載檔案查看</div>
-            </div>
-
-            <div
-              v-else-if="selectedArchive?.previewUrl"
-              class="flex-1 relative"
-            >
-              <iframe
-                :src="selectedArchive.previewUrl"
-                class="absolute top-0 left-0 w-full h-full"
-                frameborder="0"
-                @load="handlePreviewLoad"
-                @error="handlePreviewError"
-                allow="fullscreen"
-                referrerpolicy="no-referrer"
-              />
-            </div>
-          </div>
-
           <template #footer>
             <Button
               v-if="selectedArchive"
@@ -196,7 +154,17 @@
               severity="success"
             />
           </template>
-        </Dialog>
+        </PdfPreviewModal>
+
+        <PdfPreviewModal
+          v-model:visible="showUploadPreview"
+          :previewUrl="uploadPreviewUrl"
+          :title="uploadForm.file ? `預覽: ${uploadForm.file.name}` : '上傳前預覽'"
+          :loading="uploadPreviewLoading"
+          :error="uploadPreviewError"
+          @hide="closeUploadPreview"
+          @error="handleUploadPreviewError"
+        />
 
         <Dialog
           v-model:visible="showUploadDialog"
@@ -313,13 +281,36 @@
 
                   <div class="flex flex-column gap-2">
                     <label for="filename-input">考試名稱</label>
-                    <InputText
-                      id="filename-input"
-                      v-model="uploadForm.filename"
-                      placeholder="輸入考試名稱（如：midterm1）"
-                      class="w-full"
-                      :maxlength="30"
-                    />
+                    <div class="relative w-full">
+                      <InputText
+                        id="filename-input"
+                        v-model="uploadForm.filename"
+                        placeholder="輸入考試名稱"
+                        class="w-full pr-8"
+                        :class="{
+                          'p-invalid': uploadForm.filename && !isFilenameValid,
+                        }"
+                        :maxlength="30"
+                        @input="validateFilename"
+                      />
+                      <i
+                        v-if="isFilenameValid && uploadForm.filename"
+                        class="pi pi-check text-green-500 absolute right-3 top-1/2 -mt-2"
+                      />
+                      <i
+                        v-else-if="uploadForm.filename"
+                        class="pi pi-times text-red-500 absolute right-3 top-1/2 -mt-2"
+                      />
+                    </div>
+                    <small
+                      v-if="uploadForm.filename && !isFilenameValid"
+                      class="p-error"
+                    >
+                      名稱格式必須是小寫英文在前面，數字在後面（如：midterm1、final2、quiz3）
+                    </small>
+                    <small v-else class="text-gray-500">
+                      請輸入小寫英文字母開頭，數字結尾的名稱（如：midterm1、final2、quiz3）
+                    </small>
                   </div>
 
                   <div class="flex align-items-center gap-2">
@@ -442,33 +433,29 @@
                     class="flex flex-column gap-2 p-3 surface-ground border-round"
                   >
                     <div>
-                      <strong>課程類別:</strong>
+                      <strong>課程類別：</strong>
                       {{ getCategoryName(uploadForm.category) }}
                     </div>
                     <div>
-                      <strong>科目名稱:</strong> {{ uploadForm.subject }}
+                      <strong>科目名稱：</strong> {{ uploadForm.subject }}
                     </div>
                     <div>
-                      <strong>授課教授:</strong> {{ uploadForm.professor }}
+                      <strong>授課教授：</strong> {{ uploadForm.professor }}
                     </div>
                     <div>
-                      <strong>考試年份:</strong>
+                      <strong>考試年份：</strong>
                       {{ uploadForm.academicYear?.getFullYear() }}
                     </div>
                     <div>
-                      <strong>考試類型:</strong>
+                      <strong>考試類型：</strong>
                       {{ getTypeName(uploadForm.type) }}
                     </div>
                     <div>
-                      <strong>考試名稱:</strong> {{ uploadForm.filename }}
+                      <strong>考試名稱：</strong> {{ uploadForm.filename }}
                     </div>
                     <div>
-                      <strong>是否附解答:</strong>
+                      <strong>是否附解答：</strong>
                       {{ uploadForm.hasAnswers ? "是" : "否" }}
-                    </div>
-                    <div>
-                      <strong>選擇檔案:</strong>
-                      {{ uploadForm.file?.name }}
                     </div>
                   </div>
                 </div>
@@ -479,14 +466,22 @@
                     severity="secondary"
                     @click="activateCallback('3')"
                   />
-                  <Button
-                    label="上傳"
-                    icon="pi pi-upload"
-                    severity="success"
-                    @click="handleUpload"
-                    :loading="uploading"
-                    :disabled="!canUpload"
-                  />
+                  <div class="flex gap-2.5">
+                    <Button
+                      icon="pi pi-eye"
+                      label="預覽"
+                      severity="secondary"
+                      @click="previewUploadFile"
+                    />
+                    <Button
+                      label="上傳"
+                      icon="pi pi-upload"
+                      severity="success"
+                      @click="handleUpload"
+                      :loading="uploading"
+                      :disabled="!canUpload"
+                    />
+                  </div>
                 </div>
               </StepPanel>
             </StepPanels>
@@ -501,6 +496,7 @@
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { courseService, archiveService } from "../services/api";
 import { useToast } from "primevue/usetoast";
+import PdfPreviewModal from "../components/PdfPreviewModal.vue";
 
 const toast = useToast();
 
@@ -789,6 +785,10 @@ async function downloadArchive(archive) {
 
 const previewLoading = ref(false);
 const previewError = ref(false);
+const showUploadPreview = ref(false);
+const uploadPreviewUrl = ref('');
+const uploadPreviewLoading = ref(false);
+const uploadPreviewError = ref(false);
 
 async function previewArchive(archive) {
   try {
@@ -840,11 +840,19 @@ const canGoToStep2 = computed(() => {
   );
 });
 
+const isFilenameValid = ref(false);
+
+function validateFilename() {
+  const regex = /^[a-z]+[0-9]+$/;
+  isFilenameValid.value = regex.test(uploadForm.value.filename);
+}
+
 const canGoToStep3 = computed(() => {
   return (
     uploadForm.value.academicYear &&
     uploadForm.value.type &&
-    uploadForm.value.filename
+    uploadForm.value.filename &&
+    isFilenameValid.value
   );
 });
 
@@ -944,7 +952,7 @@ const handleUpload = async () => {
     toast.add({
       severity: "success",
       summary: "上傳成功",
-      detail: "考題已成功上傳",
+      detail: "考古題已成功上傳",
       life: 3000,
     });
   } catch (error) {
@@ -1068,6 +1076,45 @@ function clearSelectedFile(removeFileCallback) {
   if (fileUpload.value) {
     fileUpload.value.clear();
   }
+}
+
+function previewUploadFile() {
+  if (!uploadForm.value.file) return;
+
+  uploadPreviewLoading.value = true;
+  uploadPreviewError.value = false;
+  
+  try {
+    const fileUrl = URL.createObjectURL(
+      new Blob([uploadForm.value.file], { type: 'application/pdf' })
+    );
+    uploadPreviewUrl.value = fileUrl;
+    showUploadPreview.value = true;
+  } catch (error) {
+    console.error("Preview error:", error);
+    uploadPreviewError.value = true;
+    toast.add({
+      severity: "error",
+      summary: "預覽失敗",
+      detail: "無法預覽檔案",
+      life: 3000,
+    });
+  } finally {
+    uploadPreviewLoading.value = false;
+  }
+}
+
+function handleUploadPreviewError() {
+  uploadPreviewError.value = true;
+}
+
+function closeUploadPreview() {
+  showUploadPreview.value = false;
+  if (uploadPreviewUrl.value) {
+    URL.revokeObjectURL(uploadPreviewUrl.value);
+    uploadPreviewUrl.value = '';
+  }
+  uploadPreviewError.value = false;
 }
 </script>
 
