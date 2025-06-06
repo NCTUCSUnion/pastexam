@@ -22,7 +22,7 @@
         v-if="loading"
         class="flex-1 flex align-items-center justify-content-center"
       >
-        <ProgressSpinner />
+        <ProgressSpinner strokeWidth="4" />
       </div>
 
       <div

@@ -13,7 +13,12 @@
         </h1>
       </div>
       <div class="code-container mt-5 flex align-items-start relative">
-        <pre
+        <template v-if="isLoading">
+          <div class="w-full flex flex-column align-items-center justify-content-center gap-3 bg-gray-900 p-4 border-round">
+            <ProgressSpinner strokeWidth="4" />
+          </div>
+        </template>
+        <pre v-else
           class="font-mono text-sm sm:text-base md:text-lg whitespace-pre-wrap text-left bg-gray-900 p-4 border-round shadow-2 m-0 w-full overflow-hidden opacity-80"
         ><code class="typewriter" v-html="highlightedCode"></code></pre>
 
@@ -38,6 +43,7 @@ const highlightedCode = ref("");
 const selectedMeme = ref({ code: "", language: "" });
 const fullText = computed(() => selectedMeme.value.code);
 const language = computed(() => selectedMeme.value.language);
+const isLoading = ref(true);
 
 let charIndex = 0;
 let typingInterval;
@@ -47,6 +53,7 @@ onMounted(async () => {
 });
 
 async function fetchRandomMeme() {
+  isLoading.value = true;
   try {
     const response = await axios.get(
       `${import.meta.env.VITE_API_BASE_URL}/meme`
@@ -71,6 +78,8 @@ async function fetchRandomMeme() {
       language: "javascript",
     };
     startTypewriter();
+  } finally {
+    isLoading.value = false;
   }
 }
 
