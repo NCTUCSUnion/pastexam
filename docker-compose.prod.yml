@@ -2,6 +2,7 @@ services:
   frontend:
     image: ghcr.io/nctucsunion/pastexam:frontend
     container_name: frontend
+    restart: always
     ports:
       - "5173:80"
     networks:
@@ -10,6 +11,7 @@ services:
   backend:
     image: ghcr.io/nctucsunion/pastexam:backend
     container_name: backend
+    restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -23,6 +25,7 @@ services:
   db:
     image: postgres:15-alpine
     container_name: postgres
+    restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -42,6 +45,7 @@ services:
   minio:
     image: quay.io/minio/minio:RELEASE.2025-05-24T17-08-30Z
     container_name: minio
+    restart: always
     command: server /data --console-address ":9001"
     # ports:
     #   - "9000:9000"
@@ -56,13 +60,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
     networks:
       - app_network
 
   nginx:
     image: nginx:latest
     container_name: nginx
+    restart: always
     ports:
       - "8080:8080"
     volumes:

@@ -8,23 +8,27 @@
       </template>
       <template #end>
         <div v-if="isAuthenticated" class="flex align-items-center gap-2">
-          <span class="user-name flex align-items-center text-gray-300">{{
+          <span class="user-name flex align-items-center text-gray-300 mr-2">{{
             userData?.name || "User"
           }}</span>
           <Button
             icon="pi pi-sign-out"
+            label="登出"
             @click="handleLogout"
-            text
-            rounded
+            severity="secondary"
+            size="small"
+            outlined
             aria-label="Logout"
           />
         </div>
         <Button
           v-else
           icon="pi pi-sign-in"
+          label="登入"
           @click="openLoginDialog"
-          text
-          rounded
+          severity="secondary"
+          size="small"
+          outlined
           aria-label="Login"
         />
       </template>
@@ -32,7 +36,7 @@
 
     <Dialog
       v-model:visible="loginVisible"
-      header="Login"
+      header="登入"
       :modal="true"
       :draggable="false"
       :dismissableMask="true"
@@ -43,7 +47,7 @@
         <div class="field mt-2 w-full">
           <FloatLabel variant="on" class="w-full">
             <InputText id="username" v-model="username" class="w-full" />
-            <label for="username">Username</label>
+            <label for="username">帳號</label>
           </FloatLabel>
         </div>
         <div class="field mt-3 w-full">
@@ -56,11 +60,11 @@
               class="w-full"
               inputClass="w-full"
             />
-            <label for="password">Password</label>
+            <label for="password">密碼</label>
           </FloatLabel>
         </div>
         <div class="field mt-4">
-          <Button label="Login" type="submit" class="p-button-primary w-full" />
+          <Button label="登入" type="submit" class="p-button-primary w-full" />
         </div>
 
         <div class="field mt-3">

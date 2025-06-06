@@ -59,8 +59,9 @@
           <div v-if="selectedSubject">
             <Accordion
               :value="
-                groupedArchives.length ? groupedArchives[0].year.toString() : ''
+                groupedArchives.length ? [groupedArchives[0].year.toString()] : []
               "
+              multiple
             >
               <AccordionPanel
                 v-for="group in groupedArchives"
