@@ -14,15 +14,25 @@
       </div>
       <div class="code-container mt-5 flex align-items-start relative">
         <template v-if="isLoading">
-          <div class="w-full flex flex-column align-items-center justify-content-center gap-3 bg-gray-900 p-4 border-round">
-            <ProgressSpinner strokeWidth="4" />
+          <div
+            class="w-full font-mono text-sm sm:text-base md:text-lg text-left bg-gray-900 p-4 border-round shadow-2 m-0 opacity-80"
+          >
+            <div class="code-compilation">
+              <div class="compilation-line">> Initializing source...</div>
+              <div class="compilation-line">> Parsing syntax...</div>
+              <div class="compilation-line">
+                > Compiling code<span class="compilation-cursor"></span>
+              </div>
+            </div>
           </div>
         </template>
-        <pre v-else
+        <pre
+          v-else
           class="font-mono text-sm sm:text-base md:text-lg whitespace-pre-wrap text-left bg-gray-900 p-4 border-round shadow-2 m-0 w-full overflow-hidden opacity-80"
         ><code class="typewriter" v-html="highlightedCode"></code></pre>
 
         <div
+          v-if="!isLoading"
           class="language-badge absolute top-0 right-0 bg-white-alpha-10 text-white-alpha-70 py-1 px-2 text-xs uppercase tracking-wider"
         >
           {{ language }}
@@ -161,10 +171,10 @@ function startTypewriter() {
 @keyframes blink {
   from,
   to {
-    border-color: transparent;
+    opacity: 0;
   }
   50% {
-    border-color: rgba(248, 248, 242, 0.7);
+    opacity: 1;
   }
 }
 
@@ -182,5 +192,30 @@ function startTypewriter() {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.code-compilation {
+  font-family: monospace;
+  text-align: left;
+  width: 100%;
+  color: #a0a0a0;
+}
+
+.compilation-line {
+  padding: 3px 0;
+}
+
+.compilation-line:last-child {
+  color: #e0e0e0;
+}
+
+.compilation-cursor {
+  display: inline-block;
+  height: 1.2em;
+  border-right: 3px solid rgba(248, 248, 242, 0.7);
+  animation: blink 0.75s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  position: relative;
 }
 </style>
