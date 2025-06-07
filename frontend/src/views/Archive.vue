@@ -794,6 +794,7 @@ async function fetchArchives() {
       professor: archive.professor,
       hasAnswers: archive.has_answers,
       subject: selectedSubject.value,
+      uploader_id: archive.uploader_id,
     }));
 
     const uniqueYears = new Set();
@@ -1168,7 +1169,13 @@ const editForm = ref({
 });
 
 const canDeleteArchive = (archive) => {
-  return isAdmin.value || archive.uploader_id === getCurrentUser()?.uid;
+  const currentUser = getCurrentUser();
+  if (!currentUser) return false;
+
+  return (
+    isAdmin.value ||
+    (archive.uploader_id && archive.uploader_id === currentUser.id)
+  );
 };
 
 const canEditArchive = (archive) => {

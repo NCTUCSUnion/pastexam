@@ -136,6 +136,7 @@ class ArchiveRead(BaseModel):
     professor: str
     has_answers: bool
     created_at: datetime
+    uploader_id: Optional[int] = None
     
     class Config:
         from_attributes = True
