@@ -40,4 +40,4 @@ SQLALCHEMY_DATABASE_URL = (
     f"{settings.DB_USER}:{settings.DB_PASSWORD}@"
     f"{settings.DB_HOST}:{settings.DB_PORT}/"
     f"{settings.DB_NAME}"
-)
+) 

@@ -1,4 +1,3 @@
-# models.py
 from typing import Optional, List, Dict
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
@@ -145,4 +144,4 @@ class ArchiveRead(BaseModel):
     uploader_id: Optional[int] = None
     
     class Config:
-        from_attributes = True
+        from_attributes = True 

@@ -1,21 +1,29 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
-from sqlmodel import select, func
+from sqlmodel import select, func, SQLModel
 
-from config import SQLALCHEMY_DATABASE_URL
-from models import SQLModel, User, Archive, Meme, Course, CourseCategory, ArchiveType
+from app.core.config import settings
+from app.models.models import User, Archive, Meme, Course, CourseCategory, ArchiveType
 
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True, future=True)
+engine = create_async_engine(
+    f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}",
+    echo=True,
+    future=True
+)
 AsyncSessionLocal = sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False
 )
 
 async def init_db():
+    # First, create all tables
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.commit()
 
-    async with AsyncSession(engine) as session:
+    # Then, check and add initial data
+    async with AsyncSessionLocal() as session:
+        # Check and add initial courses
         result = await session.execute(select(func.count()).select_from(Course))
         count = result.scalar()
         if count == 0:
@@ -33,10 +41,10 @@ async def init_db():
                     category=CourseCategory.SOPHOMORE,
                 ),
             ]
-        
             session.add_all(initial_courses)
             await session.commit()
 
+        # Check and add initial memes
         result = await session.execute(select(func.count()).select_from(Meme))
         count = result.scalar()
         if count == 0:
@@ -252,10 +260,9 @@ COMMIT;""",
             session.add_all(initial_memes)
             await session.commit()
 
-
-async def get_db():
+async def get_session():
     """
     Database dependency for FastAPI endpoints.
     """
     async with AsyncSessionLocal() as session:
-        yield session
+        yield session 
