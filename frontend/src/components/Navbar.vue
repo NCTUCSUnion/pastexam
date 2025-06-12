@@ -35,11 +35,10 @@
     </Menubar>
 
     <Dialog
-      v-model="loginVisible"
+      v-model:visible="loginVisible"
       header="登入"
       :modal="true"
       :draggable="false"
-      :dismissableMask="true"
       :closeOnEscape="true"
       :style="{ width: '350px' }"
     >

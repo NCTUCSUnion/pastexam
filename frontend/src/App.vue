@@ -1,6 +1,6 @@
 <template>
   <div id="app" class="flex flex-column">
-    <Navbar class="navbar" />
+    <Navbar class="navbar px-1" />
     <div class="content-container">
       <router-view />
     </div>
@@ -22,7 +22,9 @@ export default {
   --navbar-height: 60px;
 }
 
-html, body, #app {
+html,
+body,
+#app {
   height: 100%;
   margin: 0;
   padding: 0;
