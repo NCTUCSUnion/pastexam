@@ -4,7 +4,6 @@
     @update:visible="$emit('update:modelValue', $event)"
     :modal="true"
     :draggable="false"
-    :dismissableMask="true"
     :closeOnEscape="true"
     header="上傳考古題"
     :style="{ width: '50vw' }"

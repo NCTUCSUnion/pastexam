@@ -5,7 +5,6 @@
     :contentStyle="{ height: '80vh' }"
     :modal="true"
     :draggable="false"
-    :dismissableMask="true"
     :closeOnEscape="true"
     :maximizable="true"
     @hide="onHide"

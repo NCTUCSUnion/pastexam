@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from enum import Enum as PyEnum
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import BaseModel, Field as PydanticField, computed_field
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, Integer, ForeignKey, Date, String, Boolean
 
 # --- Enums for Course and Archive Structure ---
 
@@ -74,6 +74,12 @@ class Archive(SQLModel, table=True):
             DateTime(timezone=True),
             default=lambda: datetime.now(timezone.utc),
             nullable=False
+        )
+    )
+    deleted_at: Optional[datetime] = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=True
         )
     )
 

@@ -223,7 +223,6 @@
             v-model:visible="showEditDialog"
             :modal="true"
             :draggable="false"
-            :dismissableMask="true"
             :closeOnEscape="true"
             header="編輯考古題資訊"
             :style="{ width: '50vw' }"
@@ -924,7 +923,7 @@ const canDeleteArchive = (archive) => {
 
   return (
     isAdmin.value ||
-    (archive.uploader_id && archive.uploader_id === currentUser.uid)
+    (archive.uploader_id && archive.uploader_id === currentUser.id)
   );
 };
 

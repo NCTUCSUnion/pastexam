@@ -143,7 +143,10 @@ async def get_course_archives(
             detail=f"Course with id {course_id} not found"
         )
 
-    query = select(Archive).where(Archive.course_id == course_id).order_by(Archive.created_at.desc())
+    query = select(Archive).where(
+        Archive.course_id == course_id,
+        Archive.deleted_at.is_(None)
+    ).order_by(Archive.created_at.desc())
     result = await db.execute(query)
     archives = result.scalars().all()
     
@@ -161,7 +164,8 @@ async def get_archive_url(
     """
     query = select(Archive).where(
         Archive.course_id == course_id,
-        Archive.id == archive_id
+        Archive.id == archive_id,
+        Archive.deleted_at.is_(None)
     )
     result = await db.execute(query)
     archive = result.scalar_one_or_none()
@@ -261,12 +265,13 @@ async def delete_archive(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Delete an archive. Users can only delete their own uploads.
+    Soft delete an archive. Users can only delete their own uploads.
     Admins can delete any archive.
     """
     query = select(Archive).where(
         Archive.course_id == course_id,
-        Archive.id == archive_id
+        Archive.id == archive_id,
+        Archive.deleted_at.is_(None)
     )
     result = await db.execute(query)
     archive = result.scalar_one_or_none()
@@ -283,17 +288,7 @@ async def delete_archive(
             detail="You don't have permission to delete this archive"
         )
 
-    try:
-        # Add your storage deletion logic here
-        # Example: await storage.delete_file(archive.object_name)
-        pass
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete file from storage"
-        )
-
-    await db.delete(archive)
+    archive.deleted_at = datetime.now(timezone.utc)
     await db.commit()
     
     return {"message": "Archive deleted successfully"}
@@ -320,7 +315,8 @@ async def update_archive(
 
     query = select(Archive).where(
         Archive.course_id == course_id,
-        Archive.id == archive_id
+        Archive.id == archive_id,
+        Archive.deleted_at.is_(None)
     )
     result = await db.execute(query)
     archive = result.scalar_one_or_none()
