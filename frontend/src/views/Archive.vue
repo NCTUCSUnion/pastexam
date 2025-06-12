@@ -2,7 +2,7 @@
   <div class="h-full">
     <Toast position="bottom-left" />
     <ConfirmDialog />
-    <div class="flex h-full code-background relative">
+    <div class="flex h-full relative">
       <Drawer
         v-model:visible="drawerVisible"
         :baseZIndex="1000"
@@ -222,9 +222,21 @@
             </div>
             <div
               v-else
-              class="flex align-items-center justify-content-center mt-4"
+              class="flex flex-column align-items-center justify-content-center mt-4 gap-3"
             >
-              請從左側選單選擇科目
+              <i
+                class="pi pi-book text-6xl"
+                style="color: var(--text-secondary)"
+              ></i>
+              <div
+                class="text-xl font-medium"
+                style="color: var(--text-secondary)"
+              >
+                請從左側選單選擇科目
+              </div>
+              <div class="text-sm" style="color: var(--text-secondary)">
+                選擇課程後即可瀏覽相關考古題
+              </div>
             </div>
           </div>
 
@@ -346,9 +358,12 @@ import { useConfirm } from "primevue/useconfirm";
 import PdfPreviewModal from "../components/PdfPreviewModal.vue";
 import UploadArchiveDialog from "../components/UploadArchiveDialog.vue";
 import { getCurrentUser } from "../utils/auth";
+import { useTheme } from "../utils/useTheme";
 
 const toast = useToast();
 const confirm = useConfirm();
+
+const { isDarkTheme } = useTheme();
 
 const archives = ref([]);
 const loading = ref(true);
@@ -1091,6 +1106,10 @@ onMounted(async () => {
   await fetchCourses();
 });
 
+watch(isDarkTheme, () => {
+  // Remove setBg call
+});
+
 function formatFileSize(bytes) {
   if (bytes === 0) return "0 Bytes";
 
@@ -1188,33 +1207,6 @@ function getCategorySeverity(categoryLabel) {
 </script>
 
 <style scoped>
-.code-background {
-  position: relative;
-  height: 100%;
-}
-
-.code-background::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><text x="20" y="30" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">{}</text><text x="170" y="80" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">for()</text><text x="60" y="150" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">if()</text><text x="200" y="200" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">while</text><text x="120" y="240" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">;</text><text x="40" y="100" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">==</text></svg>');
-  animation: scrollBackground 120s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@keyframes scrollBackground {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 300% 300%;
-  }
-}
-
 .card {
   position: relative;
   z-index: 1;
@@ -1231,6 +1223,7 @@ function getCategorySeverity(categoryLabel) {
 :deep(.p-drawer) {
   padding: 0;
   background-color: var(--bg-primary);
+  z-index: 2;
 }
 
 :deep(.p-drawer-header) {

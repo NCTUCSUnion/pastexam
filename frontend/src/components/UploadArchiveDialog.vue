@@ -325,6 +325,7 @@ import { ref, computed, watch, nextTick } from "vue";
 import { useToast } from "primevue/usetoast";
 import { courseService, archiveService } from "../services/api";
 import PdfPreviewModal from "./PdfPreviewModal.vue";
+import { PDFDocument } from "pdf-lib";
 
 const props = defineProps({
   modelValue: {
@@ -499,8 +500,29 @@ const handleUpload = async () => {
   try {
     uploading.value = true;
 
+    // Remove PDF metadata
+    const fileArrayBuffer = await form.value.file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(fileArrayBuffer);
+
+    // Clear all metadata
+    pdfDoc.setTitle("");
+    pdfDoc.setAuthor("");
+    pdfDoc.setSubject("");
+    pdfDoc.setKeywords([]);
+    pdfDoc.setProducer("");
+    pdfDoc.setCreator("");
+    pdfDoc.setCreationDate(new Date());
+    pdfDoc.setModificationDate(new Date());
+
+    // Convert back to blob
+    const pdfBytes = await pdfDoc.save();
+    const cleanFile = new Blob([pdfBytes], { type: "application/pdf" });
+    const cleanFileWithName = new File([cleanFile], form.value.file.name, {
+      type: "application/pdf",
+    });
+
     const formData = new FormData();
-    formData.append("file", form.value.file);
+    formData.append("file", cleanFileWithName);
     formData.append("subject", form.value.subject);
     formData.append("category", form.value.category);
     formData.append("professor", form.value.professor);
@@ -512,7 +534,7 @@ const handleUpload = async () => {
 
     const { data } = await archiveService.uploadArchive(formData);
 
-    await uploadWithProgress(data.upload_url, form.value.file);
+    await uploadWithProgress(data.upload_url, cleanFileWithName);
 
     if (fileUpload.value) {
       fileUpload.value.clear();

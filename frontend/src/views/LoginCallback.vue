@@ -33,6 +33,9 @@
 </template>
 
 <script>
+import { useTheme } from "../utils/useTheme";
+import { getCodeBgSvg } from "../utils/svgBg";
+
 export default {
   data() {
     return {
@@ -40,12 +43,25 @@ export default {
       errorMessage: "",
     };
   },
+  setup() {
+    const { isDarkTheme } = useTheme();
+    return {
+      isDarkTheme,
+    };
+  },
   methods: {
     goToHome() {
       this.$router.push("/");
     },
+    setBg() {
+      const el = document.querySelector(".code-background");
+      if (el) {
+        el.style.setProperty("background-image", getCodeBgSvg());
+      }
+    },
   },
   async mounted() {
+    this.setBg();
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get("token");
@@ -64,6 +80,11 @@ export default {
       this.loading = false;
     }
   },
+  watch: {
+    isDarkTheme() {
+      this.setBg();
+    },
+  },
 };
 </script>
 
@@ -79,7 +100,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><text x="20" y="30" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">{}</text><text x="170" y="80" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">for()</text><text x="60" y="150" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">if()</text><text x="200" y="200" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">while</text><text x="120" y="240" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">;</text><text x="40" y="100" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">==</text></svg>');
+  /* background-image is set dynamically */
   animation: scrollBackground 120s linear infinite;
   pointer-events: none;
   z-index: 0;
