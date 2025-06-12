@@ -1,6 +1,6 @@
 <template>
   <div id="app" class="flex flex-column">
-    <Navbar class="navbar px-1" />
+    <Navbar class="navbar px-1" @toggle-drawer="toggleDrawer" />
     <div class="content-container">
       <router-view />
     </div>
@@ -9,10 +9,23 @@
 
 <script>
 import Navbar from "./components/Navbar.vue";
+import { ref, provide } from "vue";
 
 export default {
   components: {
     Navbar,
+  },
+  setup() {
+    const drawerVisible = ref(true);
+    provide("drawerVisible", drawerVisible);
+
+    const toggleDrawer = () => {
+      drawerVisible.value = !drawerVisible.value;
+    };
+
+    return {
+      toggleDrawer,
+    };
   },
 };
 </script>

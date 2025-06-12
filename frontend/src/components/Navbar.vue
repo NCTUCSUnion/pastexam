@@ -2,6 +2,15 @@
   <div class="card">
     <Menubar :model="items">
       <template #start>
+        <Button
+          v-if="$route.path === '/archive'"
+          icon="pi pi-bars"
+          severity="secondary"
+          size="small"
+          outlined
+          class="mr-2"
+          @click="$emit('toggle-drawer')"
+        />
         <span class="font-bold text-xl pl-2 title-text"
           >交大資工考古題系統</span
         >
@@ -35,11 +44,11 @@
             aria-label="Login"
           />
           <Button
-            icon="pi pi-moon"
-            class="p-button-text"
+            :icon="isDarkTheme ? 'pi pi-moon' : 'pi pi-sun'"
+            severity="secondary"
             size="small"
+            outlined
             @click="toggleTheme"
-            :class="{ 'p-button-secondary': isDarkTheme }"
           />
         </div>
       </template>

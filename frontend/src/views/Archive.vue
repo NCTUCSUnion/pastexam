@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full">
+  <div class="h-full" ref="archiveView">
     <Toast position="bottom-left" />
     <ConfirmDialog />
     <div class="flex h-full relative">
@@ -80,12 +80,6 @@
           <Toolbar class="m-3">
             <template #start>
               <div class="flex flex-wrap gap-3 w-full">
-                <Button
-                  icon="pi pi-bars"
-                  text
-                  rounded
-                  @click="drawerVisible = true"
-                />
                 <Select
                   v-model="filters.year"
                   :options="years"
@@ -351,7 +345,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick, inject } from "vue";
 import { courseService, archiveService } from "../services/api";
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
@@ -359,11 +353,15 @@ import PdfPreviewModal from "../components/PdfPreviewModal.vue";
 import UploadArchiveDialog from "../components/UploadArchiveDialog.vue";
 import { getCurrentUser } from "../utils/auth";
 import { useTheme } from "../utils/useTheme";
+import { useRoute } from "vue-router";
 
 const toast = useToast();
 const confirm = useConfirm();
+const route = useRoute();
 
 const { isDarkTheme } = useTheme();
+
+const drawerVisible = inject("drawerVisible");
 
 const archives = ref([]);
 const loading = ref(true);
@@ -425,7 +423,6 @@ const years = ref([]);
 const professors = ref([]);
 const archiveTypes = ref([]);
 
-const drawerVisible = ref(true);
 const searchQuery = ref("");
 
 const menuItems = computed(() => {
@@ -1173,6 +1170,17 @@ watch(selectedSubject, (newValue) => {
     drawerVisible.value = false;
   }
 });
+
+// Watch for route changes to show drawer when entering archive page
+watch(
+  () => route.path,
+  (newPath) => {
+    if (newPath === "/archive" && !selectedSubject.value) {
+      drawerVisible.value = true;
+    }
+  },
+  { immediate: true }
+);
 
 async function handleUploadSuccess() {
   await fetchCourses();
