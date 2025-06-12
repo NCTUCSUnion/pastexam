@@ -7,11 +7,15 @@
         >
       </template>
       <template #end>
-        <div v-if="isAuthenticated" class="flex align-items-center gap-2">
-          <span class="user-name flex align-items-center text-gray-300 mr-2">{{
-            userData?.name || "User"
-          }}</span>
+        <div class="flex align-items-center gap-2">
+          <span
+            v-if="isAuthenticated"
+            class="user-name flex align-items-center mr-2"
+            :style="{ color: 'var(--text-secondary)' }"
+            >{{ userData?.name || "User" }}</span
+          >
           <Button
+            v-if="isAuthenticated"
             icon="pi pi-sign-out"
             label="登出"
             @click="handleLogout"
@@ -20,17 +24,24 @@
             outlined
             aria-label="Logout"
           />
+          <Button
+            v-else
+            icon="pi pi-sign-in"
+            label="登入"
+            @click="openLoginDialog"
+            severity="secondary"
+            size="small"
+            outlined
+            aria-label="Login"
+          />
+          <Button
+            icon="pi pi-moon"
+            class="p-button-text"
+            size="small"
+            @click="toggleTheme"
+            :class="{ 'p-button-secondary': isDarkTheme }"
+          />
         </div>
-        <Button
-          v-else
-          icon="pi pi-sign-in"
-          label="登入"
-          @click="openLoginDialog"
-          severity="secondary"
-          size="small"
-          outlined
-          aria-label="Login"
-        />
       </template>
     </Menubar>
 
@@ -87,6 +98,7 @@
 
 <script>
 import { getCurrentUser, isAuthenticated } from "../utils/auth.js";
+import { useTheme } from "../utils/useTheme";
 
 export default {
   data() {
@@ -97,6 +109,13 @@ export default {
       password: "",
       isAuthenticated: false,
       userData: null,
+    };
+  },
+  setup() {
+    const { isDarkTheme, toggleTheme } = useTheme();
+    return {
+      isDarkTheme,
+      toggleTheme,
     };
   },
   mounted() {
@@ -153,7 +172,11 @@ export default {
 }
 
 .title-text {
-  background: linear-gradient(to right, #a2a9b0, #d5d9e0);
+  background: linear-gradient(
+    to right,
+    var(--title-gradient-start),
+    var(--title-gradient-end)
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -164,6 +187,7 @@ export default {
   height: var(--navbar-height);
   display: flex;
   align-items: center;
+  background-color: var(--bg-primary);
 }
 
 .user-name {

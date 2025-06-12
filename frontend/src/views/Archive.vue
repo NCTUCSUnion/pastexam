@@ -7,13 +7,20 @@
         v-model:visible="drawerVisible"
         :baseZIndex="1000"
         class="w-[20vw]"
+        :style="{ backgroundColor: 'var(--bg-primary)' }"
       >
         <template #container="{ closeCallback }">
           <div class="flex flex-col h-full">
             <div
-              class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border"
+              class="flex align-items-center justify-content-between p-3 border-bottom-1"
+              :style="{ borderColor: 'var(--border-color)' }"
             >
-              <h2 class="text-xl font-bold m-0">課程選單</h2>
+              <h2
+                class="text-xl font-bold m-0"
+                :style="{ color: 'var(--text-primary)' }"
+              >
+                課程選單
+              </h2>
               <Button
                 type="button"
                 @click="closeCallback"
@@ -1211,26 +1218,30 @@ function getCategorySeverity(categoryLabel) {
 .card {
   position: relative;
   z-index: 1;
-  background-color: var(--surface-card);
+  background-color: var(--bg-primary);
 }
 
 .surface-border {
   position: relative;
   z-index: 1;
-  background-color: var(--surface-card);
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
 }
 
 :deep(.p-drawer) {
   padding: 0;
+  background-color: var(--bg-primary);
 }
 
 :deep(.p-drawer-header) {
   padding: 1rem;
-  border-bottom: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
 }
 
 :deep(.p-drawer-content) {
   padding: 1rem;
+  background-color: var(--bg-primary);
 }
 
 :deep(.p-input-icon-left) {

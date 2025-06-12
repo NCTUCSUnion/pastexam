@@ -5,15 +5,20 @@
     <div class="text-center px-4 w-full max-w-md">
       <div v-if="loading" class="loading-container">
         <ProgressSpinner strokeWidth="4" class="mb-4" />
-        <p class="text-gray-300">驗證中...</p>
+        <p :style="{ color: 'var(--text-secondary)' }">驗證中...</p>
       </div>
       <div v-else-if="errorMessage">
-        <Card class="bg-gray-900 border-round shadow-2">
+        <Card
+          class="border-round shadow-2"
+          :style="{ backgroundColor: 'var(--bg-secondary)' }"
+        >
           <template #title>
             <div class="text-red-400 text-xl mb-1">登入失敗</div>
           </template>
           <template #content>
-            <p class="text-gray-300 mb-4">{{ errorMessage }}</p>
+            <p :style="{ color: 'var(--text-secondary)' }" class="mb-4">
+              {{ errorMessage }}
+            </p>
             <Button
               label="返回首頁"
               icon="pi pi-home"
@@ -95,8 +100,8 @@ export default {
 }
 
 :deep(.p-card) {
-  background-color: #25272f;
-  color: #f8f8f2;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 :deep(.p-card .p-card-title) {

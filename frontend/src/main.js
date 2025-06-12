@@ -18,12 +18,12 @@ app.use(PrimeVue, {
     preset: Aura,
     options: {
       prefix: "p",
-      darkTheme: true,
+      darkModeSelector: ".dark",
       cssLayer: false,
     },
   },
 });
 app.use(ToastService);
-app.use(ConfirmationService) 
+app.use(ConfirmationService);
 
 app.mount("#app");

@@ -1,6 +1,7 @@
 <template>
   <div
-    class="h-full flex align-items-center justify-content-center code-background relative text-gray-100"
+    class="h-full flex align-items-center justify-content-center code-background relative"
+    :class="{ 'text-gray-100': isDarkTheme, 'text-gray-900': !isDarkTheme }"
   >
     <div class="text-left px-4 w-full max-w-2xl relative z-1">
       <div
@@ -15,7 +16,8 @@
       <div class="code-container mt-5 flex align-items-start relative">
         <template v-if="isLoading">
           <div
-            class="w-full font-mono text-sm sm:text-base md:text-lg text-left bg-gray-900 p-4 border-round shadow-2 m-0 opacity-80"
+            class="w-full font-mono text-sm sm:text-base md:text-lg text-left p-4 border-round shadow-2 m-0"
+            :style="{ backgroundColor: 'var(--code-bg)', opacity: 0.8 }"
           >
             <div class="code-compilation">
               <div class="compilation-line">> Initializing source...</div>
@@ -28,12 +30,27 @@
         </template>
         <pre
           v-else
-          class="font-mono text-sm sm:text-base md:text-lg whitespace-pre-wrap text-left bg-gray-900 p-4 border-round shadow-2 m-0 w-full overflow-hidden opacity-80"
+          class="font-mono text-sm sm:text-base md:text-lg whitespace-pre-wrap text-left p-4 border-round shadow-2 m-0 w-full overflow-hidden"
+          :style="{ backgroundColor: 'var(--code-bg)', opacity: 0.8 }"
         ><code class="typewriter" v-html="highlightedCode"></code></pre>
 
         <div
           v-if="!isLoading"
-          class="language-badge absolute top-0 right-0 bg-white-alpha-10 text-white-alpha-70 py-1 px-2 text-xs uppercase tracking-wider"
+          class="language-badge absolute top-0 right-0 py-1 px-2 text-xs uppercase tracking-wider"
+          :style="{
+            backgroundColor: isDarkTheme
+              ? 'rgba(255, 255, 255, 0.15)'
+              : 'rgba(0, 0, 0, 0.1)',
+            color: isDarkTheme
+              ? 'rgba(255, 255, 255, 0.95)'
+              : 'rgba(0, 0, 0, 0.9)',
+            borderTopRightRadius: '0.5rem',
+            borderBottomLeftRadius: '0.5rem',
+            backdropFilter: 'blur(4px)',
+            border: isDarkTheme
+              ? '1px solid rgba(255, 255, 255, 0.1)'
+              : '1px solid rgba(0, 0, 0, 0.1)',
+          }"
         >
           {{ language }}
         </div>
@@ -43,11 +60,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watchEffect } from "vue";
+import { ref, onMounted, computed, watchEffect, watch } from "vue";
 import hljs from "highlight.js";
 import "highlight.js/styles/atom-one-dark.css";
 import axios from "axios";
+import { useTheme } from "../utils/useTheme";
+import { getCodeBgSvg } from "../utils/svgBg";
 
+const { isDarkTheme } = useTheme();
 const displayedText = ref("");
 const highlightedCode = ref("");
 const selectedMeme = ref({ code: "", language: "" });
@@ -60,6 +80,11 @@ let typingInterval;
 
 onMounted(async () => {
   await fetchRandomMeme();
+  setBg();
+});
+
+watch(isDarkTheme, () => {
+  setBg();
 });
 
 async function fetchRandomMeme() {
@@ -117,6 +142,13 @@ function startTypewriter() {
     }
   }, 30);
 }
+
+function setBg() {
+  const el = document.querySelector(".code-background");
+  if (el) {
+    el.style.setProperty("background-image", getCodeBgSvg());
+  }
+}
 </script>
 
 <style scoped>
@@ -131,7 +163,7 @@ function startTypewriter() {
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><text x="20" y="30" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">{}</text><text x="170" y="80" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">for()</text><text x="60" y="150" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">if()</text><text x="200" y="200" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">while</text><text x="120" y="240" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">;</text><text x="40" y="100" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.05)">==</text></svg>');
+  /* background-image is set dynamically */
   animation: scrollBackground 120s linear infinite;
   pointer-events: none;
   z-index: 0;
@@ -166,6 +198,76 @@ function startTypewriter() {
 :deep(.hljs) {
   background-color: transparent !important;
   padding: 0 !important;
+  color: var(--code-text) !important;
+}
+
+:deep(.hljs-keyword),
+:deep(.hljs-selector-tag),
+:deep(.hljs-subst) {
+  color: var(--code-keyword) !important;
+}
+
+:deep(.hljs-string),
+:deep(.hljs-doctag) {
+  color: var(--code-string) !important;
+}
+
+:deep(.hljs-title),
+:deep(.hljs-section),
+:deep(.hljs-selector-id) {
+  color: var(--code-title) !important;
+}
+
+:deep(.hljs-comment),
+:deep(.hljs-quote) {
+  color: var(--code-comment) !important;
+}
+
+:deep(.hljs-number),
+:deep(.hljs-literal) {
+  color: var(--code-number) !important;
+}
+
+:deep(.hljs-type),
+:deep(.hljs-class .hljs-title) {
+  color: var(--code-type) !important;
+}
+
+:deep(.hljs-attribute),
+:deep(.hljs-name),
+:deep(.hljs-regexp),
+:deep(.hljs-link) {
+  color: var(--code-attribute) !important;
+}
+
+:deep(.hljs-symbol),
+:deep(.hljs-bullet) {
+  color: var(--code-symbol) !important;
+}
+
+:deep(.hljs-built_in),
+:deep(.hljs-builtin-name) {
+  color: var(--code-builtin) !important;
+}
+
+:deep(.hljs-meta) {
+  color: var(--code-meta) !important;
+}
+
+:deep(.hljs-deletion) {
+  background: var(--code-deletion-bg) !important;
+}
+
+:deep(.hljs-addition) {
+  background: var(--code-addition-bg) !important;
+}
+
+:deep(.hljs-emphasis) {
+  font-style: italic !important;
+}
+
+:deep(.hljs-strong) {
+  font-weight: bold !important;
 }
 
 @keyframes blink {
@@ -188,7 +290,11 @@ function startTypewriter() {
 }
 
 .title-text {
-  background: linear-gradient(to right, #a2a9b0, #d5d9e0);
+  background: linear-gradient(
+    to right,
+    var(--title-gradient-start),
+    var(--title-gradient-end)
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -198,7 +304,7 @@ function startTypewriter() {
   font-family: monospace;
   text-align: left;
   width: 100%;
-  color: #a0a0a0;
+  color: var(--text-secondary);
 }
 
 .compilation-line {

@@ -1,1 +1,77 @@
 @import "tailwindcss";
+
+:root {
+  /* Light theme variables */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  --code-bg: #f8f9fa;
+  --code-text: #212529;
+  --title-gradient-start: #495057;
+  --title-gradient-end: #6c757d;
+  --code-bg-svg-fill: rgba(60, 60, 60, 0.16);
+
+  /* Code highlighting - Light theme */
+  --code-keyword: #d73a49;
+  --code-string: #032f62;
+  --code-title: #6f42c1;
+  --code-comment: #6a737d;
+  --code-number: #005cc5;
+  --code-type: #005cc5;
+  --code-attribute: #005cc5;
+  --code-symbol: #005cc5;
+  --code-builtin: #005cc5;
+  --code-meta: #6a737d;
+  --code-deletion-bg: #ffeef0;
+  --code-addition-bg: #e6ffed;
+}
+
+.dark {
+  /* Dark theme variables */
+  --bg-primary: #1a1b1e;
+  --bg-secondary: #25272f;
+  --text-primary: #f8f8f2;
+  --text-secondary: #a0a0a0;
+  --border-color: #2d2f36;
+  --code-bg: #25272f;
+  --code-text: #f8f8f2;
+  --title-gradient-start: #a2a9b0;
+  --title-gradient-end: #d5d9e0;
+  --code-bg-svg-fill: rgba(255, 255, 255, 0.12);
+
+  /* Code highlighting - Dark theme (brighter) */
+  --code-keyword: #ff92df;
+  --code-string: #ffe066;
+  --code-title: #b5e8ff;
+  --code-comment: #bfbfbf;
+  --code-number: #ffd580;
+  --code-type: #8be9fd;
+  --code-attribute: #7afcff;
+  --code-symbol: #ffb86c;
+  --code-builtin: #8be9fd;
+  --code-meta: #bfbfbf;
+  --code-deletion-bg: rgba(255, 121, 198, 0.18);
+  --code-addition-bg: rgba(80, 250, 123, 0.18);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.code-background {
+  position: relative;
+  background-position: 0 0;
+  animation: scrollBackground 120s linear infinite;
+}
+
+@keyframes scrollBackground {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 300% 300%;
+  }
+}
