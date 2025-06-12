@@ -34,7 +34,35 @@
                   class="w-full pl-6"
                 />
               </div>
-              <PanelMenu :model="filteredMenuItems" multiple class="w-full" />
+              <div v-if="searchQuery" class="search-results">
+                <div
+                  v-for="category in filteredCategories"
+                  :key="category.label"
+                  class="mb-3"
+                >
+                  <div class="text-lg font-semibold mb-2">
+                    {{ category.label }}
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <Button
+                      v-for="course in category.items"
+                      :key="course.label"
+                      class="p-button-text"
+                      @click="
+                        filterBySubject({ label: course.label, id: course.id })
+                      "
+                    >
+                      <Tag
+                        :value="getCategoryTag(category.label)"
+                        :severity="getCategorySeverity(category.label)"
+                        class="mr-2"
+                      />
+                      {{ course.label }}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <PanelMenu v-else :model="menuItems" multiple class="w-full" />
             </div>
           </div>
         </template>
@@ -389,7 +417,7 @@ const menuItems = computed(() => {
     items:
       coursesList.value?.freshman?.map((course) => ({
         label: course.name,
-        command: () => filterBySubject(course),
+        command: () => filterBySubject({ label: course.name, id: course.id }),
       })) || [],
   });
 
@@ -399,7 +427,7 @@ const menuItems = computed(() => {
     items:
       coursesList.value?.sophomore?.map((course) => ({
         label: course.name,
-        command: () => filterBySubject(course),
+        command: () => filterBySubject({ label: course.name, id: course.id }),
       })) || [],
   });
 
@@ -409,7 +437,7 @@ const menuItems = computed(() => {
     items:
       coursesList.value?.junior?.map((course) => ({
         label: course.name,
-        command: () => filterBySubject(course),
+        command: () => filterBySubject({ label: course.name, id: course.id }),
       })) || [],
   });
 
@@ -419,7 +447,7 @@ const menuItems = computed(() => {
     items:
       coursesList.value?.senior?.map((course) => ({
         label: course.name,
-        command: () => filterBySubject(course),
+        command: () => filterBySubject({ label: course.name, id: course.id }),
       })) || [],
   });
 
@@ -429,7 +457,7 @@ const menuItems = computed(() => {
     items:
       coursesList.value?.graduate?.map((course) => ({
         label: course.name,
-        command: () => filterBySubject(course),
+        command: () => filterBySubject({ label: course.name, id: course.id }),
       })) || [],
   });
 
@@ -439,19 +467,16 @@ const menuItems = computed(() => {
     items:
       coursesList.value?.interdisciplinary?.map((course) => ({
         label: course.name,
-        command: () => filterBySubject(course),
+        command: () => filterBySubject({ label: course.name, id: course.id }),
       })) || [],
   });
 
   return items;
 });
 
-const filteredMenuItems = computed(() => {
+const filteredCategories = computed(() => {
   if (!searchQuery.value) {
-    return menuItems.value.map((category) => ({
-      ...category,
-      expanded: true,
-    }));
+    return [];
   }
 
   const query = searchQuery.value.toLowerCase();
@@ -465,14 +490,33 @@ const filteredMenuItems = computed(() => {
     if (filteredItems.length > 0) {
       filtered.push({
         ...category,
-        items: filteredItems,
-        expanded: true,
+        items: filteredItems.map((item) => {
+          const course = coursesList.value[getCategoryKey(category.label)].find(
+            (c) => c.name === item.label
+          );
+          return {
+            label: item.label,
+            id: course?.id,
+          };
+        }),
       });
     }
   });
 
   return filtered;
 });
+
+function getCategoryKey(categoryLabel) {
+  const categoryMap = {
+    大一課程: "freshman",
+    大二課程: "sophomore",
+    大三課程: "junior",
+    大四課程: "senior",
+    研究所課程: "graduate",
+    跨領域課程: "interdisciplinary",
+  };
+  return categoryMap[categoryLabel] || "";
+}
 
 const groupedArchives = computed(() => {
   if (!archives.value) return [];
@@ -523,7 +567,8 @@ async function fetchCourses() {
 }
 
 function filterBySubject(course) {
-  selectedSubject.value = course.name;
+  if (!course || !course.id) return;
+  selectedSubject.value = course.label;
   selectedCourse.value = course.id;
   filters.value.professor = "";
   filters.value.year = "";
@@ -1108,6 +1153,30 @@ async function handleUploadSuccess() {
   if (selectedCourse.value) {
     await fetchArchives();
   }
+}
+
+function getCategoryTag(categoryLabel) {
+  const categoryMap = {
+    大一課程: "大一",
+    大二課程: "大二",
+    大三課程: "大三",
+    大四課程: "大四",
+    研究所課程: "研究所",
+    跨領域課程: "跨領域",
+  };
+  return categoryMap[categoryLabel] || categoryLabel;
+}
+
+function getCategorySeverity(categoryLabel) {
+  const severityMap = {
+    大一課程: "info",
+    大二課程: "success",
+    大三課程: "warning",
+    大四課程: "danger",
+    研究所課程: "help",
+    跨領域課程: "secondary",
+  };
+  return severityMap[categoryLabel] || "secondary";
 }
 </script>
 
