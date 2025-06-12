@@ -1174,7 +1174,7 @@ const canDeleteArchive = (archive) => {
 
   return (
     isAdmin.value ||
-    (archive.uploader_id && archive.uploader_id === currentUser.id)
+    (archive.uploader_id && archive.uploader_id === currentUser.uid)
   );
 };
 
