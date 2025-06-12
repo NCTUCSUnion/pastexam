@@ -35,7 +35,7 @@
     </Menubar>
 
     <Dialog
-      v-model:visible="loginVisible"
+      v-model="loginVisible"
       header="登入"
       :modal="true"
       :draggable="false"
