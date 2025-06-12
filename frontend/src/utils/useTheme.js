@@ -2,7 +2,11 @@ import { ref, watch } from "vue";
 import { usePrimeVue } from "primevue/config";
 
 const THEME_KEY = "theme-preference";
-const isDarkTheme = ref(localStorage.getItem(THEME_KEY) === "dark" || true);
+const isDarkTheme = ref(
+  localStorage.getItem(THEME_KEY)
+    ? localStorage.getItem(THEME_KEY) === "dark"
+    : true
+);
 
 export function useTheme() {
   const primevue = usePrimeVue();
