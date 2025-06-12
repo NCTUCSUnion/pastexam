@@ -9,7 +9,7 @@ import os
 from app.db.init_db import get_session
 from app.models.models import User, Course, CourseInfo, CoursesByCategory, Archive, ArchiveRead, CourseCategory, ArchiveType
 from app.utils.auth import get_current_user
-from app.utils.storage import presigned_put_url, presigned_get_url
+from app.utils.storage import presigned_get_url
 
 router = APIRouter()
 

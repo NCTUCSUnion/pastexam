@@ -9,7 +9,7 @@ import os
 from app.db.init_db import get_session
 from app.models.models import User, Course, Archive, ArchiveRead, CourseCategory, ArchiveType
 from app.utils.auth import get_current_user
-from app.utils.storage import get_minio_client
+from app.utils.storage import presigned_put_url
 from app.core.config import settings
 from pydantic import BaseModel
 
@@ -81,10 +81,7 @@ async def upload_archive(
     await db.commit()
     await db.refresh(archive)
 
-    # Generate presigned URL for upload
-    minio_client = get_minio_client()
-    upload_url = minio_client.presigned_put_object(
-        bucket_name=settings.MINIO_BUCKET_NAME,
+    upload_url = presigned_put_url(
         object_name=object_name,
         expires=timedelta(hours=1)  # 1 hour
     )
