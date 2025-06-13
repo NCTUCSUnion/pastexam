@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.api.api import api_router
 from app.db.init_db import init_db
 
-app = FastAPI(title="Past Exam API")
+app = FastAPI(title="Past Exam API", docs_url=None, redoc_url=None)
 
 # app.add_middleware(
 #     CORSMiddleware,
