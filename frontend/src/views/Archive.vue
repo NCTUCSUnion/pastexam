@@ -158,6 +158,7 @@
                               size="small"
                               severity="success"
                               label="下載"
+                              :loading="downloadingId === data.id"
                             />
                             <Button
                               v-if="canEditArchive(data)"
@@ -211,17 +212,8 @@
             :error="previewError"
             @hide="closePreview"
             @error="handlePreviewError"
-          >
-            <template #footer>
-              <Button
-                v-if="selectedArchive"
-                label="下載"
-                icon="pi pi-download"
-                @click="downloadArchive(selectedArchive)"
-                severity="success"
-              />
-            </template>
-          </PdfPreviewModal>
+            @download="handlePreviewDownload"
+          />
 
           <UploadArchiveDialog
             v-model="showUploadDialog"
@@ -637,8 +629,12 @@ async function fetchArchives() {
   }
 }
 
+const downloadingId = ref(null);
+const previewingId = ref(null);
+
 async function downloadArchive(archive) {
   try {
+    downloadingId.value = archive.id;
     const { data } = await archiveService.getArchiveUrl(
       selectedCourse.value,
       archive.id
@@ -673,6 +669,8 @@ async function downloadArchive(archive) {
       detail: "無法取得下載連結",
       life: 3000,
     });
+  } finally {
+    downloadingId.value = null;
   }
 }
 
@@ -685,6 +683,7 @@ const uploadPreviewError = ref(false);
 
 async function previewArchive(archive) {
   try {
+    previewingId.value = archive.id;
     previewLoading.value = true;
     previewError.value = false;
     showPreview.value = true;
@@ -709,6 +708,7 @@ async function previewArchive(archive) {
     });
   } finally {
     previewLoading.value = false;
+    previewingId.value = null;
   }
 }
 
@@ -1188,6 +1188,49 @@ function toggleSidebar() {
   console.log("Toggle sidebar called");
   sidebarVisible.value = !sidebarVisible.value;
   console.log("Sidebar collapsed:", sidebarVisible.value);
+}
+
+async function handlePreviewDownload(onComplete) {
+  if (!selectedArchive.value) return;
+
+  try {
+    const { data } = await archiveService.getArchiveUrl(
+      selectedCourse.value,
+      selectedArchive.value.id
+    );
+
+    const response = await fetch(data.download_url);
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    const fileName = `${selectedArchive.value.year}_${selectedSubject.value}_${selectedArchive.value.professor}_${selectedArchive.value.name}.pdf`;
+    link.download = fileName;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    window.URL.revokeObjectURL(url);
+    link.remove();
+
+    toast.add({
+      severity: "success",
+      summary: "下載成功",
+      detail: `已下載 ${fileName}`,
+      life: 3000,
+    });
+  } catch (error) {
+    console.error("Download error:", error);
+    toast.add({
+      severity: "error",
+      summary: "下載失敗",
+      detail: "無法取得下載連結",
+      life: 3000,
+    });
+  } finally {
+    onComplete();
+  }
 }
 </script>
 

@@ -49,7 +49,13 @@
     </div>
 
     <template #footer>
-      <slot name="footer"></slot>
+      <Button
+        label="下載"
+        icon="pi pi-download"
+        @click="handleDownload"
+        severity="success"
+        :loading="downloading"
+      />
     </template>
   </Dialog>
 </template>
@@ -80,12 +86,20 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:visible", "hide", "load", "error"]);
+const emit = defineEmits([
+  "update:visible",
+  "hide",
+  "load",
+  "error",
+  "download",
+]);
 
 const localVisible = computed({
   get: () => props.visible,
   set: (value) => emit("update:visible", value),
 });
+
+const downloading = ref(false);
 
 function onHide() {
   emit("hide");
@@ -97,5 +111,12 @@ function handleLoad() {
 
 function handleError() {
   emit("error");
+}
+
+function handleDownload() {
+  downloading.value = true;
+  emit("download", () => {
+    downloading.value = false;
+  });
 }
 </script>
