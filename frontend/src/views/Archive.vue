@@ -1117,7 +1117,8 @@ const getCurrentCategory = computed(() => {
     width 0.2s ease-in-out,
     min-width 0.2s ease-in-out,
     max-width 0.2s ease-in-out;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
   z-index: 1;
   height: 100%;
@@ -1127,12 +1128,19 @@ const getCurrentCategory = computed(() => {
   width: 100%;
   opacity: 1;
   white-space: nowrap;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .sidebar .search-results {
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 100px);
   overflow-y: auto;
   padding: 0.5rem;
+}
+
+.sidebar :deep(.p-panelmenu) {
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
 }
 
 .sidebar .search-results .flex-wrap {
