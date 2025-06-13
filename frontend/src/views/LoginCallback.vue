@@ -70,7 +70,7 @@ export default {
         throw new Error("No authentication token received");
       }
 
-      localStorage.setItem("authToken", token);
+      sessionStorage.setItem("authToken", token);
 
       this.$router.push("/archive");
     } catch (error) {

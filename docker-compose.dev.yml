@@ -15,6 +15,10 @@ services:
   #   depends_on:
   #     db:
   #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #     minio:
+  #       condition: service_started
   #   # ports:
   #   #   - "8000:8000"
   #   env_file:
@@ -62,6 +66,16 @@ services:
     networks:
       - app_network
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    # volumes:
+    #   - redis_data:/data
+    networks:
+      - app_network
+
   # nginx:
   #   image: nginx:latest
   #   container_name: nginx
@@ -83,3 +97,4 @@ networks:
 # volumes:
 #   pg_data:
 #   minio_data:
+#   redis_data:

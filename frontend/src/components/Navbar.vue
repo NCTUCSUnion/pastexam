@@ -108,6 +108,8 @@
 <script>
 import { getCurrentUser, isAuthenticated } from "../utils/auth.js";
 import { useTheme } from "../utils/useTheme";
+import { api } from "../services/api";
+import { useRouter } from "vue-router";
 
 export default {
   data() {
@@ -122,9 +124,11 @@ export default {
   },
   setup() {
     const { isDarkTheme, toggleTheme } = useTheme();
+    const router = useRouter();
     return {
       isDarkTheme,
       toggleTheme,
+      router,
     };
   },
   mounted() {
@@ -165,11 +169,20 @@ export default {
       }
     },
 
-    handleLogout() {
-      localStorage.removeItem("authToken");
-      this.isAuthenticated = false;
-      this.userData = null;
-      this.$router.push("/");
+    async handleLogout() {
+      try {
+        await api.post("/oauth/logout");
+        sessionStorage.removeItem("authToken");
+        this.isAuthenticated = false;
+        this.userData = null;
+        await this.$router.push("/");
+      } catch (error) {
+        console.error("Logout failed:", error);
+        sessionStorage.removeItem("authToken");
+        this.isAuthenticated = false;
+        this.userData = null;
+        await this.$router.push("/");
+      }
     },
   },
 };

@@ -14,6 +14,7 @@ dependencies = [
     "pydantic-settings>=2.9.1",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.20",
+    "redis>=6.2.0",
     "sqlmodel>=0.0.24",
     "uvicorn[standard]>=0.34.3",
 ]

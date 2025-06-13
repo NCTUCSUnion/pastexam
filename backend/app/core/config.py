@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     MINIO_BUCKET_NAME: str
     EXTERNAL_ENDPOINT: str
 
+    # Redis
+    REDIS_URL: str
+
     class Config:
         env_file = ".env"
         from_attributes = True

@@ -11,6 +11,7 @@ from app.models.models import User
 from app.services.auth import oauth_callback
 from app.utils.jwt import jwt
 from app.core.config import settings
+from app.utils.auth import get_current_user, blacklist_token
 
 router = APIRouter()
 
@@ -47,7 +48,7 @@ async def auth_callback_endpoint(
     info = await oauth_callback(code, state, stored_state)
     if not info.get("sub") or not info.get("email"):
         raise HTTPException(status_code=400, detail="Invalid OAuth response")
-
+    
     result = await db.execute(
         select(User).where(
             User.oauth_provider == info["provider"],
@@ -55,12 +56,13 @@ async def auth_callback_endpoint(
         )
     )
     user = result.scalar_one_or_none()
+    
     if user is None:
         user = User(
             oauth_provider=info["provider"],
             oauth_sub=info["sub"],
             email=info["email"],
-            name=info.get("name")
+            name=info["name"]
         )
         db.add(user)
         await db.commit()
@@ -72,10 +74,23 @@ async def auth_callback_endpoint(
         "name": user.name,
         "is_admin": user.is_admin,
         "exp": int(datetime.now(timezone.utc).timestamp() + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
-        "iat": int(datetime.now(timezone.utc).timestamp())
     }
     token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     
     frontend_url = settings.FRONTEND_URL
     redirect_url = f"{frontend_url}/login/callback?token={token}"
-    return RedirectResponse(url=redirect_url) 
+    return RedirectResponse(url=redirect_url)
+
+@router.post("/logout")
+async def logout(
+    request: Request,
+    current_user = Depends(get_current_user)
+):
+    """
+    Logout endpoint that blacklists the current token
+    """
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        blacklist_token(token)
+    return {"message": "Successfully logged out"} 

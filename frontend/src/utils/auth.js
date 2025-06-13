@@ -1,3 +1,5 @@
+const TOKEN_KEY = "authToken";
+
 export function decodeToken(token) {
   if (!token) return null;
 
@@ -19,7 +21,7 @@ export function decodeToken(token) {
 }
 
 export function getCurrentUser() {
-  const token = localStorage.getItem("authToken");
+  const token = sessionStorage.getItem("authToken");
   if (!token) return null;
 
   const decoded = decodeToken(token);
@@ -36,7 +38,7 @@ export function getCurrentUser() {
 }
 
 export function isAuthenticated() {
-  const token = localStorage.getItem("authToken");
+  const token = sessionStorage.getItem("authToken");
   if (!token) return false;
 
   const decoded = decodeToken(token);
@@ -46,4 +48,16 @@ export function isAuthenticated() {
   const bufferTime = 60;
 
   return decoded.exp > currentTime - bufferTime;
+}
+
+export function setToken(token) {
+  sessionStorage.setItem(TOKEN_KEY, token);
+}
+
+export function getToken() {
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+export function removeToken() {
+  sessionStorage.removeItem(TOKEN_KEY);
 }
