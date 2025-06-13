@@ -1288,6 +1288,14 @@ const getCurrentCategory = computed(() => {
 
 :deep(.p-input-icon-left input) {
   padding-left: 2.5rem;
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+:deep(.p-input-icon-left input:focus) {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
 }
 
 .sidebar {
@@ -1296,7 +1304,8 @@ const getCurrentCategory = computed(() => {
   max-width: 320px;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
-  transition: all 0.2s ease-in-out;
+  transition: width 0.2s ease-in-out, min-width 0.2s ease-in-out,
+    max-width 0.2s ease-in-out;
   overflow: hidden;
   position: relative;
   z-index: 1;
