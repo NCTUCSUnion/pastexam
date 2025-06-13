@@ -6,6 +6,7 @@
     :modal="true"
     :draggable="false"
     :closeOnEscape="true"
+    :dismissableMask="true"
     :maximizable="true"
     @hide="onHide"
   >

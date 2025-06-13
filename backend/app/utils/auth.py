@@ -2,15 +2,28 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from datetime import datetime, timezone
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.core.config import settings
-from app.models.models import UserRoles
+from app.models.models import UserRoles, User
+from app.db.init_db import AsyncSessionLocal
 
 oauth2_scheme = HTTPBearer()
 
-async def get_current_user(token: HTTPAuthorizationCredentials = Depends(oauth2_scheme)) -> UserRoles:
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+async def get_current_user(
+    token: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+) -> UserRoles:
     """
-    Extract user_id from Bearer <token> in header.
+    Extract user_id from Bearer <token> in header and verify user's admin status from database.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -22,12 +35,25 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Depends(oauth2_
             token.credentials,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
-            options={"verify_signature": False},
         )
+        
+        exp = payload.get("exp")
+        if exp is None or datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         user_id: int = payload.get("uid")
-        is_admin: bool = payload.get("is_admin", False)
         if user_id is None:
             raise credentials_exception
-        return UserRoles(user_id=user_id, is_admin=is_admin)
+
+        result = await db.execute(select(User).filter(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise credentials_exception
+
+        return UserRoles(user_id=user_id, is_admin=user.is_admin)
     except JWTError:
         raise credentials_exception 

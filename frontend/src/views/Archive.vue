@@ -658,6 +658,13 @@ async function downloadArchive(archive) {
     link.click();
     window.URL.revokeObjectURL(url);
     link.remove();
+
+    toast.add({
+      severity: "success",
+      summary: "下載成功",
+      detail: `已下載 ${fileName}`,
+      life: 3000,
+    });
   } catch (error) {
     console.error("Download error:", error);
     toast.add({
