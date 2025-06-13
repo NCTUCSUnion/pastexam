@@ -1,81 +1,50 @@
 <template>
-  <div class="h-full" ref="archiveView">
+  <div class="h-full" ref="archiveView" @toggle-sidebar="toggleSidebar">
     <Toast position="bottom-left" />
     <ConfirmDialog />
     <div class="flex h-full relative">
-      <Drawer
-        v-model:visible="drawerVisible"
-        :baseZIndex="1000"
-        class="w-[20vw]"
-        :style="{ backgroundColor: 'var(--bg-primary)' }"
-      >
-        <template #container="{ closeCallback }">
-          <div class="flex flex-col h-full">
+      <div class="sidebar" :class="{ collapsed: !sidebarVisible }">
+        <div class="flex flex-column gap-3 p-3">
+          <div class="relative w-full">
+            <i class="pi pi-search absolute left-4 top-1/2 -mt-2 text-500"></i>
+            <InputText
+              v-model="searchQuery"
+              placeholder="搜尋課程"
+              class="w-full pl-6"
+            />
+          </div>
+          <div v-if="searchQuery" class="search-results">
             <div
-              class="flex align-items-center justify-content-between p-3 border-bottom-1"
-              :style="{ borderColor: 'var(--border-color)' }"
+              v-for="category in filteredCategories"
+              :key="category.label"
+              class="mb-3"
             >
-              <h2
-                class="text-xl font-bold m-0"
-                :style="{ color: 'var(--text-primary)' }"
-              >
-                課程選單
-              </h2>
-              <Button
-                type="button"
-                @click="closeCallback"
-                icon="pi pi-times"
-                rounded
-                outlined
-                class="p-button-text"
-              />
-            </div>
-            <div class="flex flex-column gap-3 p-3">
-              <div class="relative w-full">
-                <i
-                  class="pi pi-search absolute left-4 top-1/2 -mt-2 text-500"
-                ></i>
-                <InputText
-                  v-model="searchQuery"
-                  placeholder="搜尋課程"
-                  class="w-full pl-6"
-                />
+              <div class="text-lg font-semibold mb-2">
+                {{ category.label }}
               </div>
-              <div v-if="searchQuery" class="search-results">
-                <div
-                  v-for="category in filteredCategories"
-                  :key="category.label"
-                  class="mb-3"
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  v-for="course in category.items"
+                  :key="course.label"
+                  class="p-button-text"
+                  @click="
+                    filterBySubject({ label: course.label, id: course.id })
+                  "
                 >
-                  <div class="text-lg font-semibold mb-2">
-                    {{ category.label }}
-                  </div>
-                  <div class="flex flex-wrap gap-2">
-                    <Button
-                      v-for="course in category.items"
-                      :key="course.label"
-                      class="p-button-text"
-                      @click="
-                        filterBySubject({ label: course.label, id: course.id })
-                      "
-                    >
-                      <Tag
-                        :value="getCategoryTag(category.label)"
-                        :severity="getCategorySeverity(category.label)"
-                        class="mr-2"
-                      />
-                      {{ course.label }}
-                    </Button>
-                  </div>
-                </div>
+                  <Tag
+                    :value="getCategoryTag(category.label)"
+                    :severity="getCategorySeverity(category.label)"
+                    class="mr-2"
+                  />
+                  {{ course.label }}
+                </Button>
               </div>
-              <PanelMenu v-else :model="menuItems" multiple class="w-full" />
             </div>
           </div>
-        </template>
-      </Drawer>
-
-      <div class="flex-1 h-full overflow-auto">
+          <PanelMenu v-else :model="menuItems" multiple class="w-full" />
+        </div>
+      </div>
+      <div class="main-content flex-1 h-full overflow-auto">
         <div class="card h-full flex flex-col">
           <Toolbar class="m-3">
             <template #start>
@@ -360,8 +329,7 @@ const confirm = useConfirm();
 const route = useRoute();
 
 const { isDarkTheme } = useTheme();
-
-const drawerVisible = inject("drawerVisible");
+const sidebarVisible = inject("sidebarVisible");
 
 const archives = ref([]);
 const loading = ref(true);
@@ -1164,24 +1132,6 @@ function closeUploadPreview() {
   uploadPreviewError.value = false;
 }
 
-// Watch for selectedSubject changes to auto-collapse drawer
-watch(selectedSubject, (newValue) => {
-  if (newValue) {
-    drawerVisible.value = false;
-  }
-});
-
-// Watch for route changes to show drawer when entering archive page
-watch(
-  () => route.path,
-  (newPath) => {
-    if (newPath === "/archive" && !selectedSubject.value) {
-      drawerVisible.value = true;
-    }
-  },
-  { immediate: true }
-);
-
 async function handleUploadSuccess() {
   await fetchCourses();
   if (selectedCourse.value) {
@@ -1212,6 +1162,12 @@ function getCategorySeverity(categoryLabel) {
   };
   return severityMap[categoryLabel] || "secondary";
 }
+
+function toggleSidebar() {
+  console.log("Toggle sidebar called");
+  sidebarVisible.value = !sidebarVisible.value;
+  console.log("Sidebar collapsed:", sidebarVisible.value);
+}
 </script>
 
 <style scoped>
@@ -1228,19 +1184,20 @@ function getCategorySeverity(categoryLabel) {
   border-color: var(--border-color);
 }
 
-:deep(.p-drawer) {
+:deep(.p-sidebar) {
   padding: 0;
   background-color: var(--bg-primary);
   z-index: 2;
+  border-right: 1px solid var(--border-color);
 }
 
-:deep(.p-drawer-header) {
+:deep(.p-sidebar-header) {
   padding: 1rem;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-primary);
 }
 
-:deep(.p-drawer-content) {
+:deep(.p-sidebar-content) {
   padding: 1rem;
   background-color: var(--bg-primary);
 }
@@ -1255,5 +1212,54 @@ function getCategorySeverity(categoryLabel) {
 
 :deep(.p-input-icon-left input) {
   padding-left: 2.5rem;
+}
+
+.sidebar {
+  width: 20vw;
+  min-width: 220px;
+  max-width: 320px;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
+  transition: all 0.2s ease-in-out;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  height: 100%;
+}
+
+.sidebar .flex-column {
+  width: 100%;
+  opacity: 1;
+  transition: opacity 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+.sidebar .search-results {
+  white-space: normal;
+}
+
+.sidebar .search-results .flex-wrap {
+  white-space: normal;
+}
+
+.sidebar.collapsed {
+  width: 0;
+  min-width: 0;
+  max-width: 0;
+  padding: 0;
+  border-right: none;
+}
+
+.sidebar.collapsed .flex-column {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.main-content {
+  flex: 1 1 0%;
+  min-width: 0;
+  background: var(--bg-primary);
+  transition: margin-left 0.2s ease-in-out;
+  height: 100%;
 }
 </style>

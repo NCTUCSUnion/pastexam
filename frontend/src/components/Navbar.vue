@@ -4,12 +4,12 @@
       <template #start>
         <Button
           v-if="$route.path === '/archive'"
-          icon="pi pi-bars"
+          :icon="'pi pi-bars'"
           severity="secondary"
           size="small"
           outlined
           class="mr-2"
-          @click="$emit('toggle-drawer')"
+          @click="$emit('toggle-sidebar')"
         />
         <span class="font-bold text-xl pl-2 title-text"
           >交大資工考古題系統</span

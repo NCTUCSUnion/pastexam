@@ -1,6 +1,6 @@
 <template>
   <div id="app" class="flex flex-column">
-    <Navbar class="navbar px-1" @toggle-drawer="toggleDrawer" />
+    <Navbar class="navbar px-1" @toggle-sidebar="toggleSidebar" />
     <div class="content-container">
       <router-view />
     </div>
@@ -16,15 +16,15 @@ export default {
     Navbar,
   },
   setup() {
-    const drawerVisible = ref(true);
-    provide("drawerVisible", drawerVisible);
+    const sidebarVisible = ref(true);
+    provide("sidebarVisible", sidebarVisible);
 
-    const toggleDrawer = () => {
-      drawerVisible.value = !drawerVisible.value;
+    const toggleSidebar = () => {
+      sidebarVisible.value = !sidebarVisible.value;
     };
 
     return {
-      toggleDrawer,
+      toggleSidebar,
     };
   },
 };
