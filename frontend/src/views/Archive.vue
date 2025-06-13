@@ -1,7 +1,5 @@
 <template>
   <div class="h-full" ref="archiveView" @toggle-sidebar="toggleSidebar">
-    <Toast position="bottom-left" />
-    <ConfirmDialog />
     <div class="flex h-full relative">
       <div class="sidebar" :class="{ collapsed: !sidebarVisible }">
         <div class="flex flex-column gap-3 p-3">
@@ -322,16 +320,14 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick, inject } from "vue";
 import { courseService, archiveService } from "../services/api";
-import { useToast } from "primevue/usetoast";
-import { useConfirm } from "primevue/useconfirm";
 import PdfPreviewModal from "../components/PdfPreviewModal.vue";
 import UploadArchiveDialog from "../components/UploadArchiveDialog.vue";
 import { getCurrentUser } from "../utils/auth";
 import { useTheme } from "../utils/useTheme";
 import { useRoute } from "vue-router";
 
-const toast = useToast();
-const confirm = useConfirm();
+const toast = inject("toast");
+const confirm = inject("confirm");
 const route = useRoute();
 
 const { isDarkTheme } = useTheme();

@@ -1,5 +1,7 @@
 <template>
   <div id="app" class="flex flex-column">
+    <Toast position="bottom-left" />
+    <ConfirmDialog />
     <Navbar class="navbar px-1" @toggle-sidebar="toggleSidebar" />
     <div class="content-container">
       <router-view />
@@ -10,14 +12,25 @@
 <script>
 import Navbar from "./components/Navbar.vue";
 import { ref, provide } from "vue";
+import Toast from "primevue/toast";
+import ConfirmDialog from "primevue/confirmdialog";
+import { useToast } from "primevue/usetoast";
+import { useConfirm } from "primevue/useconfirm";
 
 export default {
   components: {
     Navbar,
+    Toast,
+    ConfirmDialog,
   },
   setup() {
     const sidebarVisible = ref(true);
+    const toast = useToast();
+    const confirm = useConfirm();
+
     provide("sidebarVisible", sidebarVisible);
+    provide("toast", toast);
+    provide("confirm", confirm);
 
     const toggleSidebar = () => {
       sidebarVisible.value = !sidebarVisible.value;
