@@ -60,7 +60,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watchEffect, watch } from "vue";
+defineOptions({
+  name: "HomeView",
+});
+
+import { ref, onMounted, computed, watch } from "vue";
 import hljs from "highlight.js";
 import "highlight.js/styles/atom-one-dark.css";
 import { useTheme } from "../utils/useTheme";

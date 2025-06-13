@@ -126,6 +126,7 @@ import { useRouter } from "vue-router";
 import { useToast } from "primevue/usetoast";
 
 export default {
+  name: "AppNavbar",
   data() {
     return {
       items: [],

@@ -320,17 +320,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick, inject } from "vue";
+defineOptions({
+  name: "ArchiveView",
+});
+
+import { ref, computed, onMounted, watch, inject } from "vue";
 import { courseService, archiveService } from "../services/api";
 import PdfPreviewModal from "../components/PdfPreviewModal.vue";
 import UploadArchiveDialog from "../components/UploadArchiveDialog.vue";
 import { getCurrentUser } from "../utils/auth";
 import { useTheme } from "../utils/useTheme";
-import { useRoute } from "vue-router";
 
 const toast = inject("toast");
 const confirm = inject("confirm");
-const route = useRoute();
 
 const { isDarkTheme } = useTheme();
 const sidebarVisible = inject("sidebarVisible");
@@ -688,10 +690,6 @@ async function downloadArchive(archive) {
 
 const previewLoading = ref(false);
 const previewError = ref(false);
-const showUploadPreview = ref(false);
-const uploadPreviewUrl = ref("");
-const uploadPreviewLoading = ref(false);
-const uploadPreviewError = ref(false);
 
 async function previewArchive(archive) {
   try {
@@ -734,45 +732,6 @@ function closePreview() {
   previewError.value = false;
 }
 
-const uploadStep = ref("1");
-const uploading = ref(false);
-
-const canGoToStep2 = computed(() => {
-  return (
-    uploadForm.value.category &&
-    uploadForm.value.subject &&
-    uploadForm.value.professor
-  );
-});
-
-const isFilenameValid = ref(false);
-
-function validateFilename() {
-  const regex = /^[a-z]+[0-9]*$/;
-  isFilenameValid.value = regex.test(uploadForm.value.filename);
-}
-
-const canGoToStep3 = computed(() => {
-  return (
-    uploadForm.value.academicYear &&
-    uploadForm.value.type &&
-    uploadForm.value.filename &&
-    isFilenameValid.value
-  );
-});
-
-const canUpload = computed(() => {
-  return (
-    uploadForm.value.file &&
-    uploadForm.value.category &&
-    uploadForm.value.subject &&
-    uploadForm.value.professor &&
-    uploadForm.value.academicYear &&
-    uploadForm.value.type &&
-    uploadForm.value.filename
-  );
-});
-
 function getCategoryName(code) {
   const categories = {
     freshman: "大一課程",
@@ -784,119 +743,6 @@ function getCategoryName(code) {
   };
   return categories[code] || code;
 }
-
-function getTypeName(code) {
-  const types = {
-    midterm: "期中考",
-    final: "期末考",
-    quiz: "小考",
-    other: "其他",
-  };
-  return types[code] || code;
-}
-
-function uploadWithProgress(url, file) {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url, true);
-    xhr.setRequestHeader("Content-Type", file.type);
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error("Upload failed"));
-    };
-
-    xhr.onerror = () => reject(new Error("Upload failed"));
-    xhr.send(file);
-  });
-}
-
-const fileUpload = ref(null);
-
-const handleUpload = async () => {
-  try {
-    uploading.value = true;
-
-    const formData = new FormData();
-    formData.append("file", uploadForm.value.file);
-    formData.append("subject", uploadForm.value.subject);
-    formData.append("category", uploadForm.value.category);
-    formData.append("professor", uploadForm.value.professor);
-    formData.append("archive_type", uploadForm.value.type);
-    formData.append("has_answers", uploadForm.value.hasAnswers);
-    formData.append("filename", uploadForm.value.filename);
-    const year = new Date(uploadForm.value.academicYear).getFullYear();
-    formData.append("academic_year", year);
-
-    const { data } = await archiveService.uploadArchive(formData);
-
-    await uploadWithProgress(data.upload_url, uploadForm.value.file);
-
-    if (fileUpload.value) {
-      fileUpload.value.clear();
-    }
-
-    showUploadDialog.value = false;
-    uploadForm.value = {
-      category: null,
-      subject: "",
-      professor: "",
-      filename: "",
-      type: null,
-      hasAnswers: false,
-      academicYear: null,
-      file: null,
-    };
-    uploadStep.value = "1";
-
-    await fetchCourses();
-    if (selectedCourse.value) {
-      await fetchArchives();
-    }
-
-    toast.add({
-      severity: "success",
-      summary: "上傳成功",
-      detail: "考古題已成功上傳",
-      life: 3000,
-    });
-  } catch (error) {
-    console.error("Upload error:", error);
-    toast.add({
-      severity: "error",
-      summary: "上傳失敗",
-      detail: "請稍後再試",
-      life: 3000,
-    });
-  } finally {
-    uploading.value = false;
-  }
-};
-
-const onFileSelect = (event) => {
-  const newFile = event.files[0];
-
-  if (fileUpload.value) {
-    fileUpload.value.clear();
-  }
-  uploadForm.value.file = null;
-
-  nextTick(() => {
-    uploadForm.value.file = newFile;
-  });
-};
-
-const availableSubjects = computed(() => {
-  if (!uploadForm.value.category) return [];
-
-  const subjects = coursesList.value[uploadForm.value.category] || [];
-  return subjects
-    .map((course) => ({
-      name: course.name,
-      code: course.id,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-});
 
 const availableProfessors = computed(() => {
   return uploadFormProfessors.value;
@@ -924,8 +770,8 @@ async function fetchProfessorsForSubject(subject) {
     const archiveData = response.data;
 
     const uniqueProfessors = new Set();
-    archiveData.forEach((archive) => {
-      if (archive.professor) uniqueProfessors.add(archive.professor);
+    archiveData.forEach((item) => {
+      if (item.professor) uniqueProfessors.add(item.professor);
     });
 
     uploadFormProfessors.value = Array.from(uniqueProfessors)
@@ -992,7 +838,7 @@ const canDeleteArchive = (archive) => {
   );
 };
 
-const canEditArchive = (archive) => {
+const canEditArchive = () => {
   return isAdmin.value;
 };
 
@@ -1036,8 +882,8 @@ const openEditDialog = async (archive) => {
     const archiveData = response.data;
 
     const uniqueProfessors = new Set();
-    archiveData.forEach((archive) => {
-      if (archive.professor) uniqueProfessors.add(archive.professor);
+    archiveData.forEach((item) => {
+      if (item.professor) uniqueProfessors.add(item.professor);
     });
 
     uploadFormProfessors.value = Array.from(uniqueProfessors)
@@ -1107,63 +953,6 @@ onMounted(async () => {
 watch(isDarkTheme, () => {
   // Remove setBg call
 });
-
-function formatFileSize(bytes) {
-  if (bytes === 0) return "0 Bytes";
-
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-}
-
-function clearSelectedFile(removeFileCallback) {
-  if (removeFileCallback) removeFileCallback(0);
-  uploadForm.value.file = null;
-  if (fileUpload.value) {
-    fileUpload.value.clear();
-  }
-}
-
-function previewUploadFile() {
-  if (!uploadForm.value.file) return;
-
-  uploadPreviewLoading.value = true;
-  uploadPreviewError.value = false;
-
-  try {
-    const fileUrl = URL.createObjectURL(
-      new Blob([uploadForm.value.file], { type: "application/pdf" })
-    );
-    uploadPreviewUrl.value = fileUrl;
-    showUploadPreview.value = true;
-  } catch (error) {
-    console.error("Preview error:", error);
-    uploadPreviewError.value = true;
-    toast.add({
-      severity: "error",
-      summary: "預覽失敗",
-      detail: "無法預覽檔案",
-      life: 3000,
-    });
-  } finally {
-    uploadPreviewLoading.value = false;
-  }
-}
-
-function handleUploadPreviewError() {
-  uploadPreviewError.value = true;
-}
-
-function closeUploadPreview() {
-  showUploadPreview.value = false;
-  if (uploadPreviewUrl.value) {
-    URL.revokeObjectURL(uploadPreviewUrl.value);
-    uploadPreviewUrl.value = "";
-  }
-  uploadPreviewError.value = false;
-}
 
 async function handleUploadSuccess() {
   await fetchCourses();
@@ -1324,7 +1113,9 @@ const getCurrentCategory = computed(() => {
   max-width: 320px;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
-  transition: width 0.2s ease-in-out, min-width 0.2s ease-in-out,
+  transition:
+    width 0.2s ease-in-out,
+    min-width 0.2s ease-in-out,
     max-width 0.2s ease-in-out;
   overflow: hidden;
   position: relative;
