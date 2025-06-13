@@ -44,7 +44,7 @@
             aria-label="Login"
           />
           <Button
-            :icon="isDarkTheme ? 'pi pi-moon' : 'pi pi-sun'"
+            :icon="isDarkTheme ? 'pi pi-sun' : 'pi pi-moon'"
             severity="secondary"
             size="small"
             outlined
