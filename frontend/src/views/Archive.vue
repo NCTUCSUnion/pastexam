@@ -24,25 +24,20 @@
             <div
               v-for="category in filteredCategories"
               :key="category.label"
-              class="mb-3"
+              class="mb-2"
             >
-              <div class="text-lg font-semibold mb-2 ellipsis">
+              <div class="text-sm mb-1" style="color: var(--text-secondary)">
                 {{ category.label }}
               </div>
-              <div class="flex flex-col gap-2">
+              <div class="flex flex-col gap-1">
                 <Button
                   v-for="course in category.items"
                   :key="course.label"
-                  class="p-button-text search-result-btn"
+                  class="p-button-text search-result-btn text-color"
                   @click="
                     filterBySubject({ label: course.label, id: course.id })
                   "
                 >
-                  <Tag
-                    :value="getCategoryTag(category.label)"
-                    :severity="getCategorySeverity(category.label)"
-                    class="mr-2"
-                  />
                   <span class="ellipsis">{{ course.label }}</span>
                 </Button>
               </div>
@@ -1306,8 +1301,9 @@ async function handlePreviewDownload(onComplete) {
 }
 
 .sidebar .search-results {
-  white-space: nowrap;
-  overflow: hidden;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding: 0.5rem;
 }
 
 .sidebar .search-results .flex-wrap {
@@ -1355,6 +1351,11 @@ async function handlePreviewDownload(onComplete) {
   width: 100%;
   justify-content: flex-start;
   text-align: left;
-  padding-right: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.search-results .text-sm {
+  font-size: 0.875rem;
 }
 </style>
