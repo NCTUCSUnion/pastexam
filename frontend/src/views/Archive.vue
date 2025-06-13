@@ -484,13 +484,15 @@ const filteredCategories = computed(() => {
     return [];
   }
 
-  const query = searchQuery.value.toLowerCase();
+  const query = searchQuery.value.trim().toLowerCase().normalize("NFKC");
   const filtered = [];
 
   menuItems.value.forEach((category) => {
-    const filteredItems = category.items.filter((item) =>
-      item.label.toLowerCase().includes(query)
-    );
+    const filteredItems = category.items.filter((item) => {
+      const itemLabelLower = item.label.toLowerCase().normalize("NFKC");
+      const isIncluded = itemLabelLower.includes(query);
+      return isIncluded;
+    });
 
     if (filteredItems.length > 0) {
       filtered.push({

@@ -1,5 +1,6 @@
 from sqlalchemy import text
 from sqlmodel import select, func, SQLModel
+import unicodedata
 
 from app.core.config import settings
 from app.models.models import User, Archive, Meme, Course, CourseCategory, ArchiveType
@@ -30,172 +31,179 @@ async def init_db():
         result = await session.execute(select(func.count()).select_from(Course))
         count = result.scalar()
         if count == 0:
+            initial_courses_data = [
+                {
+                    "name": "微積分(一)",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "微積分(二)",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "物理(一)",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "物理(二)",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "化學(一)",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "化學(二)",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "線性代數",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "計算機概論與程式設計",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "資料結構與物件導向程式設計",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "離散數學",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "數位電路設計",
+                    "category": CourseCategory.FRESHMAN
+                },
+                {
+                    "name": "機率",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "演算法概論",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "計算機組織",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "資料庫系統概論",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "人工智慧概論",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "計算機網路概論",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "密碼學概論",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "數值方法",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "通訊原理與無線網路",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "數位電路實驗",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "正規語言概論",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "組合數學",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "作業系統概論",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "機器學習概論",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "人工智慧總整與實作",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "網路程式設計概論",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "電腦安全總整與實作",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "計算機圖學概論",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "影像處理概論",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "網路系統總整與實作",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "編譯器設計概論",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "微處理機系統原理與實作",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "嵌入式系統總整與實作",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "多媒體與人機互動總整與實作",
+                    "category": CourseCategory.SENIOR
+                },
+                {
+                    "name": "計算機系統管理",
+                    "category": CourseCategory.SENIOR,
+                },
+                {
+                    "name": "計算機網路管理",
+                    "category": CourseCategory.SENIOR,
+                },
+                {
+                    "name": "作業系統總整與實作",
+                    "category": CourseCategory.SENIOR,
+                },
+                {
+                    "name": "密碼工程",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "高等 UNIX 程式設計",
+                    "category": CourseCategory.GRADUATE,
+                },
+            ]
+
             initial_courses = [
                 Course(
-                    name="微積分(一)",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="微積分(二)",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="物理(一)",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="物理(二)",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="化學(一)",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="化學(二)",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="線性代數",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="計算機概論與程式設計",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="資料結構與物件導向程式設計",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="離散數學",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="數位電路設計",
-                    category=CourseCategory.FRESHMAN,
-                ),
-                Course(
-                    name="機率",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="演算法概論",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="計算機組織",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="資料庫系統概論",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="人工智慧概論",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="計算機網路概論",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="密碼學概論",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="數值方法",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="通訊原理與無線網路",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="數位電路實驗",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="正規語言概論",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="組合數學",
-                    category=CourseCategory.SOPHOMORE,
-                ),
-                Course(
-                    name="作業系統概論",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="機器學習概論",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="人工智慧總整與實作",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="網路程式設計概論",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="電腦安全總整與實作",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="計算機圖學概論",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="影像處理概論",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="網路系統總整與實作",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="編譯器設計概論",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="微處理機系統原理與實作",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="嵌入式系統總整與實作",
-                    category=CourseCategory.JUNIOR,
-                ),
-                Course(
-                    name="多媒體與人機互動總整與實作",
-                    category=CourseCategory.SENIOR,
-                ),
-                Course(
-                    name="計算機系統管理",
-                    category=CourseCategory.SENIOR,
-                ),
-                Course(
-                    name="計算機網路管理",
-                    category=CourseCategory.SENIOR,
-                ),
-                Course(
-                    name="作業系統總整與實作",
-                    category=CourseCategory.SENIOR,
-                ),
-                Course(
-                    name="密碼工程",
-                    category=CourseCategory.GRADUATE,
-                ),
-                Course(
-                    name="高等 UNIX 程式設計",
-                    category=CourseCategory.GRADUATE,
-                ),
+                    name=unicodedata.normalize("NFKC", data["name"]),
+                    category=data["category"],
+                )
+                for data in initial_courses_data
             ]
             session.add_all(initial_courses)
             await session.commit()
 
-        # Check and add initial memes
         result = await session.execute(select(func.count()).select_from(Meme))
         count = result.scalar()
         if count == 0:
@@ -416,4 +424,4 @@ async def get_session():
     Database dependency for FastAPI endpoints.
     """
     async with AsyncSessionLocal() as session:
-        yield session 
+        yield session
