@@ -199,7 +199,7 @@
             </div>
             <div
               v-else
-              class="flex flex-column align-items-center justify-content-center h-full gap-3"
+              class="flex flex-column align-items-center justify-content-center h-full"
               style="min-height: calc(100vh - 200px)"
             >
               <i
@@ -207,12 +207,12 @@
                 style="color: var(--text-secondary)"
               ></i>
               <div
-                class="text-xl font-medium"
+                class="text-xl font-medium mt-4"
                 style="color: var(--text-secondary)"
               >
                 請從左側選單選擇科目
               </div>
-              <div class="text-sm" style="color: var(--text-secondary)">
+              <div class="text-sm mt-2" style="color: var(--text-secondary)">
                 選擇課程後即可瀏覽相關考古題
               </div>
             </div>
