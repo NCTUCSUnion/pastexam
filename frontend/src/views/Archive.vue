@@ -1298,6 +1298,30 @@ const getCurrentCategory = computed(() => {
   box-shadow: 0 0 0 1px var(--primary-color);
 }
 
+:deep(.p-accordionheader),
+:deep(.p-panelmenu-header-link),
+:deep(.p-panelmenu-content),
+:deep(.p-button),
+:deep(.p-button-outlined),
+:deep(.p-inputtext),
+:deep(.p-dropdown),
+:deep(.p-select),
+:deep(.p-checkbox),
+:deep(.p-checkbox-box),
+:deep(.p-checkbox-icon),
+:deep(.p-tag),
+:deep(.p-toolbar),
+:deep(.p-datatable),
+:deep(.p-datatable-thead > tr > th),
+:deep(.p-datatable-tbody > *),
+:deep(.p-dialog),
+:deep(.p-dialog-header),
+:deep(.p-dialog-content),
+:deep(.p-dialog-footer) {
+  transition: none !important;
+}
+
+/* Keep only sidebar transition */
 .sidebar {
   width: 20vw;
   min-width: 220px;
@@ -1315,7 +1339,6 @@ const getCurrentCategory = computed(() => {
 .sidebar .flex-column {
   width: 100%;
   opacity: 1;
-  transition: opacity 0.2s ease-in-out;
   white-space: nowrap;
 }
 
@@ -1353,7 +1376,6 @@ const getCurrentCategory = computed(() => {
   flex: 1 1 0%;
   min-width: 0;
   background: var(--bg-primary);
-  transition: margin-left 0.2s ease-in-out;
   height: 100%;
 }
 
