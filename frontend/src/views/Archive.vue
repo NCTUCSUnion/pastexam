@@ -15,6 +15,13 @@
           </div>
           <div v-if="searchQuery" class="search-results">
             <div
+              v-if="filteredCategories.length === 0"
+              class="p-3 text-center text-500"
+            >
+              <i class="pi pi-search text-2xl mb-2"></i>
+              <div>查無搜尋結果</div>
+            </div>
+            <div
               v-for="category in filteredCategories"
               :key="category.label"
               class="mb-3"
