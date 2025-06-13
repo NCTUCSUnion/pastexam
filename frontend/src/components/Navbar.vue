@@ -224,16 +224,15 @@ export default {
     },
 
     async handleLogout() {
-      sessionStorage.removeItem("authToken");
-      this.isAuthenticated = false;
-      this.userData = null;
-
       try {
-
         await authService.logout();
       } catch (error) {
         console.error("Logout API failed:", error);
       }
+
+      sessionStorage.removeItem("authToken");
+      this.isAuthenticated = false;
+      this.userData = null;
 
       await this.$router.push("/");
     },
