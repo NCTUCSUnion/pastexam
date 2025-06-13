@@ -28,7 +28,7 @@ services:
 
   db:
     image: postgres:15-alpine
-    container_name: postgres
+    container_name: pastexam-postgres-dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -47,7 +47,7 @@ services:
 
   minio:
     image: quay.io/minio/minio:RELEASE.2025-05-24T17-08-30Z
-    container_name: minio
+    container_name: pastexam-minio-dev
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000"
@@ -68,7 +68,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: pastexam-redis-dev
     ports:
       - "6379:6379"
     # volumes:
@@ -92,8 +92,8 @@ services:
 
 networks:
   app_network:
+    name: pastexam-dev-network
     driver: bridge
-
 # volumes:
 #   pg_data:
 #   minio_data:

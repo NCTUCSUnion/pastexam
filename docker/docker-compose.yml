@@ -1,19 +1,17 @@
-version: "3.8"
-
 services:
   frontend:
-    build: ../frontend
-    container_name: frontend
+    image: ghcr.io/nctucsunion/pastexam:frontend
+    container_name: pastexam-frontend
+    restart: always
     ports:
       - "5173:80"
-    env_file:
-      - ../frontend/.env
     networks:
       - app_network
 
   backend:
-    build: ../backend
-    container_name: backend
+    image: ghcr.io/nctucsunion/pastexam:backend
+    container_name: pastexam-backend
+    restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -21,8 +19,8 @@ services:
         condition: service_started
       minio:
         condition: service_started
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
     env_file:
       - ../backend/.env
     networks:
@@ -30,11 +28,16 @@ services:
 
   db:
     image: postgres:15-alpine
-    container_name: postgres
+    container_name: pastexam-postgres
+    restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # ports:
+    #   - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -45,23 +48,39 @@ services:
 
   minio:
     image: quay.io/minio/minio:RELEASE.2025-05-24T17-08-30Z
-    container_name: minio
+    container_name: pastexam-minio
+    restart: always
     command: server /data --console-address ":9001"
+    # ports:
+    #   - "9000:9000"
+    #   - "9001:9001" # 9000 for S3 API, 9001 for MinIO Console
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+    networks:
+      - app_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: pastexam-redis
+    # ports:
+    #   - "6379:6379"
+    volumes:
+      - redis_data:/data
     networks:
       - app_network
 
   nginx:
     image: nginx:latest
-    container_name: nginx
+    container_name: pastexam-nginx
+    restart: always
     ports:
       - "8080:8080"
     volumes:
@@ -73,14 +92,15 @@ services:
     networks:
       - app_network
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - app_network
-
 networks:
   app_network:
+    name: pastexam-network
     driver: bridge
+
+volumes:
+  pg_data:
+    name: pastexam-postgres-data
+  minio_data:
+    name: pastexam-minio-data
+  redis_data:
+    name: pastexam-redis-data
