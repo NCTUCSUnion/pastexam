@@ -402,60 +402,72 @@ const menuItems = computed(() => {
     label: "大一課程",
     icon: "pi pi-fw pi-book",
     items:
-      coursesList.value?.freshman?.map((course) => ({
-        label: course.name,
-        command: () => filterBySubject({ label: course.name, id: course.id }),
-      })) || [],
+      coursesList.value?.freshman
+        ?.map((course) => ({
+          label: course.name,
+          command: () => filterBySubject({ label: course.name, id: course.id }),
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)) || [],
   });
 
   items.push({
     label: "大二課程",
     icon: "pi pi-fw pi-book",
     items:
-      coursesList.value?.sophomore?.map((course) => ({
-        label: course.name,
-        command: () => filterBySubject({ label: course.name, id: course.id }),
-      })) || [],
+      coursesList.value?.sophomore
+        ?.map((course) => ({
+          label: course.name,
+          command: () => filterBySubject({ label: course.name, id: course.id }),
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)) || [],
   });
 
   items.push({
     label: "大三課程",
     icon: "pi pi-fw pi-book",
     items:
-      coursesList.value?.junior?.map((course) => ({
-        label: course.name,
-        command: () => filterBySubject({ label: course.name, id: course.id }),
-      })) || [],
+      coursesList.value?.junior
+        ?.map((course) => ({
+          label: course.name,
+          command: () => filterBySubject({ label: course.name, id: course.id }),
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)) || [],
   });
 
   items.push({
     label: "大四課程",
     icon: "pi pi-fw pi-book",
     items:
-      coursesList.value?.senior?.map((course) => ({
-        label: course.name,
-        command: () => filterBySubject({ label: course.name, id: course.id }),
-      })) || [],
+      coursesList.value?.senior
+        ?.map((course) => ({
+          label: course.name,
+          command: () => filterBySubject({ label: course.name, id: course.id }),
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)) || [],
   });
 
   items.push({
     label: "研究所課程",
     icon: "pi pi-fw pi-graduation-cap",
     items:
-      coursesList.value?.graduate?.map((course) => ({
-        label: course.name,
-        command: () => filterBySubject({ label: course.name, id: course.id }),
-      })) || [],
+      coursesList.value?.graduate
+        ?.map((course) => ({
+          label: course.name,
+          command: () => filterBySubject({ label: course.name, id: course.id }),
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)) || [],
   });
 
   items.push({
     label: "跨領域課程",
     icon: "pi pi-fw pi-globe",
     items:
-      coursesList.value?.interdisciplinary?.map((course) => ({
-        label: course.name,
-        command: () => filterBySubject({ label: course.name, id: course.id }),
-      })) || [],
+      coursesList.value?.interdisciplinary
+        ?.map((course) => ({
+          label: course.name,
+          command: () => filterBySubject({ label: course.name, id: course.id }),
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)) || [],
   });
 
   return items;
@@ -477,15 +489,17 @@ const filteredCategories = computed(() => {
     if (filteredItems.length > 0) {
       filtered.push({
         ...category,
-        items: filteredItems.map((item) => {
-          const course = coursesList.value[getCategoryKey(category.label)].find(
-            (c) => c.name === item.label
-          );
-          return {
-            label: item.label,
-            id: course?.id,
-          };
-        }),
+        items: filteredItems
+          .map((item) => {
+            const course = coursesList.value[
+              getCategoryKey(category.label)
+            ].find((c) => c.name === item.label);
+            return {
+              label: item.label,
+              id: course?.id,
+            };
+          })
+          .sort((a, b) => a.label.localeCompare(b.label)),
       });
     }
   });
