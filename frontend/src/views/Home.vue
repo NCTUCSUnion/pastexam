@@ -63,9 +63,9 @@
 import { ref, onMounted, computed, watchEffect, watch } from "vue";
 import hljs from "highlight.js";
 import "highlight.js/styles/atom-one-dark.css";
-import axios from "axios";
 import { useTheme } from "../utils/useTheme";
 import { getCodeBgSvg } from "../utils/svgBg";
+import { memeService } from "../services/api";
 
 const { isDarkTheme } = useTheme();
 const displayedText = ref("");
@@ -90,16 +90,13 @@ watch(isDarkTheme, () => {
 async function fetchRandomMeme() {
   isLoading.value = true;
   try {
-    const response = await axios.get(
-      `${import.meta.env.VITE_API_BASE_URL}/meme`
-    );
+    const response = await memeService.getRandomMeme();
 
     if (response.data && response.data.content && response.data.language) {
       selectedMeme.value = {
         code: response.data.content,
         language: response.data.language,
       };
-      // console.log("API response:", response.data);
     } else {
       console.error("Invalid API response format:", response.data);
       throw new Error("Invalid API response format");

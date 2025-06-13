@@ -108,7 +108,7 @@
 <script>
 import { getCurrentUser, isAuthenticated } from "../utils/auth.js";
 import { useTheme } from "../utils/useTheme";
-import { api } from "../services/api";
+import { authService } from "../services/api";
 import { useRouter } from "vue-router";
 
 export default {
@@ -150,7 +150,7 @@ export default {
 
     handleOAuthLogin() {
       this.loginVisible = false;
-      window.location.href = `${import.meta.env.VITE_API_BASE_URL}/oauth/login`;
+      authService.login();
     },
 
     checkAuthentication() {
@@ -171,7 +171,7 @@ export default {
 
     async handleLogout() {
       try {
-        await api.post("/oauth/logout");
+        await authService.logout();
         sessionStorage.removeItem("authToken");
         this.isAuthenticated = false;
         this.userData = null;

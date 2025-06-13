@@ -15,7 +15,7 @@ from app.utils.auth import get_current_user, blacklist_token
 
 router = APIRouter()
 
-@router.get("/login")
+@router.get("/oauth/login")
 async def oauth_login(request: Request):
     """
     Initialize OAuth login flow
@@ -34,7 +34,7 @@ async def oauth_login(request: Request):
     auth_url = f"{settings.OAUTH_AUTHORIZE_URL}?{urlencode(auth_params)}"
     return RedirectResponse(url=auth_url)
 
-@router.get("/callback")
+@router.get("/oauth/callback")
 async def auth_callback_endpoint(
     request: Request,
     code: str,

@@ -70,3 +70,19 @@ export const archiveService = {
     return api.patch(`/courses/${courseId}/archives/${archiveId}`, formData);
   },
 };
+
+export const authService = {
+  login() {
+    window.location.href = `${apiBaseUrl}/auth/oauth/login`;
+  },
+
+  logout() {
+    return api.post("/auth/logout");
+  },
+};
+
+export const memeService = {
+  getRandomMeme() {
+    return api.get("/meme");
+  },
+};
