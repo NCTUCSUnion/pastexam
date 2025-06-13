@@ -48,7 +48,18 @@
       </div>
       <div class="main-content flex-1 h-full overflow-auto">
         <div class="card h-full flex flex-col">
-          <Toolbar class="m-3">
+          <div
+            v-if="selectedSubject"
+            class="p-3 border-bottom-1 surface-border"
+          >
+            <div class="flex align-items-center gap-2">
+              <Tag severity="secondary" class="text-sm">
+                {{ getCategoryTag(getCategoryName(getCurrentCategory)) }}
+              </Tag>
+              <span class="text-xl font-medium">{{ selectedSubject }}</span>
+            </div>
+          </div>
+          <Toolbar v-if="selectedSubject" class="m-3">
             <template #start>
               <div class="flex flex-wrap gap-3 w-full">
                 <Select
@@ -188,7 +199,8 @@
             </div>
             <div
               v-else
-              class="flex flex-column align-items-center justify-content-center mt-4 gap-3"
+              class="flex flex-column align-items-center justify-content-center h-full gap-3"
+              style="min-height: calc(100vh - 200px)"
             >
               <i
                 class="pi pi-book text-6xl"
@@ -1174,18 +1186,6 @@ function getCategoryTag(categoryLabel) {
   return categoryMap[categoryLabel] || categoryLabel;
 }
 
-function getCategorySeverity(categoryLabel) {
-  const severityMap = {
-    大一課程: "info",
-    大二課程: "success",
-    大三課程: "warning",
-    大四課程: "danger",
-    研究所課程: "help",
-    跨領域課程: "secondary",
-  };
-  return severityMap[categoryLabel] || "secondary";
-}
-
 function toggleSidebar() {
   console.log("Toggle sidebar called");
   sidebarVisible.value = !sidebarVisible.value;
@@ -1234,6 +1234,16 @@ async function handlePreviewDownload(onComplete) {
     onComplete();
   }
 }
+
+const getCurrentCategory = computed(() => {
+  if (!selectedCourse.value) return "";
+
+  for (const [category, courses] of Object.entries(coursesList.value)) {
+    const course = courses.find((c) => c.id === selectedCourse.value);
+    if (course) return category;
+  }
+  return "";
+});
 </script>
 
 <style scoped>
