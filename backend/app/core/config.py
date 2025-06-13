@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str
 
+    # Default Admin
+    DEFAULT_ADMIN_NAME: str
+    DEFAULT_ADMIN_PASSWORD: str
+    DEFAULT_ADMIN_EMAIL: str
+
     class Config:
         env_file = ".env"
         from_attributes = True

@@ -26,11 +26,13 @@ class ArchiveType(str, PyEnum):
 class User(SQLModel, table=True):
     __tablename__ = "users"
     id: Optional[int] = Field(default=None, primary_key=True)
-    oauth_provider: str
-    oauth_sub: str
-    email: str
-    name: Optional[str] = None
+    oauth_provider: Optional[str] = Field(default=None)
+    oauth_sub: Optional[str] = Field(default=None)
+    email: str = Field(unique=True, index=True)
+    name: str = Field(unique=True, index=True)
     is_admin: bool = Field(default=False)
+    password_hash: Optional[str] = Field(default=None)
+    is_local: bool = Field(default=False)
 
     archives: List["Archive"] = Relationship(back_populates="uploader")
 

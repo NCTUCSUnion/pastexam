@@ -1,19 +1,50 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 import secrets
 
-from app.db.init_db import get_session
+from app.db.session import get_session
 from app.models.models import User
 from app.services.auth import oauth_callback
 from app.utils.jwt import jwt
 from app.core.config import settings
-from app.utils.auth import get_current_user, blacklist_token
+from app.utils.auth import get_current_user, blacklist_token, authenticate_user
 
 router = APIRouter()
+
+@router.post("/login")
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_session)
+):
+    """
+    Local login endpoint for users with password authentication
+    """
+    user = await authenticate_user(form_data.username, form_data.password, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    payload = {
+        "uid": user.id,
+        "email": user.email,
+        "name": user.name,
+        "is_admin": user.is_admin,
+        "exp": int(datetime.now(timezone.utc).timestamp() + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
 
 @router.get("/oauth/login")
 async def oauth_login(request: Request):
@@ -62,7 +93,8 @@ async def auth_callback_endpoint(
             oauth_provider=info["provider"],
             oauth_sub=info["sub"],
             email=info["email"],
-            name=info["name"]
+            name=info["name"],
+            is_local=False
         )
         db.add(user)
         await db.commit()
@@ -93,4 +125,4 @@ async def logout(
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
         blacklist_token(token)
-    return {"message": "Successfully logged out"} 
+    return {"message": "Successfully logged out"}

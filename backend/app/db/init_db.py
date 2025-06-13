@@ -1,29 +1,32 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 from sqlmodel import select, func, SQLModel
 
 from app.core.config import settings
 from app.models.models import User, Archive, Meme, Course, CourseCategory, ArchiveType
-
-engine = create_async_engine(
-    f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}",
-    echo=True,
-    future=True
-)
-AsyncSessionLocal = sessionmaker(
-    bind=engine, class_=AsyncSession, expire_on_commit=False
-)
+from app.utils.auth import get_password_hash
+from app.db.session import engine, AsyncSessionLocal
 
 async def init_db():
-    # First, create all tables
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
         await conn.commit()
 
-    # Then, check and add initial data
     async with AsyncSessionLocal() as session:
-        # Check and add initial courses
+        result = await session.execute(select(User).where(User.name == settings.DEFAULT_ADMIN_NAME))
+        admin_user = result.scalar_one_or_none()
+        
+        if not admin_user:
+            admin_user = User(
+                name=settings.DEFAULT_ADMIN_NAME,
+                email=settings.DEFAULT_ADMIN_EMAIL,
+                password_hash=get_password_hash(settings.DEFAULT_ADMIN_PASSWORD),
+                is_local=True,
+                is_admin=True
+            )
+            session.add(admin_user)
+            await session.commit()
+            await session.refresh(admin_user)
+
         result = await session.execute(select(func.count()).select_from(Course))
         count = result.scalar()
         if count == 0:

@@ -65,7 +65,12 @@
       <div class="p-fluid w-full">
         <div class="field mt-2 w-full">
           <FloatLabel variant="on" class="w-full">
-            <InputText id="username" v-model="username" class="w-full" />
+            <InputText
+              id="username"
+              v-model="username"
+              class="w-full"
+              @keyup.enter="handleLocalLogin"
+            />
             <label for="username">帳號</label>
           </FloatLabel>
         </div>
@@ -78,12 +83,19 @@
               :feedback="false"
               class="w-full"
               inputClass="w-full"
+              @keyup.enter="handleLocalLogin"
             />
             <label for="password">密碼</label>
           </FloatLabel>
         </div>
         <div class="field mt-4">
-          <Button label="登入" type="submit" class="p-button-primary w-full" />
+          <Button
+            label="登入"
+            type="submit"
+            class="p-button-primary w-full"
+            @click="handleLocalLogin"
+            :loading="loading"
+          />
         </div>
 
         <div class="field mt-3">
@@ -106,10 +118,11 @@
 </template>
 
 <script>
-import { getCurrentUser, isAuthenticated } from "../utils/auth.js";
+import { getCurrentUser, isAuthenticated, setToken } from "../utils/auth.js";
 import { useTheme } from "../utils/useTheme";
 import { authService } from "../services/api";
 import { useRouter } from "vue-router";
+import { useToast } from "primevue/usetoast";
 
 export default {
   data() {
@@ -120,15 +133,18 @@ export default {
       password: "",
       isAuthenticated: false,
       userData: null,
+      loading: false,
     };
   },
   setup() {
     const { isDarkTheme, toggleTheme } = useTheme();
     const router = useRouter();
+    const toast = useToast();
     return {
       isDarkTheme,
       toggleTheme,
       router,
+      toast,
     };
   },
   mounted() {
@@ -146,6 +162,42 @@ export default {
   methods: {
     openLoginDialog() {
       this.loginVisible = true;
+    },
+
+    async handleLocalLogin() {
+      if (!this.username || !this.password) {
+        this.toast.add({
+          severity: "error",
+          summary: "錯誤",
+          detail: "請輸入帳號和密碼",
+          life: 3000,
+        });
+        return;
+      }
+
+      this.loading = true;
+      try {
+        const response = await authService.localLogin(
+          this.username,
+          this.password
+        );
+        setToken(response.access_token);
+        this.loginVisible = false;
+        this.checkAuthentication();
+        this.username = "";
+        this.password = "";
+        await this.router.push("/archive");
+      } catch (error) {
+        console.error("Login failed:", error);
+        this.toast.add({
+          severity: "error",
+          summary: "登入失敗",
+          detail: "帳號或密碼錯誤",
+          life: 3000,
+        });
+      } finally {
+        this.loading = false;
+      }
     },
 
     handleOAuthLogin() {

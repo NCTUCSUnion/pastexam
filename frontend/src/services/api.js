@@ -76,6 +76,15 @@ export const authService = {
     window.location.href = `${apiBaseUrl}/auth/oauth/login`;
   },
 
+  async localLogin(username, password) {
+    const formData = new FormData();
+    formData.append("username", username);
+    formData.append("password", password);
+
+    const response = await api.post("/auth/login", formData);
+    return response.data;
+  },
+
   logout() {
     return api.post("/auth/logout");
   },
