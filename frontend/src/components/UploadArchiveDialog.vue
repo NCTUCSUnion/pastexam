@@ -1,323 +1,342 @@
 <template>
-  <Dialog
-    :visible="modelValue"
-    @update:visible="$emit('update:modelValue', $event)"
-    :modal="true"
-    :draggable="false"
-    :closeOnEscape="true"
-    header="上傳考古題"
-    :style="{ width: '50vw' }"
-  >
-    <Stepper v-model:value="uploadStep" linear>
-      <StepList>
-        <Step value="1">選擇課程</Step>
-        <Step value="2">考試資訊</Step>
-        <Step value="3">上傳檔案</Step>
-        <Step value="4">確認資訊</Step>
-      </StepList>
+  <div>
+    <Dialog
+      :visible="modelValue"
+      @update:visible="$emit('update:modelValue', $event)"
+      :modal="true"
+      :draggable="false"
+      :closeOnEscape="true"
+      header="上傳考古題"
+      :style="{ width: '50vw' }"
+    >
+      <Stepper :value="uploadStep" @update:value="uploadStep = $event" linear>
+        <StepList>
+          <Step value="1">選擇課程</Step>
+          <Step value="2">考試資訊</Step>
+          <Step value="3">上傳檔案</Step>
+          <Step value="4">確認資訊</Step>
+        </StepList>
 
-      <StepPanels>
-        <StepPanel v-slot="{ activateCallback }" value="1">
-          <div class="flex flex-column gap-4">
-            <div class="flex flex-column gap-2">
-              <label>類別</label>
-              <Select
-                v-model="form.category"
-                :options="[
-                  { name: '大一課程', value: 'freshman' },
-                  { name: '大二課程', value: 'sophomore' },
-                  { name: '大三課程', value: 'junior' },
-                  { name: '大四課程', value: 'senior' },
-                  { name: '研究所課程', value: 'graduate' },
-                  { name: '跨領域課程', value: 'interdisciplinary' },
-                ]"
-                optionLabel="name"
-                optionValue="value"
-                placeholder="選擇課程類別"
-                class="w-full"
-              />
-            </div>
-
-            <div class="flex flex-column gap-2">
-              <label>科目名稱</label>
-              <Select
-                v-model="form.subject"
-                :options="availableSubjects"
-                optionLabel="name"
-                optionValue="name"
-                placeholder="選擇科目"
-                class="w-full"
-                :disabled="!form.category"
-                filter
-                editable
-              />
-            </div>
-
-            <div class="flex flex-column gap-2">
-              <label>教授</label>
-              <Select
-                v-model="form.professor"
-                :options="availableProfessors"
-                optionLabel="name"
-                optionValue="code"
-                placeholder="選擇教授"
-                class="w-full"
-                :disabled="!form.subject"
-                filter
-                editable
-              />
-            </div>
-          </div>
-          <div class="flex pt-6 justify-end">
-            <Button
-              label="下一步"
-              icon="pi pi-arrow-right"
-              iconPos="right"
-              @click="activateCallback('2')"
-              :disabled="!canGoToStep2"
-            />
-          </div>
-        </StepPanel>
-
-        <StepPanel v-slot="{ activateCallback }" value="2">
-          <div class="flex flex-column gap-4">
-            <div class="flex flex-column gap-2">
-              <label>年份</label>
-              <DatePicker
-                v-model="form.academicYear"
-                view="year"
-                dateFormat="yy"
-                :showIcon="true"
-                placeholder="選擇年份"
-                class="w-full"
-                :maxDate="new Date()"
-                :minDate="new Date(2000, 0, 1)"
-              />
-            </div>
-
-            <div class="flex flex-column gap-2">
-              <label>考試類型</label>
-              <Select
-                v-model="form.type"
-                :options="[
-                  { name: '期中考', value: 'midterm' },
-                  { name: '期末考', value: 'final' },
-                  { name: '小考', value: 'quiz' },
-                  { name: '其他', value: 'other' },
-                ]"
-                optionLabel="name"
-                optionValue="value"
-                placeholder="選擇考試類型"
-                class="w-full"
-              />
-            </div>
-
-            <div class="flex flex-column gap-2">
-              <label for="filename-input">考試名稱</label>
-              <div class="relative w-full">
-                <InputText
-                  id="filename-input"
-                  v-model="form.filename"
-                  placeholder="輸入考試名稱"
-                  class="w-full pr-8"
-                  :class="{
-                    'p-invalid': form.filename && !isFilenameValid,
-                  }"
-                  :maxlength="30"
-                  @input="validateFilename"
-                />
-                <i
-                  v-if="isFilenameValid && form.filename"
-                  class="pi pi-check text-green-500 absolute right-3 top-1/2 -mt-2"
-                />
-                <i
-                  v-else-if="form.filename"
-                  class="pi pi-times text-red-500 absolute right-3 top-1/2 -mt-2"
+        <StepPanels>
+          <StepPanel v-slot="{ activateCallback }" value="1">
+            <div class="flex flex-column gap-4">
+              <div class="flex flex-column gap-2">
+                <label>類別</label>
+                <Select
+                  v-model="form.category"
+                  :options="[
+                    { name: '大一課程', value: 'freshman' },
+                    { name: '大二課程', value: 'sophomore' },
+                    { name: '大三課程', value: 'junior' },
+                    { name: '大四課程', value: 'senior' },
+                    { name: '研究所課程', value: 'graduate' },
+                    { name: '跨領域課程', value: 'interdisciplinary' },
+                  ]"
+                  optionLabel="name"
+                  optionValue="value"
+                  placeholder="選擇課程類別"
+                  class="w-full"
                 />
               </div>
-              <small v-if="form.filename && !isFilenameValid" class="p-error">
-                名稱格式必須是小寫英文，如需加入數字需加在結尾（如：midterm1、final、quiz3）
-              </small>
-              <small v-else class="text-gray-500">
-                請輸入小寫英文，如需加入數字需加在結尾（如：midterm1、final、quiz3）
-              </small>
-            </div>
 
-            <div class="flex align-items-center gap-2">
-              <Checkbox v-model="form.hasAnswers" :binary="true" />
-              <label>附解答</label>
-            </div>
-          </div>
-          <div class="flex pt-6 justify-between">
-            <Button
-              label="上一步"
-              icon="pi pi-arrow-left"
-              severity="secondary"
-              @click="activateCallback('1')"
-            />
-            <Button
-              label="下一步"
-              icon="pi pi-arrow-right"
-              iconPos="right"
-              @click="activateCallback('3')"
-              :disabled="!canGoToStep3"
-            />
-          </div>
-        </StepPanel>
+              <div class="flex flex-column gap-2">
+                <label>科目名稱</label>
+                <AutoComplete
+                  v-model="form.subject"
+                  :suggestions="availableSubjects"
+                  @complete="searchSubject"
+                  @item-select="onSubjectSelect"
+                  optionLabel="name"
+                  placeholder="選擇科目"
+                  class="w-full"
+                  :disabled="!form.category"
+                  dropdown
+                  :dropdownOptions="{ showClear: true }"
+                >
+                  <template #item="{ item }">
+                    <div>{{ item.name }}</div>
+                  </template>
+                </AutoComplete>
+              </div>
 
-        <StepPanel v-slot="{ activateCallback }" value="3">
-          <div class="flex flex-column gap-4">
-            <FileUpload
-              ref="fileUpload"
-              accept="application/pdf"
-              :maxFileSize="10 * 1024 * 1024"
-              class="w-full"
-              @select="onFileSelect"
-              :multiple="false"
-              :auto="false"
-            >
-              <template #header="{ chooseCallback }">
-                <div class="flex justify-between items-center flex-1 gap-4">
-                  <div class="flex gap-2">
-                    <Button
-                      @click="chooseCallback()"
-                      icon="pi pi-file-pdf"
-                      rounded
-                      outlined
-                      severity="secondary"
-                      label="選擇檔案"
-                    ></Button>
-                  </div>
-                  <div v-if="form.file" class="text-sm text-500">
-                    {{ formatFileSize(form.file.size) }} / 10MB
-                  </div>
+              <div class="flex flex-column gap-2">
+                <label>教授</label>
+                <AutoComplete
+                  :modelValue="form.professor"
+                  @update:modelValue="(val) => (form.professor = val)"
+                  :suggestions="availableProfessors"
+                  @complete="searchProfessor"
+                  @item-select="onProfessorSelect"
+                  optionLabel="name"
+                  placeholder="選擇教授"
+                  class="w-full"
+                  :disabled="!form.subject"
+                  dropdown
+                  :dropdownOptions="{ showClear: true }"
+                >
+                  <template #item="{ item }">
+                    <div>{{ item.name }}</div>
+                  </template>
+                </AutoComplete>
+              </div>
+            </div>
+            <div class="flex pt-6 justify-end">
+              <Button
+                label="下一步"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                @click="activateCallback('2')"
+                :disabled="!canGoToStep2"
+              />
+            </div>
+          </StepPanel>
+
+          <StepPanel v-slot="{ activateCallback }" value="2">
+            <div class="flex flex-column gap-4">
+              <div class="flex flex-column gap-2">
+                <label>年份</label>
+                <DatePicker
+                  v-model="form.academicYear"
+                  view="year"
+                  dateFormat="yy"
+                  :showIcon="true"
+                  placeholder="選擇年份"
+                  class="w-full"
+                  :maxDate="new Date()"
+                  :minDate="new Date(2000, 0, 1)"
+                />
+              </div>
+
+              <div class="flex flex-column gap-2">
+                <label>考試類型</label>
+                <Select
+                  v-model="form.type"
+                  :options="[
+                    { name: '期中考', value: 'midterm' },
+                    { name: '期末考', value: 'final' },
+                    { name: '小考', value: 'quiz' },
+                    { name: '其他', value: 'other' },
+                  ]"
+                  optionLabel="name"
+                  optionValue="value"
+                  placeholder="選擇考試類型"
+                  class="w-full"
+                />
+              </div>
+
+              <div class="flex flex-column gap-2">
+                <label for="filename-input">考試名稱</label>
+                <div class="relative w-full">
+                  <InputText
+                    id="filename-input"
+                    v-model="form.filename"
+                    placeholder="輸入考試名稱"
+                    class="w-full pr-8"
+                    :class="{
+                      'p-invalid': form.filename && !isFilenameValid,
+                    }"
+                    :maxlength="30"
+                    @input="validateFilename"
+                  />
+                  <i
+                    v-if="isFilenameValid && form.filename"
+                    class="pi pi-check text-green-500 absolute right-3 top-1/2 -mt-2"
+                  />
+                  <i
+                    v-else-if="form.filename"
+                    class="pi pi-times text-red-500 absolute right-3 top-1/2 -mt-2"
+                  />
                 </div>
-              </template>
+                <small v-if="form.filename && !isFilenameValid" class="p-error">
+                  名稱格式必須是小寫英文，如需加入數字需加在結尾（如：midterm1、final、quiz3）
+                </small>
+                <small v-else class="text-gray-500">
+                  請輸入小寫英文，如需加入數字需加在結尾（如：midterm1、final、quiz3）
+                </small>
+              </div>
 
-              <template #content="{ removeFileCallback }">
-                <div v-if="form.file" class="flex flex-col gap">
-                  <div class="p-4 surface-50 border-1 border-round">
-                    <div class="flex align-items-center gap-3">
-                      <i class="pi pi-file-pdf text-2xl"></i>
-                      <div class="flex-1">
-                        <div
-                          class="font-semibold text-overflow-ellipsis overflow-hidden"
-                        >
-                          {{ form.file.name }}
-                        </div>
-                        <div class="text-sm text-500">
-                          {{ formatFileSize(form.file.size) }}
-                        </div>
-                      </div>
+              <div class="flex align-items-center gap-2">
+                <Checkbox v-model="form.hasAnswers" :binary="true" />
+                <label>附解答</label>
+              </div>
+            </div>
+            <div class="flex pt-6 justify-between">
+              <Button
+                label="上一步"
+                icon="pi pi-arrow-left"
+                severity="secondary"
+                @click="activateCallback('1')"
+              />
+              <Button
+                label="下一步"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                @click="activateCallback('3')"
+                :disabled="!canGoToStep3"
+              />
+            </div>
+          </StepPanel>
+
+          <StepPanel v-slot="{ activateCallback }" value="3">
+            <div class="flex flex-column gap-4">
+              <FileUpload
+                ref="fileUpload"
+                accept="application/pdf"
+                :maxFileSize="10 * 1024 * 1024"
+                class="w-full"
+                @select="onFileSelect"
+                :multiple="false"
+                :auto="false"
+              >
+                <template #header="{ chooseCallback }">
+                  <div class="flex justify-between items-center flex-1 gap-4">
+                    <div class="flex gap-2">
                       <Button
-                        icon="pi pi-times"
-                        @click="clearSelectedFile(removeFileCallback)"
-                        outlined
+                        @click="chooseCallback()"
+                        icon="pi pi-file-pdf"
                         rounded
-                        severity="danger"
-                        size="small"
-                      />
+                        outlined
+                        severity="secondary"
+                        label="選擇檔案"
+                      ></Button>
+                    </div>
+                    <div v-if="form.file" class="text-sm text-500">
+                      {{ formatFileSize(form.file.size) }} / 10MB
                     </div>
                   </div>
-                </div>
-              </template>
+                </template>
 
-              <template #empty>
-                <div
-                  v-if="!form.file"
-                  class="flex align-items-center justify-content-center flex-column p-5 border-1 border-dashed border-round"
-                >
-                  <i
-                    class="pi pi-cloud-upload border-2 border-round p-5 text-4xl text-500 mb-3"
-                  ></i>
-                  <p class="m-0 text-600">將 PDF 檔案拖放至此處以上傳</p>
-                  <p class="m-0 text-sm text-500 mt-2">
-                    僅接受 PDF 檔案，檔案大小最大 10MB
-                  </p>
-                </div>
-              </template>
-            </FileUpload>
-          </div>
-          <div class="flex pt-6 justify-between">
-            <Button
-              label="上一步"
-              icon="pi pi-arrow-left"
-              severity="secondary"
-              @click="activateCallback('2')"
-            />
-            <Button
-              label="下一步"
-              icon="pi pi-arrow-right"
-              iconPos="right"
-              @click="activateCallback('4')"
-              :disabled="!form.file"
-            />
-          </div>
-        </StepPanel>
+                <template #content="{ removeFileCallback }">
+                  <div v-if="form.file" class="flex flex-col gap">
+                    <div class="p-4 surface-50 border-1 border-round">
+                      <div class="flex align-items-center gap-3">
+                        <i class="pi pi-file-pdf text-2xl"></i>
+                        <div class="flex-1">
+                          <div
+                            class="font-semibold text-overflow-ellipsis overflow-hidden"
+                          >
+                            {{ form.file.name }}
+                          </div>
+                          <div class="text-sm text-500">
+                            {{ formatFileSize(form.file.size) }}
+                          </div>
+                        </div>
+                        <Button
+                          icon="pi pi-times"
+                          @click="clearSelectedFile(removeFileCallback)"
+                          outlined
+                          rounded
+                          severity="danger"
+                          size="small"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </template>
 
-        <StepPanel v-slot="{ activateCallback }" value="4">
-          <div class="flex flex-column gap-4">
-            <div class="flex flex-column gap-2 p-3 surface-ground border-round">
-              <div>
-                <strong>課程類別：</strong>
-                {{ getCategoryName(form.category) }}
-              </div>
-              <div><strong>科目名稱：</strong> {{ form.subject }}</div>
-              <div><strong>授課教授：</strong> {{ form.professor }}</div>
-              <div>
-                <strong>考試年份：</strong>
-                {{ form.academicYear?.getFullYear() }}
-              </div>
-              <div>
-                <strong>考試類型：</strong>
-                {{ getTypeName(form.type) }}
-              </div>
-              <div><strong>考試名稱：</strong> {{ form.filename }}</div>
-              <div>
-                <strong>是否附解答：</strong>
-                {{ form.hasAnswers ? "是" : "否" }}
-              </div>
+                <template #empty>
+                  <div
+                    v-if="!form.file"
+                    class="flex align-items-center justify-content-center flex-column p-5 border-1 border-dashed border-round"
+                  >
+                    <i
+                      class="pi pi-cloud-upload border-2 border-round p-5 text-4xl text-500 mb-3"
+                    ></i>
+                    <p class="m-0 text-600">將 PDF 檔案拖放至此處以上傳</p>
+                    <p class="m-0 text-sm text-500 mt-2">
+                      僅接受 PDF 檔案，檔案大小最大 10MB
+                    </p>
+                  </div>
+                </template>
+              </FileUpload>
             </div>
-          </div>
-          <div class="flex pt-6 justify-between">
-            <Button
-              label="上一步"
-              icon="pi pi-arrow-left"
-              severity="secondary"
-              @click="activateCallback('3')"
-            />
-            <div class="flex gap-2.5">
+            <div class="flex pt-6 justify-between">
               <Button
-                icon="pi pi-eye"
-                label="預覽"
+                label="上一步"
+                icon="pi pi-arrow-left"
                 severity="secondary"
-                @click="previewUploadFile"
+                @click="activateCallback('2')"
               />
               <Button
-                label="上傳"
-                icon="pi pi-upload"
-                severity="success"
-                @click="handleUpload"
-                :loading="uploading"
-                :disabled="!canUpload"
+                label="下一步"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                @click="activateCallback('4')"
+                :disabled="!form.file"
               />
             </div>
-          </div>
-        </StepPanel>
-      </StepPanels>
-    </Stepper>
-  </Dialog>
+          </StepPanel>
 
-  <PdfPreviewModal
-    :visible="showUploadPreview"
-    @update:visible="showUploadPreview = $event"
-    :previewUrl="uploadPreviewUrl"
-    :title="form.file ? form.file.name : ''"
-    :loading="uploadPreviewLoading"
-    :error="uploadPreviewError"
-    @hide="closeUploadPreview"
-    @error="handleUploadPreviewError"
-  />
+          <StepPanel v-slot="{ activateCallback }" value="4">
+            <div class="flex flex-column gap-4">
+              <div
+                class="flex flex-column gap-2 p-3 surface-ground border-round"
+              >
+                <div>
+                  <strong>課程類別：</strong>
+                  {{ getCategoryName(form.category) }}
+                </div>
+                <div>
+                  <strong>科目名稱：</strong>
+                  {{ form.subject || "" }}
+                </div>
+                <div><strong>授課教授：</strong> {{ form.professor }}</div>
+                <div>
+                  <strong>考試年份：</strong>
+                  {{ form.academicYear?.getFullYear() }}
+                </div>
+                <div>
+                  <strong>考試類型：</strong>
+                  {{ getTypeName(form.type) }}
+                </div>
+                <div><strong>考試名稱：</strong> {{ form.filename }}</div>
+                <div>
+                  <strong>是否附解答：</strong>
+                  {{ form.hasAnswers ? "是" : "否" }}
+                </div>
+              </div>
+            </div>
+            <div class="flex pt-6 justify-between">
+              <Button
+                label="上一步"
+                icon="pi pi-arrow-left"
+                severity="secondary"
+                @click="activateCallback('3')"
+              />
+              <div class="flex gap-2.5">
+                <Button
+                  icon="pi pi-eye"
+                  label="預覽"
+                  severity="secondary"
+                  @click="previewUploadFile"
+                />
+                <Button
+                  label="上傳"
+                  icon="pi pi-upload"
+                  severity="success"
+                  @click="handleUpload"
+                  :loading="uploading"
+                  :disabled="!canUpload"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepPanels>
+      </Stepper>
+    </Dialog>
+
+    <PdfPreviewModal
+      :visible="showUploadPreview"
+      @update:visible="showUploadPreview = $event"
+      :previewUrl="uploadPreviewUrl"
+      :title="form.file ? form.file.name : ''"
+      :loading="uploadPreviewLoading"
+      :error="uploadPreviewError"
+      :showDownload="false"
+      @hide="closeUploadPreview"
+      @error="handleUploadPreviewError"
+    />
+  </div>
 </template>
 
 <script setup>
@@ -344,8 +363,9 @@ const toast = useToast();
 
 const form = ref({
   category: null,
-  subject: "",
-  professor: "",
+  subject: null,
+  subjectId: null,
+  professor: null,
   filename: "",
   type: null,
   hasAnswers: false,
@@ -364,21 +384,8 @@ const uploadPreviewUrl = ref("");
 const uploadPreviewLoading = ref(false);
 const uploadPreviewError = ref(false);
 
-const availableSubjects = computed(() => {
-  if (!form.value.category) return [];
-
-  const subjects = props.coursesList[form.value.category] || [];
-  return subjects
-    .map((course) => ({
-      name: course.name,
-      code: course.id,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-});
-
-const availableProfessors = computed(() => {
-  return uploadFormProfessors.value;
-});
+const availableSubjects = ref([]);
+const availableProfessors = ref([]);
 
 const canGoToStep2 = computed(() => {
   return form.value.category && form.value.subject && form.value.professor;
@@ -442,25 +449,11 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-async function fetchProfessorsForSubject(subject) {
-  if (!subject) return;
+async function fetchProfessorsForSubject(subjectId) {
+  if (!subjectId) return;
 
   try {
-    let courseId = null;
-    const category = form.value.category;
-
-    if (category && props.coursesList[category]) {
-      const course = props.coursesList[category].find(
-        (c) => c.name === subject
-      );
-      if (course) {
-        courseId = course.id;
-      }
-    }
-
-    if (!courseId) return;
-
-    const response = await courseService.getCourseArchives(courseId);
+    const response = await courseService.getCourseArchives(subjectId);
     const archiveData = response.data;
 
     const uniqueProfessors = new Set();
@@ -543,8 +536,9 @@ const handleUpload = async () => {
     emit("update:modelValue", false);
     form.value = {
       category: null,
-      subject: "",
-      professor: "",
+      subject: null,
+      subjectId: null,
+      professor: null,
       filename: "",
       type: null,
       hasAnswers: false,
@@ -634,23 +628,58 @@ function closeUploadPreview() {
   uploadPreviewError.value = false;
 }
 
-watch(
-  () => form.value.subject,
-  (newSubject) => {
-    form.value.professor = "";
-    if (newSubject) {
-      fetchProfessorsForSubject(newSubject);
-    } else {
-      uploadFormProfessors.value = [];
-    }
+const searchSubject = (event) => {
+  const query = event.query.toLowerCase();
+  const subjects = props.coursesList[form.value.category] || [];
+  const filteredSubjects = subjects
+    .map((course) => ({
+      name: course.name,
+      code: course.id,
+    }))
+    .filter((subject) => subject.name.toLowerCase().includes(query))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  availableSubjects.value = filteredSubjects;
+};
+
+const searchProfessor = (event) => {
+  const query = event.query.toLowerCase();
+  const filteredProfessors = uploadFormProfessors.value
+    .filter((professor) => professor.name.toLowerCase().includes(query))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  availableProfessors.value = filteredProfessors;
+};
+
+const onSubjectSelect = (event) => {
+  form.value.subject = event.value.name; // 只保存名稱用於顯示
+  form.value.subjectId = event.value.code; // 保存 ID 用於後端提交
+};
+
+const onProfessorSelect = (event) => {
+  if (event.value && typeof event.value === "object") {
+    form.value.professor = event.value.name;
   }
-);
+};
 
 watch(
   () => form.value.category,
   () => {
-    form.value.subject = "";
-    form.value.professor = "";
+    form.value.subject = null;
+    form.value.subjectId = null;
+    form.value.professor = null;
+  }
+);
+
+watch(
+  () => form.value.subject,
+  (newSubject) => {
+    form.value.professor = null;
+    if (newSubject) {
+      fetchProfessorsForSubject(form.value.subjectId);
+    } else {
+      uploadFormProfessors.value = [];
+    }
   }
 );
 </script>

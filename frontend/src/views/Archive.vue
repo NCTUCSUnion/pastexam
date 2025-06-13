@@ -217,7 +217,8 @@
           </div>
 
           <PdfPreviewModal
-            v-model:visible="showPreview"
+            :visible="showPreview"
+            @update:visible="showPreview = $event"
             :previewUrl="selectedArchive?.previewUrl"
             :title="selectedArchive?.name || ''"
             :loading="previewLoading"
@@ -234,7 +235,8 @@
           />
 
           <Dialog
-            v-model:visible="showEditDialog"
+            :visible="showEditDialog"
+            @update:visible="showEditDialog = $event"
             :modal="true"
             :draggable="false"
             :closeOnEscape="true"
@@ -1183,9 +1185,7 @@ function getCategoryTag(categoryLabel) {
 }
 
 function toggleSidebar() {
-  console.log("Toggle sidebar called");
   sidebarVisible.value = !sidebarVisible.value;
-  console.log("Sidebar collapsed:", sidebarVisible.value);
 }
 
 async function handlePreviewDownload(onComplete) {

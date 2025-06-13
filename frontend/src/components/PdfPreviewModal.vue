@@ -1,6 +1,7 @@
 <template>
   <Dialog
-    v-model:visible="localVisible"
+    :visible="localVisible"
+    @update:visible="localVisible = $event"
     :style="{ width: '90vw', height: '90vh' }"
     :contentStyle="{ height: '80vh' }"
     :modal="true"
@@ -50,6 +51,7 @@
 
     <template #footer>
       <Button
+        v-if="showDownload"
         label="下載"
         icon="pi pi-download"
         @click="handleDownload"
@@ -61,7 +63,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 
 const props = defineProps({
   visible: {
@@ -83,6 +85,10 @@ const props = defineProps({
   error: {
     type: Boolean,
     default: false,
+  },
+  showDownload: {
+    type: Boolean,
+    default: true,
   },
 });
 

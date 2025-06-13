@@ -55,7 +55,8 @@
     </Menubar>
 
     <Dialog
-      v-model:visible="loginVisible"
+      :visible="loginVisible"
+      @update:visible="loginVisible = $event"
       header="登入"
       :modal="true"
       :draggable="false"
