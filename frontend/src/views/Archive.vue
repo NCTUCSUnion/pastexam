@@ -19,14 +19,14 @@
               :key="category.label"
               class="mb-3"
             >
-              <div class="text-lg font-semibold mb-2">
+              <div class="text-lg font-semibold mb-2 ellipsis">
                 {{ category.label }}
               </div>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-col gap-2">
                 <Button
                   v-for="course in category.items"
                   :key="course.label"
-                  class="p-button-text"
+                  class="p-button-text search-result-btn"
                   @click="
                     filterBySubject({ label: course.label, id: course.id })
                   "
@@ -36,7 +36,7 @@
                     :severity="getCategorySeverity(category.label)"
                     class="mr-2"
                   />
-                  {{ course.label }}
+                  <span class="ellipsis">{{ course.label }}</span>
                 </Button>
               </div>
             </div>
@@ -1235,11 +1235,19 @@ function toggleSidebar() {
 }
 
 .sidebar .search-results {
-  white-space: normal;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .sidebar .search-results .flex-wrap {
-  white-space: normal;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar .search-results .p-button {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar.collapsed {
@@ -1261,5 +1269,21 @@ function toggleSidebar() {
   background: var(--bg-primary);
   transition: margin-left 0.2s ease-in-out;
   height: 100%;
+}
+
+.ellipsis {
+  display: inline-block;
+  max-width: 90%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.search-result-btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  padding-right: 0.5rem;
 }
 </style>
