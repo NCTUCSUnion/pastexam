@@ -820,7 +820,7 @@ const formatDateTime = (dateString) => {
   if (diffInDays === 0) {
     if (diffInHours === 0) {
       const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-      if (diffInMinutes < 5) {
+      if (diffInMinutes < 1) {
         return "剛剛";
       } else if (diffInMinutes < 60) {
         return `${diffInMinutes} 分鐘前`;
