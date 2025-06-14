@@ -11,7 +11,9 @@
           class="mr-2"
           @click="$emit('toggle-sidebar')"
         />
-        <span class="font-bold text-xl pl-2 title-text"
+        <span
+          class="font-bold text-xl pl-2 title-text clickable-title"
+          @click="handleTitleClick"
           >交大資工考古題系統</span
         >
       </template>
@@ -61,7 +63,7 @@
       :modal="true"
       :draggable="false"
       :closeOnEscape="false"
-      :style="{ width: '25vw' }"
+      :style="{ width: '400px' }"
     >
       <div class="p-fluid w-full">
         <div class="field mt-2 w-full">
@@ -121,7 +123,7 @@
 <script>
 import { getCurrentUser, isAuthenticated, setToken } from "../utils/auth.js";
 import { useTheme } from "../utils/useTheme";
-import { authService } from "../services/api";
+import { authService } from "../api";
 import { useRouter } from "vue-router";
 import { useToast } from "primevue/usetoast";
 
@@ -151,6 +153,19 @@ export default {
   },
   mounted() {
     this.checkAuthentication();
+
+    // Continuously clear focus states from menubar
+    setInterval(() => {
+      const focusedElements = document.querySelectorAll(
+        '.p-menubar .p-focus, .p-menubar .p-highlight, .p-menubar [tabindex="0"]'
+      );
+      focusedElements.forEach((el) => {
+        el.classList.remove("p-focus", "p-highlight");
+        if (el.tabIndex >= 0) {
+          el.blur();
+        }
+      });
+    }, 500);
   },
 
   watch: {
@@ -158,6 +173,16 @@ export default {
       immediate: true,
       handler() {
         this.checkAuthentication();
+        // Force remove focus from menubar items when route changes
+        this.$nextTick(() => {
+          const focusedElements = document.querySelectorAll(
+            ".p-menubar .p-menuitem-content, .p-menubar .p-menuitem-link, .p-menubar .p-focus, .p-menubar .p-highlight"
+          );
+          focusedElements.forEach((el) => {
+            el.blur();
+            el.classList.remove("p-focus", "p-highlight");
+          });
+        });
       },
     },
   },
@@ -213,13 +238,30 @@ export default {
         const user = getCurrentUser();
         if (user) {
           this.userData = user;
+          this.updateMenuItems(user);
         } else {
           this.isAuthenticated = false;
           this.userData = null;
+          this.items = [];
         }
       } else {
         this.isAuthenticated = false;
         this.userData = null;
+        this.items = [];
+      }
+    },
+
+    updateMenuItems(user) {
+      this.items = [];
+
+      if (this.isAuthenticated && user.is_admin) {
+        this.items.push({
+          label: "系統管理",
+          icon: "pi pi-cog",
+          command: () => {
+            this.$router.push("/admin");
+          },
+        });
       }
     },
 
@@ -235,6 +277,12 @@ export default {
       this.userData = null;
 
       await this.$router.push("/");
+    },
+
+    handleTitleClick() {
+      if (this.isAuthenticated) {
+        this.$router.push("/archive");
+      }
     },
   },
 };
@@ -255,6 +303,15 @@ export default {
   background-clip: text;
   color: transparent;
   padding: 0 0.5rem;
+}
+
+.clickable-title {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.clickable-title:hover {
+  transform: scale(1.02);
 }
 
 .card {
@@ -296,5 +353,90 @@ export default {
 
 :deep(.p-float-label) {
   width: 100%;
+}
+
+/* Fix menubar item hover state */
+:deep(.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content) {
+  transition: background-color 0.2s ease;
+  background: transparent !important;
+}
+
+:deep(
+  .p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content:hover
+) {
+  background: var(--highlight-bg) !important;
+}
+
+:deep(
+  .p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content:focus
+) {
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+:deep(
+  .p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content:active
+) {
+  background: transparent !important;
+}
+
+:deep(
+  .p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content.p-focus
+) {
+  background: transparent !important;
+}
+
+:deep(.p-menubar .p-menubar-root-list > .p-menuitem-link) {
+  background: transparent !important;
+}
+
+:deep(.p-menubar .p-menubar-root-list > .p-menuitem-link:focus) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Additional rules to prevent active state persistence */
+:deep(.p-menubar .p-menuitem) {
+  outline: none !important;
+  background: transparent !important;
+}
+
+:deep(.p-menubar .p-menuitem:focus) {
+  background: transparent !important;
+  outline: none !important;
+}
+
+:deep(.p-menubar .p-menuitem:focus-visible) {
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.p-menubar .p-menuitem.p-focus) {
+  background: transparent !important;
+}
+
+:deep(.p-menubar .p-menuitem.p-highlight) {
+  background: transparent !important;
+}
+
+:deep(.p-menubar) {
+  outline: none;
+}
+
+/* Override all possible PrimeVue focus states */
+:deep(.p-menubar *:focus) {
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.p-menubar *.p-focus) {
+  background: transparent !important;
+}
+
+:deep(.p-menubar *.p-highlight) {
+  background: transparent !important;
 }
 </style>

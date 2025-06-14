@@ -16,17 +16,18 @@ redis_client = redis.from_url(settings.REDIS_URL)
 
 oauth2_scheme = HTTPBearer()
 
-def blacklist_token(token: str, expire_seconds: int = 7200):
-    redis_client.setex(f"blacklist:{token}", expire_seconds, "1")
-
-def is_token_blacklisted(token: str) -> bool:
-    return bool(redis_client.get(f"blacklist:{token}"))
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+def blacklist_token(token: str, expire_seconds: int = 7200):
+    redis_client.setex(f"blacklist:{token}", expire_seconds, "1")
+
+def is_token_blacklisted(token: str) -> bool:
+    result = redis_client.get(f"blacklist:{token}")
+    return result is not None
 
 async def authenticate_user(name: str, password: str, db: AsyncSession) -> User | None:
     """

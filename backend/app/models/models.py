@@ -40,7 +40,6 @@ class Course(SQLModel, table=True):
     __tablename__ = "courses"
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)
-    code: Optional[str] = Field(default=None, index=True)
     category: CourseCategory
     
     archives: List["Archive"] = Relationship(back_populates="course")
@@ -94,13 +93,25 @@ class Meme(SQLModel, table=True):
 
 class UserRead(BaseModel):
     id: int
-    oauth_provider: str
-    oauth_sub: str
     email: str
-    name: Optional[str] = None
+    name: str
+    is_admin: bool
+    is_local: bool
 
     class Config:
         from_attributes = True
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+    is_admin: bool = False
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
+    is_admin: Optional[bool] = None
 
 class UserRoles(BaseModel):
     user_id: int
@@ -146,4 +157,25 @@ class ArchiveRead(BaseModel):
     uploader_id: Optional[int] = None
     
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class CourseCreate(BaseModel):
+    name: str
+    category: CourseCategory
+
+class CourseUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[CourseCategory] = None
+
+class CourseRead(BaseModel):
+    id: int
+    name: str
+    category: CourseCategory
+
+    class Config:
+        from_attributes = True
+
+class ArchiveUpdateCourse(BaseModel):
+    course_id: int
+
+ 

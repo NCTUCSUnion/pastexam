@@ -69,7 +69,7 @@ import hljs from "highlight.js";
 import "highlight.js/styles/atom-one-dark.css";
 import { useTheme } from "../utils/useTheme";
 import { getCodeBgSvg } from "../utils/svgBg";
-import { memeService } from "../services/api";
+import { memeService } from "../api";
 
 const { isDarkTheme } = useTheme();
 const displayedText = ref("");

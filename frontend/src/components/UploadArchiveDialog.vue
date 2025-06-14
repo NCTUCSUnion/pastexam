@@ -342,7 +342,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import { useToast } from "primevue/usetoast";
-import { courseService, archiveService } from "../services/api";
+import { courseService, archiveService } from "../api";
 import PdfPreviewModal from "./PdfPreviewModal.vue";
 import { PDFDocument } from "pdf-lib";
 

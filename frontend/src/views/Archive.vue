@@ -180,6 +180,14 @@
                               label="編輯"
                             />
                             <Button
+                              v-if="canEditArchive(data)"
+                              icon="pi pi-arrow-right-arrow-left"
+                              @click="openChangeCourseDialog(data)"
+                              size="small"
+                              severity="info"
+                              label="轉移"
+                            />
+                            <Button
                               v-if="canDeleteArchive(data)"
                               icon="pi pi-trash"
                               @click="confirmDelete(data)"
@@ -235,6 +243,114 @@
           />
 
           <Dialog
+            :visible="showChangeCourseDialog"
+            @update:visible="showChangeCourseDialog = $event"
+            :modal="true"
+            :draggable="false"
+            :closeOnEscape="false"
+            header="轉移考古題"
+            :style="{ width: '40vw' }"
+          >
+            <div class="flex flex-column">
+              <div
+                v-if="changingArchive"
+                class="flex flex-column gap-2 p-3 surface-ground border-round"
+              >
+                <div>
+                  <strong>目前科目：</strong>
+                  {{ selectedSubject }}
+                </div>
+                <div>
+                  <strong>目前分類：</strong>
+                  {{ getCategoryName(getCurrentCategory) }}
+                </div>
+                <div>
+                  <strong>考試名稱：</strong>
+                  {{ changingArchive.name }}
+                </div>
+                <div>
+                  <strong>授課教授：</strong>
+                  {{ changingArchive.professor }}
+                </div>
+                <div>
+                  <strong>考試類型：</strong>
+                  {{
+                    archiveTypeConfig[changingArchive.type]?.name ||
+                    changingArchive.type
+                  }}
+                </div>
+                <div>
+                  <strong>考試年份：</strong>
+                  {{ changingArchive.year }}
+                </div>
+                <div>
+                  <strong>是否附解答：</strong>
+                  {{ changingArchive.hasAnswers ? "是" : "否" }}
+                </div>
+              </div>
+
+              <div class="mt-2">
+                <Divider />
+              </div>
+
+              <div class="flex flex-column gap-2 mt-2">
+                <label>目標課程分類</label>
+                <Select
+                  v-model="changeCourseForm.category"
+                  :options="[
+                    { name: '大一課程', value: 'freshman' },
+                    { name: '大二課程', value: 'sophomore' },
+                    { name: '大三課程', value: 'junior' },
+                    { name: '大四課程', value: 'senior' },
+                    { name: '研究所課程', value: 'graduate' },
+                    { name: '跨領域課程', value: 'interdisciplinary' },
+                  ]"
+                  optionLabel="name"
+                  optionValue="value"
+                  placeholder="選擇課程分類"
+                  class="w-full"
+                />
+              </div>
+
+              <div class="flex flex-column gap-2 mt-3">
+                <label>目標課程</label>
+                <AutoComplete
+                  v-model="selectedTargetCourse"
+                  :suggestions="availableCoursesForTransfer"
+                  @complete="searchTargetCourse"
+                  @item-select="onTargetCourseSelect"
+                  optionLabel="label"
+                  placeholder="搜尋目標課程"
+                  class="w-full"
+                  :disabled="!changeCourseForm.category"
+                  dropdown
+                  :dropdownOptions="{ showClear: true }"
+                >
+                  <template #item="{ item }">
+                    <div>{{ item.label }}</div>
+                  </template>
+                </AutoComplete>
+              </div>
+            </div>
+            <div class="flex pt-6 justify-end gap-2">
+              <Button
+                label="取消"
+                icon="pi pi-times"
+                severity="secondary"
+                @click="showChangeCourseDialog = false"
+              />
+              <Button
+                label="確定轉移"
+                icon="pi pi-arrow-right-arrow-left"
+                severity="success"
+                @click="handleChangeCourse"
+                :disabled="!changeCourseForm.courseId"
+                :loading="changeCourseLoading"
+              />
+            </div>
+          </Dialog>
+
+          <Dialog
             :visible="showEditDialog"
             @update:visible="showEditDialog = $event"
             :modal="true"
@@ -271,6 +387,21 @@
                     <div>{{ item.name }}</div>
                   </template>
                 </AutoComplete>
+              </div>
+
+              <div class="flex flex-column gap-2">
+                <label>年份</label>
+                <DatePicker
+                  v-model="editForm.academicYear"
+                  @update:modelValue="(val) => (editForm.academicYear = val)"
+                  view="year"
+                  dateFormat="yy"
+                  :showIcon="true"
+                  placeholder="選擇年份"
+                  class="w-full"
+                  :maxDate="new Date()"
+                  :minDate="new Date(2000, 0, 1)"
+                />
               </div>
 
               <div class="flex flex-column gap-2">
@@ -331,7 +462,7 @@ defineOptions({
 });
 
 import { ref, computed, onMounted, watch, inject } from "vue";
-import { courseService, archiveService } from "../services/api";
+import { courseService, archiveService } from "../api";
 import PdfPreviewModal from "../components/PdfPreviewModal.vue";
 import UploadArchiveDialog from "../components/UploadArchiveDialog.vue";
 import { getCurrentUser } from "../utils/auth";
@@ -832,7 +963,39 @@ const editForm = ref({
   professor: "",
   type: "",
   hasAnswers: false,
+  academicYear: null,
 });
+
+// Course transfer related variables
+const showChangeCourseDialog = ref(false);
+const changingArchive = ref(null);
+const changeCourseLoading = ref(false);
+const selectedTargetCourse = ref(null);
+const changeCourseForm = ref({
+  category: null,
+  courseId: null,
+});
+
+const allAvailableCoursesForTransfer = computed(() => {
+  if (!changeCourseForm.value.category || !coursesList.value) {
+    return [];
+  }
+
+  const categoryData = coursesList.value[changeCourseForm.value.category];
+  if (!categoryData) {
+    return [];
+  }
+
+  return categoryData
+    .filter((course) => course.id !== selectedCourse.value)
+    .map((course) => ({
+      id: course.id,
+      label: course.name,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+});
+
+const availableCoursesForTransfer = ref([]);
 
 const canDeleteArchive = (archive) => {
   const currentUser = getCurrentUser();
@@ -905,9 +1068,11 @@ const openEditDialog = async (archive) => {
       professor: archive.professor,
       type: archive.type,
       hasAnswers: archive.hasAnswers,
+      academicYear: archive.year
+        ? new Date(parseInt(archive.year), 0, 1)
+        : null,
     };
 
-    // 初始化 availableEditProfessors
     availableEditProfessors.value = uploadFormProfessors.value;
 
     showEditDialog.value = true;
@@ -932,6 +1097,9 @@ const handleEdit = async () => {
         professor: editForm.value.professor,
         archive_type: editForm.value.type,
         has_answers: editForm.value.hasAnswers,
+        academic_year: editForm.value.academicYear
+          ? editForm.value.academicYear.getFullYear()
+          : null,
       }
     );
     await fetchArchives();
@@ -1053,6 +1221,81 @@ const onEditProfessorSelect = (event) => {
     editForm.value.professor = event.value.name;
   }
 };
+
+const openChangeCourseDialog = (archive) => {
+  changingArchive.value = archive;
+  selectedTargetCourse.value = null;
+  changeCourseForm.value = {
+    category: null,
+    courseId: null,
+  };
+  showChangeCourseDialog.value = true;
+};
+
+const searchTargetCourse = (event) => {
+  const query = event.query.toLowerCase();
+  const filteredCourses = allAvailableCoursesForTransfer.value
+    .filter((course) => course.label.toLowerCase().includes(query))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  availableCoursesForTransfer.value = filteredCourses;
+};
+
+const onTargetCourseSelect = (event) => {
+  if (event.value && typeof event.value === "object") {
+    selectedTargetCourse.value = event.value.label;
+    changeCourseForm.value.courseId = event.value.id;
+  }
+};
+
+const handleChangeCourse = async () => {
+  if (!changingArchive.value || !changeCourseForm.value.courseId) {
+    return;
+  }
+
+  try {
+    changeCourseLoading.value = true;
+
+    await archiveService.updateArchiveCourse(
+      selectedCourse.value,
+      changingArchive.value.id,
+      changeCourseForm.value.courseId
+    );
+
+    toast.add({
+      severity: "success",
+      summary: "轉移成功",
+      detail: "考古題已成功轉移到新課程",
+      life: 3000,
+    });
+
+    showChangeCourseDialog.value = false;
+    changingArchive.value = null;
+
+    // Refresh archives list
+    await fetchArchives();
+  } catch (error) {
+    console.error("Change course error:", error);
+    toast.add({
+      severity: "error",
+      summary: "轉移失敗",
+      detail: error.response?.data?.detail || "請稍後再試",
+      life: 3000,
+    });
+  } finally {
+    changeCourseLoading.value = false;
+  }
+};
+
+// Watch for category change to reset course selection
+watch(
+  () => changeCourseForm.value.category,
+  () => {
+    changeCourseForm.value.courseId = null;
+    selectedTargetCourse.value = null;
+    availableCoursesForTransfer.value = allAvailableCoursesForTransfer.value;
+  }
+);
 </script>
 
 <style scoped>
