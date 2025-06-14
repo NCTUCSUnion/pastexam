@@ -51,8 +51,9 @@
                 tableStyle="min-width: 50rem"
                 scrollable
                 scrollHeight="65vh"
-                sortField="category"
-                :sortOrder="1"
+                :multiSortMeta="courseSortMeta"
+                sortMode="multiple"
+                removableSort
               >
                 <Column
                   field="name"
@@ -143,8 +144,9 @@
                 tableStyle="min-width: 50rem"
                 scrollable
                 scrollHeight="65vh"
-                sortField="is_admin"
-                :sortOrder="-1"
+                :multiSortMeta="userSortMeta"
+                sortMode="multiple"
+                removableSort
               >
                 <Column
                   field="name"
@@ -378,6 +380,11 @@ const coursesLoading = ref(false);
 const searchQuery = ref("");
 const filterCategory = ref(null);
 
+const courseSortMeta = ref([
+  { field: "category", order: 1 },
+  { field: "name", order: 1 },
+]);
+
 const showCourseDialog = ref(false);
 const editingCourse = ref(null);
 const saveLoading = ref(false);
@@ -392,6 +399,11 @@ const users = ref([]);
 const usersLoading = ref(false);
 const userSearchQuery = ref("");
 const filterUserType = ref(null);
+
+const userSortMeta = ref([
+  { field: "is_admin", order: -1 },
+  { field: "name", order: -1 },
+]);
 
 const showUserDialog = ref(false);
 const editingUser = ref(null);
