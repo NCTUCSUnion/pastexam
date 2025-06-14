@@ -60,8 +60,8 @@
       header="登入"
       :modal="true"
       :draggable="false"
-      :closeOnEscape="true"
-      :style="{ width: '350px' }"
+      :closeOnEscape="false"
+      :style="{ width: '25vw' }"
     >
       <div class="p-fluid w-full">
         <div class="field mt-2 w-full">

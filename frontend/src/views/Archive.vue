@@ -239,7 +239,7 @@
             @update:visible="showEditDialog = $event"
             :modal="true"
             :draggable="false"
-            :closeOnEscape="true"
+            :closeOnEscape="false"
             header="編輯考古題資訊"
             :style="{ width: '50vw' }"
           >
@@ -255,16 +255,22 @@
 
               <div class="flex flex-column gap-2">
                 <label>教授</label>
-                <Select
-                  v-model="editForm.professor"
-                  :options="availableProfessors"
+                <AutoComplete
+                  :modelValue="editForm.professor"
+                  @update:modelValue="(val) => (editForm.professor = val)"
+                  :suggestions="availableEditProfessors"
+                  @complete="searchEditProfessor"
+                  @item-select="onEditProfessorSelect"
                   optionLabel="name"
-                  optionValue="code"
                   placeholder="選擇教授"
                   class="w-full"
-                  filter
-                  editable
-                />
+                  dropdown
+                  :dropdownOptions="{ showClear: true }"
+                >
+                  <template #item="{ item }">
+                    <div>{{ item.name }}</div>
+                  </template>
+                </AutoComplete>
               </div>
 
               <div class="flex flex-column gap-2">
@@ -746,9 +752,7 @@ function getCategoryName(code) {
   return categories[code] || code;
 }
 
-const availableProfessors = computed(() => {
-  return uploadFormProfessors.value;
-});
+const availableEditProfessors = ref([]);
 
 async function fetchProfessorsForSubject(subject) {
   if (!subject) return;
@@ -903,6 +907,9 @@ const openEditDialog = async (archive) => {
       hasAnswers: archive.hasAnswers,
     };
 
+    // 初始化 availableEditProfessors
+    availableEditProfessors.value = uploadFormProfessors.value;
+
     showEditDialog.value = true;
   } catch (error) {
     console.error("Error fetching professors:", error);
@@ -1031,6 +1038,21 @@ const getCurrentCategory = computed(() => {
   }
   return "";
 });
+
+const searchEditProfessor = (event) => {
+  const query = event.query.toLowerCase();
+  const filteredProfessors = uploadFormProfessors.value
+    .filter((professor) => professor.name.toLowerCase().includes(query))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  availableEditProfessors.value = filteredProfessors;
+};
+
+const onEditProfessorSelect = (event) => {
+  if (event.value && typeof event.value === "object") {
+    editForm.value.professor = event.value.name;
+  }
+};
 </script>
 
 <style scoped>
