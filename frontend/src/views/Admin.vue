@@ -1,189 +1,219 @@
 <template>
   <div class="h-full px-4">
     <div class="card h-full flex flex-col">
-      <TabView class="flex-1">
-        <TabPanel header="課程管理">
-          <div class="p-4">
-            <div class="flex justify-content-between align-items-center mb-4">
-              <div class="flex gap-3">
-                <div class="relative">
-                  <i class="pi pi-search search-icon"></i>
-                  <InputText
-                    v-model="searchQuery"
-                    placeholder="搜尋課程"
-                    class="w-full pl-6"
-                  />
-                </div>
-                <Select
-                  v-model="filterCategory"
-                  :options="categoryFilterOptions"
-                  optionLabel="name"
-                  optionValue="value"
-                  placeholder="篩選分類"
-                  showClear
-                  class="w-full md:w-14rem"
-                />
-              </div>
-              <Button
-                label="新增課程"
-                icon="pi pi-plus"
-                severity="success"
-                @click="openCreateDialog"
-              />
-            </div>
-
-            <ProgressSpinner
-              v-if="coursesLoading"
-              class="w-full flex justify-content-center mt-4"
-              strokeWidth="4"
-            />
-            <DataTable
-              v-else
-              :value="filteredCourses"
-              paginator
-              :rows="15"
-              tableStyle="min-width: 50rem"
-              :scrollable="true"
-              scrollHeight="flex"
-            >
-              <Column
-                field="name"
-                header="課程名稱"
-                style="width: 50%"
-              ></Column>
-              <Column field="category" header="分類" style="width: 25%">
-                <template #body="{ data }">
-                  <Tag
-                    :severity="getCategorySeverity(data.category)"
-                    class="text-sm"
-                  >
-                    {{ getCategoryName(data.category) }}
-                  </Tag>
-                </template>
-              </Column>
-              <Column header="操作" style="width: 25%">
-                <template #body="{ data }">
-                  <div class="flex gap-2">
-                    <Button
-                      icon="pi pi-pencil"
-                      severity="warning"
-                      size="small"
-                      @click="openEditDialog(data)"
-                      label="編輯"
-                    />
-                    <Button
-                      icon="pi pi-trash"
-                      severity="danger"
-                      size="small"
-                      @click="confirmDeleteCourse(data)"
-                      label="刪除"
+      <Tabs value="0" class="flex-1">
+        <TabList>
+          <Tab value="0">課程管理</Tab>
+          <Tab value="1">使用者管理</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel value="0">
+            <div class="p-4">
+              <div class="flex justify-content-between align-items-center mb-4">
+                <div class="flex gap-3">
+                  <div class="relative">
+                    <i class="pi pi-search search-icon"></i>
+                    <InputText
+                      v-model="searchQuery"
+                      placeholder="搜尋課程"
+                      class="w-full pl-6"
                     />
                   </div>
-                </template>
-              </Column>
-            </DataTable>
-          </div>
-        </TabPanel>
-
-        <TabPanel header="使用者管理">
-          <div class="p-4">
-            <div class="flex justify-content-between align-items-center mb-4">
-              <div class="flex gap-3">
-                <div class="relative">
-                  <i class="pi pi-search search-icon"></i>
-                  <InputText
-                    v-model="userSearchQuery"
-                    placeholder="搜尋使用者"
-                    class="w-full pl-6"
+                  <Select
+                    v-model="filterCategory"
+                    :options="categoryFilterOptions"
+                    optionLabel="name"
+                    optionValue="value"
+                    placeholder="篩選分類"
+                    showClear
+                    class="w-full md:w-14rem"
                   />
                 </div>
-                <Select
-                  v-model="filterUserType"
-                  :options="userTypeFilterOptions"
-                  optionLabel="name"
-                  optionValue="value"
-                  placeholder="篩選類型"
-                  showClear
-                  class="w-full md:w-14rem"
+                <Button
+                  label="新增課程"
+                  icon="pi pi-plus"
+                  severity="success"
+                  @click="openCreateDialog"
                 />
               </div>
-              <Button
-                label="新增使用者"
-                icon="pi pi-plus"
-                severity="success"
-                @click="openCreateUserDialog"
-              />
-            </div>
 
-            <ProgressSpinner
-              v-if="usersLoading"
-              class="w-full flex justify-content-center mt-4"
-              strokeWidth="4"
-            />
-            <DataTable
-              v-else
-              :value="filteredUsers"
-              paginator
-              :rows="15"
-              tableStyle="min-width: 50rem"
-              :scrollable="true"
-              scrollHeight="flex"
-            >
-              <Column
-                field="name"
-                header="使用者名稱"
-                style="width: 25%"
-              ></Column>
-              <Column
-                field="email"
-                header="電子郵件"
-                style="width: 30%"
-              ></Column>
-              <Column field="is_admin" header="管理員權限" style="width: 15%">
-                <template #body="{ data }">
-                  <Tag
-                    :severity="data.is_admin ? 'success' : 'secondary'"
-                    class="text-sm"
-                  >
-                    {{ data.is_admin ? "是" : "否" }}
-                  </Tag>
-                </template>
-              </Column>
-              <Column field="is_local" header="帳號類型" style="width: 15%">
-                <template #body="{ data }">
-                  <Tag
-                    :severity="data.is_local ? 'info' : 'warning'"
-                    class="text-sm"
-                  >
-                    {{ data.is_local ? "本地帳號" : "OAuth 帳號" }}
-                  </Tag>
-                </template>
-              </Column>
-              <Column header="操作" style="width: 15%">
-                <template #body="{ data }">
-                  <div class="flex gap-2">
-                    <Button
-                      icon="pi pi-pencil"
-                      severity="warning"
-                      size="small"
-                      @click="openEditUserDialog(data)"
-                      label="編輯"
-                    />
-                    <Button
-                      icon="pi pi-trash"
-                      severity="danger"
-                      size="small"
-                      @click="confirmDeleteUser(data)"
-                      label="刪除"
-                      :disabled="data.id === currentUserId"
+              <ProgressSpinner
+                v-if="coursesLoading"
+                class="w-full flex justify-content-center mt-4"
+                strokeWidth="4"
+              />
+              <DataTable
+                v-else
+                :value="filteredCourses"
+                paginator
+                :rows="10"
+                :rowsPerPageOptions="[5, 10, 15, 25, 50]"
+                tableStyle="min-width: 50rem"
+                scrollable
+                scrollHeight="65vh"
+                sortField="category"
+                :sortOrder="1"
+              >
+                <Column
+                  field="name"
+                  header="課程名稱"
+                  sortable
+                  style="width: 50%"
+                ></Column>
+                <Column
+                  field="category"
+                  header="分類"
+                  sortable
+                  style="width: 25%"
+                >
+                  <template #body="{ data }">
+                    <Tag
+                      :severity="getCategorySeverity(data.category)"
+                      class="text-sm"
+                    >
+                      {{ getCategoryName(data.category) }}
+                    </Tag>
+                  </template>
+                </Column>
+                <Column header="操作" style="width: 25%">
+                  <template #body="{ data }">
+                    <div class="flex gap-2">
+                      <Button
+                        icon="pi pi-pencil"
+                        severity="warning"
+                        size="small"
+                        @click="openEditDialog(data)"
+                        label="編輯"
+                      />
+                      <Button
+                        icon="pi pi-trash"
+                        severity="danger"
+                        size="small"
+                        @click="confirmDeleteCourse(data)"
+                        label="刪除"
+                      />
+                    </div>
+                  </template>
+                </Column>
+              </DataTable>
+            </div>
+          </TabPanel>
+
+          <TabPanel value="1">
+            <div class="p-4">
+              <div class="flex justify-content-between align-items-center mb-4">
+                <div class="flex gap-3">
+                  <div class="relative">
+                    <i class="pi pi-search search-icon"></i>
+                    <InputText
+                      v-model="userSearchQuery"
+                      placeholder="搜尋使用者"
+                      class="w-full pl-6"
                     />
                   </div>
-                </template>
-              </Column>
-            </DataTable>
-          </div>
-        </TabPanel>
-      </TabView>
+                  <Select
+                    v-model="filterUserType"
+                    :options="userTypeFilterOptions"
+                    optionLabel="name"
+                    optionValue="value"
+                    placeholder="篩選類型"
+                    showClear
+                    class="w-full md:w-14rem"
+                  />
+                </div>
+                <Button
+                  label="新增使用者"
+                  icon="pi pi-plus"
+                  severity="success"
+                  @click="openCreateUserDialog"
+                />
+              </div>
+
+              <ProgressSpinner
+                v-if="usersLoading"
+                class="w-full flex justify-content-center mt-4"
+                strokeWidth="4"
+              />
+              <DataTable
+                v-else
+                :value="filteredUsers"
+                paginator
+                :rows="10"
+                :rowsPerPageOptions="[5, 10, 15, 25, 50]"
+                tableStyle="min-width: 50rem"
+                scrollable
+                scrollHeight="65vh"
+                sortField="is_admin"
+                :sortOrder="-1"
+              >
+                <Column
+                  field="name"
+                  header="使用者名稱"
+                  sortable
+                  style="width: 25%"
+                ></Column>
+                <Column
+                  field="email"
+                  header="電子郵件"
+                  sortable
+                  style="width: 30%"
+                ></Column>
+                <Column
+                  field="is_admin"
+                  header="管理員權限"
+                  sortable
+                  style="width: 15%"
+                >
+                  <template #body="{ data }">
+                    <Tag
+                      :severity="data.is_admin ? 'success' : 'secondary'"
+                      class="text-sm"
+                    >
+                      {{ data.is_admin ? "是" : "否" }}
+                    </Tag>
+                  </template>
+                </Column>
+                <Column
+                  field="is_local"
+                  header="帳號類型"
+                  sortable
+                  style="width: 15%"
+                >
+                  <template #body="{ data }">
+                    <Tag
+                      :severity="data.is_local ? 'info' : 'warning'"
+                      class="text-sm"
+                    >
+                      {{ data.is_local ? "本地帳號" : "OAuth 帳號" }}
+                    </Tag>
+                  </template>
+                </Column>
+                <Column header="操作" style="width: 15%">
+                  <template #body="{ data }">
+                    <div class="flex gap-2">
+                      <Button
+                        icon="pi pi-pencil"
+                        severity="warning"
+                        size="small"
+                        @click="openEditUserDialog(data)"
+                        label="編輯"
+                      />
+                      <Button
+                        icon="pi pi-trash"
+                        severity="danger"
+                        size="small"
+                        @click="confirmDeleteUser(data)"
+                        label="刪除"
+                        :disabled="data.id === currentUserId"
+                      />
+                    </div>
+                  </template>
+                </Column>
+              </DataTable>
+            </div>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
 
       <Dialog
         :visible="showCourseDialog"
@@ -225,7 +255,7 @@
           </div>
         </div>
 
-        <div class="flex pt-6 justify-end gap-2">
+        <div class="flex pt-6 justify-end gap-2.5">
           <Button
             label="取消"
             icon="pi pi-times"
@@ -300,7 +330,7 @@
           </div>
         </div>
 
-        <div class="flex pt-6 justify-end gap-2">
+        <div class="flex pt-6 justify-end gap-2.5">
           <Button
             label="取消"
             icon="pi pi-times"
