@@ -8,7 +8,7 @@ from app.models.models import Meme, MemeRead
 
 router = APIRouter()
 
-@router.get("/", response_model=MemeRead)
+@router.get("/meme", response_model=MemeRead)
 async def get_random_meme(
     db: AsyncSession = Depends(get_session),
 ):

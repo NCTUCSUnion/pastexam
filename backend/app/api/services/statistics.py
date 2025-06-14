@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("/statistics")
 async def get_system_statistics(db: AsyncSession = Depends(get_session)):
     """Get system-wide statistics"""
     try:
