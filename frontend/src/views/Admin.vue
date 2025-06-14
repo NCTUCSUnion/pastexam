@@ -185,7 +185,6 @@
         </TabPanel>
       </TabView>
 
-      <!-- Create/Edit Course Dialog -->
       <Dialog
         :visible="showCourseDialog"
         @update:visible="showCourseDialog = $event"
@@ -243,7 +242,6 @@
         </div>
       </Dialog>
 
-      <!-- Create/Edit User Dialog -->
       <Dialog
         :visible="showUserDialog"
         @update:visible="showUserDialog = $event"
@@ -345,7 +343,6 @@ import {
 const confirm = useConfirm();
 const toast = useToast();
 
-// Course management
 const courses = ref([]);
 const coursesLoading = ref(false);
 const searchQuery = ref("");
@@ -361,8 +358,6 @@ const courseForm = ref({
 });
 
 const courseFormErrors = ref({});
-
-// User management
 const users = ref([]);
 const usersLoading = ref(false);
 const userSearchQuery = ref("");

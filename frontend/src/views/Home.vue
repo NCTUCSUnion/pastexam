@@ -164,7 +164,7 @@ function setBg() {
   left: 0;
   right: 0;
   bottom: 0;
-  /* background-image is set dynamically */
+
   animation: scrollBackground 120s linear infinite;
   pointer-events: none;
   z-index: 0;
@@ -282,8 +282,8 @@ function setBg() {
 }
 
 .title-container {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .title-container::-webkit-scrollbar {

@@ -42,7 +42,6 @@ async def create_user(
             detail="Not enough permissions"
         )
     
-    # Check if user with email already exists
     result = await db.execute(select(User).where(User.email == user_data.email))
     if result.scalar_one_or_none():
         raise HTTPException(
@@ -50,15 +49,12 @@ async def create_user(
             detail="User with this email already exists"
         )
     
-    # Check if user with name already exists
     result = await db.execute(select(User).where(User.name == user_data.name))
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this name already exists"
         )
-    
-    # Create new user
     hashed_password = get_password_hash(user_data.password)
     user = User(
         name=user_data.name,
@@ -90,7 +86,6 @@ async def update_user(
             detail="Not enough permissions"
         )
     
-    # Get user
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
@@ -99,9 +94,7 @@ async def update_user(
             detail="User not found"
         )
     
-    # Update user fields
     if user_data.name is not None:
-        # Check if name is already taken by another user
         result = await db.execute(
             select(User).where(User.name == user_data.name, User.id != user_id)
         )
@@ -113,7 +106,6 @@ async def update_user(
         user.name = user_data.name
     
     if user_data.email is not None:
-        # Check if email is already taken by another user
         result = await db.execute(
             select(User).where(User.email == user_data.email, User.id != user_id)
         )
@@ -150,14 +142,11 @@ async def delete_user(
             detail="Not enough permissions"
         )
     
-    # Prevent deleting yourself
     if current_user.user_id == user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete yourself"
         )
-    
-    # Get user
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:

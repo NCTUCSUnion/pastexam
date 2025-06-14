@@ -1,4 +1,3 @@
-// Export all API services
 export { api } from "./services/client";
 export { courseService } from "./services/courses";
 export { archiveService } from "./services/archives";

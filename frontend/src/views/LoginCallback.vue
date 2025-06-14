@@ -100,7 +100,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  /* background-image is set dynamically */
+
   animation: scrollBackground 120s linear infinite;
   pointer-events: none;
   z-index: 0;

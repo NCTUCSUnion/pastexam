@@ -86,8 +86,8 @@ async def get_archive_url(
         )
         
     return {
-        "download_url": presigned_get_url(archive.object_name, expires=timedelta(hours=1)),  # 1 hour
-        "preview_url": presigned_get_url(archive.object_name, expires=timedelta(minutes=30))  # 30 minutes
+        "download_url": presigned_get_url(archive.object_name, expires=timedelta(hours=1)),
+        "preview_url": presigned_get_url(archive.object_name, expires=timedelta(minutes=30))
     }
 
 @router.patch("/{course_id}/archives/{archive_id}")
@@ -161,7 +161,6 @@ async def update_archive_course(
             detail="Only admins can change archive's course"
         )
 
-    # Check if archive exists
     archive_query = select(Archive).where(
         Archive.course_id == course_id,
         Archive.id == archive_id,
@@ -176,7 +175,6 @@ async def update_archive_course(
             detail="Archive not found"
         )
 
-    # Check if new course exists
     new_course_query = select(Course).where(Course.id == course_update.course_id)
     new_course_result = await db.execute(new_course_query)
     new_course = new_course_result.scalar_one_or_none()
@@ -186,8 +184,6 @@ async def update_archive_course(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Target course not found"
         )
-
-    # Update archive's course
     archive.course_id = course_update.course_id
     archive.updated_at = datetime.now(timezone.utc)
     
@@ -237,7 +233,7 @@ async def delete_archive(
     
     return {"message": "Archive deleted successfully"}
 
-# Admin-only course management endpoints
+
 
 @router.post("/admin/courses", response_model=CourseRead)
 async def create_course(
@@ -254,7 +250,6 @@ async def create_course(
             detail="Only admins can create courses"
         )
 
-    # Check if course with same name and category already exists
     query = select(Course).where(
         Course.name == course_data.name,
         Course.category == course_data.category
@@ -305,7 +300,6 @@ async def update_course(
             detail="Course not found"
         )
 
-    # Check if updated name/category combination already exists (if changed)
     if course_data.name is not None or course_data.category is not None:
         new_name = course_data.name if course_data.name is not None else course.name
         new_category = course_data.category if course_data.category is not None else course.category
@@ -324,8 +318,6 @@ async def update_course(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Course with this name and category already exists"
                 )
-
-    # Update fields
     if course_data.name is not None:
         course.name = course_data.name
     if course_data.category is not None:
@@ -362,7 +354,6 @@ async def delete_course(
             detail="Course not found"
         )
 
-    # Soft delete all associated archives first
     archives_query = select(Archive).where(
         Archive.course_id == course_id,
         Archive.deleted_at.is_(None)
@@ -373,8 +364,6 @@ async def delete_course(
     current_time = datetime.now(timezone.utc)
     for archive in archives:
         archive.deleted_at = current_time
-    
-    # Delete the course
     await db.delete(course)
     await db.commit()
     

@@ -25,7 +25,6 @@ export const archiveService = {
     return api.patch(`/courses/${courseId}/archives/${archiveId}`, formData);
   },
 
-  // Update archive's course
   updateArchiveCourse(courseId, archiveId, newCourseId) {
     return api.patch(`/courses/${courseId}/archives/${archiveId}/course`, {
       course_id: newCourseId,

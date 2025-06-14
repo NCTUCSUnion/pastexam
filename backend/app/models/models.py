@@ -5,7 +5,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from pydantic import BaseModel, Field as PydanticField, computed_field
 from sqlalchemy import Column, DateTime, Integer, ForeignKey, Date, String, Boolean
 
-# --- Enums for Course and Archive Structure ---
+
 
 class CourseCategory(str, PyEnum):
     FRESHMAN = "freshman"
@@ -21,7 +21,7 @@ class ArchiveType(str, PyEnum):
     FINAL = "final"
     OTHER = "other"
 
-# --- SQLModel Table Definitions ---
+
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
@@ -89,7 +89,7 @@ class Meme(SQLModel, table=True):
     content: str
     language: str
 
-# --- Pydantic Schema for Request/Response ---
+
 
 class UserRead(BaseModel):
     id: int

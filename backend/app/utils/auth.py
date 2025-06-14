@@ -37,15 +37,11 @@ async def authenticate_user(name: str, password: str, db: AsyncSession) -> User 
     result = await db.execute(select(User).where(User.name == name))
     user = result.scalar_one_or_none()
     
-    # Check if user exists and is a local user
     if not user or not user.is_local:
         return None
         
-    # Check if user has a password hash
     if not user.password_hash:
         return None
-        
-    # Verify password
     if not verify_password(password, user.password_hash):
         return None
         

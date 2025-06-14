@@ -1,6 +1,5 @@
 import { api } from "./client";
 
-// Course management
 export const getCourses = () => {
   return api.get("/courses/admin/courses");
 };
@@ -16,8 +15,6 @@ export const updateCourse = (courseId, courseData) => {
 export const deleteCourse = (courseId) => {
   return api.delete(`/courses/admin/courses/${courseId}`);
 };
-
-// User management
 export const getUsers = () => {
   return api.get("/users/admin/users");
 };

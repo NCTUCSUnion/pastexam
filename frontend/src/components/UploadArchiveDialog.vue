@@ -493,11 +493,9 @@ const handleUpload = async () => {
   try {
     uploading.value = true;
 
-    // Remove PDF metadata
     const fileArrayBuffer = await form.value.file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(fileArrayBuffer);
 
-    // Clear all metadata
     pdfDoc.setTitle("");
     pdfDoc.setAuthor("");
     pdfDoc.setSubject("");
@@ -506,8 +504,6 @@ const handleUpload = async () => {
     pdfDoc.setCreator("");
     pdfDoc.setCreationDate(new Date());
     pdfDoc.setModificationDate(new Date());
-
-    // Convert back to blob
     const pdfBytes = await pdfDoc.save();
     const cleanFile = new Blob([pdfBytes], { type: "application/pdf" });
     const cleanFileWithName = new File([cleanFile], form.value.file.name, {
@@ -652,8 +648,8 @@ const searchProfessor = (event) => {
 };
 
 const onSubjectSelect = (event) => {
-  form.value.subject = event.value.name; // 只保存名稱用於顯示
-  form.value.subjectId = event.value.code; // 保存 ID 用於後端提交
+  form.value.subject = event.value.name;
+  form.value.subjectId = event.value.code;
 };
 
 const onProfessorSelect = (event) => {

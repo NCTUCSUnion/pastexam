@@ -154,7 +154,6 @@ export default {
   mounted() {
     this.checkAuthentication();
 
-    // Continuously clear focus states from menubar
     setInterval(() => {
       const focusedElements = document.querySelectorAll(
         '.p-menubar .p-focus, .p-menubar .p-highlight, .p-menubar [tabindex="0"]'
@@ -173,7 +172,6 @@ export default {
       immediate: true,
       handler() {
         this.checkAuthentication();
-        // Force remove focus from menubar items when route changes
         this.$nextTick(() => {
           const focusedElements = document.querySelectorAll(
             ".p-menubar .p-menuitem-content, .p-menubar .p-menuitem-link, .p-menubar .p-focus, .p-menubar .p-highlight"
@@ -355,7 +353,6 @@ export default {
   width: 100%;
 }
 
-/* Fix menubar item hover state */
 :deep(.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content) {
   transition: background-color 0.2s ease;
   background: transparent !important;
@@ -396,7 +393,6 @@ export default {
   box-shadow: none !important;
 }
 
-/* Additional rules to prevent active state persistence */
 :deep(.p-menubar .p-menuitem) {
   outline: none !important;
   background: transparent !important;
@@ -425,7 +421,6 @@ export default {
   outline: none;
 }
 
-/* Override all possible PrimeVue focus states */
 :deep(.p-menubar *:focus) {
   background: transparent !important;
   outline: none !important;

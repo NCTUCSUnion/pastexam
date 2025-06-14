@@ -35,7 +35,6 @@ async def upload_archive(
     """
     Upload a new archive and create course if not exists
     """
-    # First check if user exists
     user_query = select(User).where(User.id == current_user.user_id)
     user_result = await db.execute(user_query)
     user = user_result.scalar_one_or_none()
@@ -83,7 +82,7 @@ async def upload_archive(
 
     upload_url = presigned_put_url(
         object_name=object_name,
-        expires=timedelta(hours=1)  # 1 hour
+        expires=timedelta(hours=1)
     )
     
     return {

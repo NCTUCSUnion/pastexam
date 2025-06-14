@@ -966,7 +966,6 @@ const editForm = ref({
   academicYear: null,
 });
 
-// Course transfer related variables
 const showChangeCourseDialog = ref(false);
 const changingArchive = ref(null);
 const changeCourseLoading = ref(false);
@@ -1127,9 +1126,7 @@ onMounted(async () => {
   await fetchCourses();
 });
 
-watch(isDarkTheme, () => {
-  // Remove setBg call
-});
+watch(isDarkTheme, () => {});
 
 async function handleUploadSuccess() {
   await fetchCourses();
@@ -1272,7 +1269,6 @@ const handleChangeCourse = async () => {
     showChangeCourseDialog.value = false;
     changingArchive.value = null;
 
-    // Refresh archives list
     await fetchArchives();
   } catch (error) {
     console.error("Change course error:", error);
@@ -1287,7 +1283,6 @@ const handleChangeCourse = async () => {
   }
 };
 
-// Watch for category change to reset course selection
 watch(
   () => changeCourseForm.value.category,
   () => {
@@ -1373,7 +1368,6 @@ watch(
   transition: none !important;
 }
 
-/* Keep only sidebar transition */
 .sidebar {
   width: 20vw;
   min-width: 220px;

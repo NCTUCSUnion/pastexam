@@ -9,7 +9,6 @@ export const courseService = {
     return api.get(`/courses/${courseId}/archives`);
   },
 
-  // Admin course management
   getAllCourses() {
     return api.get("/courses/admin/courses");
   },
