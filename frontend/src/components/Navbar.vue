@@ -63,7 +63,7 @@
       :modal="true"
       :draggable="false"
       :closeOnEscape="false"
-      :style="{ width: '400px' }"
+      :style="{ width: '25vw' }"
     >
       <div class="p-fluid w-full">
         <div class="field mt-2 w-full">
