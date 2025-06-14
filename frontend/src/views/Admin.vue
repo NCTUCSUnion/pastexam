@@ -58,7 +58,7 @@
                   field="name"
                   header="課程名稱"
                   sortable
-                  style="width: 50%"
+                  style="width: 35%"
                 ></Column>
                 <Column
                   field="category"
@@ -75,7 +75,7 @@
                     </Tag>
                   </template>
                 </Column>
-                <Column header="操作" style="width: 25%">
+                <Column header="操作" style="width: 50%">
                   <template #body="{ data }">
                     <div class="flex gap-2">
                       <Button
@@ -150,13 +150,13 @@
                   field="name"
                   header="使用者名稱"
                   sortable
-                  style="width: 25%"
+                  style="width: 20%"
                 ></Column>
                 <Column
                   field="email"
                   header="電子郵件"
                   sortable
-                  style="width: 30%"
+                  style="width: 25%"
                 ></Column>
                 <Column
                   field="is_admin"
@@ -188,7 +188,7 @@
                     </Tag>
                   </template>
                 </Column>
-                <Column header="操作" style="width: 15%">
+                <Column header="操作" style="width: 25%">
                   <template #body="{ data }">
                     <div class="flex gap-2">
                       <Button
