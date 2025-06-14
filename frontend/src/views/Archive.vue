@@ -761,7 +761,8 @@ async function downloadArchive(archive) {
     downloadingId.value = archive.id;
     const { data } = await archiveService.getArchiveUrl(
       selectedCourse.value,
-      archive.id
+      archive.id,
+      true
     );
 
     const response = await fetch(data.download_url);
@@ -785,6 +786,8 @@ async function downloadArchive(archive) {
       detail: `已下載 ${fileName}`,
       life: 3000,
     });
+
+    await fetchArchives();
   } catch (error) {
     console.error("Download error:", error);
     toast.add({
@@ -1159,7 +1162,8 @@ async function handlePreviewDownload(onComplete) {
   try {
     const { data } = await archiveService.getArchiveUrl(
       selectedCourse.value,
-      selectedArchive.value.id
+      selectedArchive.value.id,
+      true
     );
 
     const response = await fetch(data.download_url);
@@ -1183,6 +1187,8 @@ async function handlePreviewDownload(onComplete) {
       detail: `已下載 ${fileName}`,
       life: 3000,
     });
+
+    await fetchArchives();
   } catch (error) {
     console.error("Download error:", error);
     toast.add({

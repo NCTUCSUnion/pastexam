@@ -65,6 +65,7 @@ async def get_course_archives(
 async def get_archive_url(
     course_id: int,
     archive_id: int,
+    is_download: bool = False,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):
@@ -85,9 +86,10 @@ async def get_archive_url(
             detail="Archive not found"
         )
     
-    archive.download_count += 1
-    await db.commit()
-    await db.refresh(archive)
+    if is_download:
+        archive.download_count += 1
+        await db.commit()
+        await db.refresh(archive)
         
     return {
         "download_url": presigned_get_url(archive.object_name, expires=timedelta(hours=1)),
