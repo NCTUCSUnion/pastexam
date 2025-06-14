@@ -33,6 +33,18 @@ class User(SQLModel, table=True):
     is_admin: bool = Field(default=False)
     password_hash: Optional[str] = Field(default=None)
     is_local: bool = Field(default=False)
+    last_login: Optional[datetime] = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=True
+        )
+    )
+    last_logout: Optional[datetime] = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=True
+        )
+    )
 
     archives: List["Archive"] = Relationship(back_populates="uploader")
 
@@ -53,6 +65,7 @@ class Archive(SQLModel, table=True):
     archive_type: ArchiveType
     professor: str = Field(index=True)
     has_answers: bool = False
+    download_count: int = Field(default=0)
     
     object_name: str
     
@@ -97,6 +110,7 @@ class UserRead(BaseModel):
     name: str
     is_admin: bool
     is_local: bool
+    last_login: Optional[datetime]
 
     class Config:
         from_attributes = True
@@ -155,6 +169,7 @@ class ArchiveRead(BaseModel):
     has_answers: bool
     created_at: datetime
     uploader_id: Optional[int] = None
+    download_count: int = 0
     
     class Config:
         from_attributes = True

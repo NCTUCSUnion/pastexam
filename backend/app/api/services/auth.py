@@ -32,6 +32,11 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Update last_login timestamp
+    user.last_login = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(user)
+
     payload = {
         "uid": user.id,
         "email": user.email,
@@ -94,9 +99,15 @@ async def auth_callback_endpoint(
             oauth_sub=info["sub"],
             email=info["email"],
             name=info["name"],
-            is_local=False
+            is_local=False,
+            last_login=datetime.now(timezone.utc)
         )
         db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    else:
+        # Update last_login timestamp for existing users
+        user.last_login = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(user)
 
@@ -116,11 +127,20 @@ async def auth_callback_endpoint(
 @router.post("/logout")
 async def logout(
     request: Request,
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session)
 ):
     """
-    Logout endpoint that blacklists the current token
+    Logout endpoint that blacklists the current token and updates logout time
     """
+    # Update user's last logout time
+    result = await db.execute(select(User).where(User.id == current_user.user_id))
+    user = result.scalar_one_or_none()
+    if user:
+        user.last_logout = datetime.now(timezone.utc)
+        await db.commit()
+    
+    # Blacklist the token
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]

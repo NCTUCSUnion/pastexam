@@ -153,7 +153,14 @@
                           </Tag>
                         </template>
                       </Column>
-                      <Column header="操作" style="width: 30%">
+                      <Column header="下載次數" style="width: 10%">
+                        <template #body="{ data }">
+                          <span class="text-sm">
+                            {{ formatDownloadCount(data.downloadCount) }}
+                          </span>
+                        </template>
+                      </Column>
+                      <Column header="操作" style="width: 35%">
                         <template #body="{ data }">
                           <div class="flex gap-2.5">
                             <Button
@@ -700,6 +707,7 @@ async function fetchArchives() {
       hasAnswers: archive.has_answers,
       subject: selectedSubject.value,
       uploader_id: archive.uploader_id,
+      downloadCount: archive.download_count,
     }));
 
     const uniqueYears = new Set();
@@ -1127,6 +1135,18 @@ function getCategoryTag(categoryLabel) {
     跨領域課程: "跨領域",
   };
   return categoryMap[categoryLabel] || categoryLabel;
+}
+
+function formatDownloadCount(count) {
+  if (count === 0 || count === null || count === undefined) {
+    return "0";
+  }
+  if (count >= 1000000) {
+    return (count / 1000000).toFixed(1) + "M";
+  } else if (count >= 1000) {
+    return (count / 1000).toFixed(1) + "K";
+  }
+  return count.toString();
 }
 
 function toggleSidebar() {

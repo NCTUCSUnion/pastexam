@@ -76,7 +76,7 @@
                     </Tag>
                   </template>
                 </Column>
-                <Column header="操作" style="width: 50%">
+                <Column header="操作" style="width: 18%">
                   <template #body="{ data }">
                     <div class="flex gap-2">
                       <Button
@@ -152,13 +152,13 @@
                   field="name"
                   header="使用者名稱"
                   sortable
-                  style="width: 20%"
+                  style="width: 15%"
                 ></Column>
                 <Column
                   field="email"
                   header="電子郵件"
                   sortable
-                  style="width: 25%"
+                  style="width: 20%"
                 ></Column>
                 <Column
                   field="is_admin"
@@ -190,7 +190,20 @@
                     </Tag>
                   </template>
                 </Column>
-                <Column header="操作" style="width: 25%">
+                <Column
+                  field="last_login"
+                  header="最近登入"
+                  sortable
+                  style="width: 15%"
+                >
+                  <template #body="{ data }">
+                    <span v-if="data.last_login" class="text-sm">
+                      {{ formatDateTime(data.last_login) }}
+                    </span>
+                    <span v-else class="text-sm text-500"> 從未登入 </span>
+                  </template>
+                </Column>
+                <Column header="操作" style="width: 20%">
                   <template #body="{ data }">
                     <div class="flex gap-2">
                       <Button
@@ -791,6 +804,40 @@ const deleteUserAction = async (user) => {
       summary: "錯誤",
       detail: "使用者刪除失敗",
       life: 3000,
+    });
+  }
+};
+
+const formatDateTime = (dateString) => {
+  if (!dateString) return "從未登入";
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInMs = now - date;
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+  const diffInDays = Math.floor(diffInHours / 24);
+
+  if (diffInDays === 0) {
+    if (diffInHours === 0) {
+      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      if (diffInMinutes < 5) {
+        return "剛剛";
+      } else if (diffInMinutes < 60) {
+        return `${diffInMinutes} 分鐘前`;
+      }
+    }
+    return `${diffInHours} 小時前`;
+  } else if (diffInDays === 1) {
+    return "昨天";
+  } else if (diffInDays < 7) {
+    return `${diffInDays} 天前`;
+  } else {
+    return date.toLocaleDateString("zh-TW", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   }
 };

@@ -84,6 +84,10 @@ async def get_archive_url(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Archive not found"
         )
+    
+    archive.download_count += 1
+    await db.commit()
+    await db.refresh(archive)
         
     return {
         "download_url": presigned_get_url(archive.object_name, expires=timedelta(hours=1)),
