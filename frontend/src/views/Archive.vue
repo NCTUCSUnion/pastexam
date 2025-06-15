@@ -55,6 +55,18 @@
             </div>
             <PanelMenu v-else :model="menuItems" multiple class="w-full" />
           </div>
+
+          <!-- Fixed upload section for desktop -->
+          <div v-if="isAuthenticatedRef" class="upload-section p-3">
+            <Button
+              icon="pi pi-cloud-upload"
+              label="上傳考古題"
+              severity="success"
+              @click="showUploadDialog = true"
+              class="w-full"
+              size="small"
+            />
+          </div>
         </div>
       </div>
 
@@ -352,7 +364,7 @@
             :draggable="false"
             :closeOnEscape="false"
             header="編輯考古題"
-            :style="{ width: '60vw' }"
+            :style="{ width: '600px', maxWidth: '90vw' }"
           >
             <div class="flex flex-column">
               <div class="flex flex-column gap-2">
@@ -494,15 +506,6 @@
           </Dialog>
         </div>
       </div>
-
-      <Button
-        icon="pi pi-cloud-upload"
-        label="上傳考古題"
-        severity="success"
-        rounded
-        class="fixed right-4 bottom-4 z-5"
-        @click="showUploadDialog = true"
-      />
     </div>
   </div>
 </template>
@@ -1509,6 +1512,13 @@ const mobileMenuItems = computed(() => {
   position: relative;
   z-index: 1;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-section {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-color);
 }
 
 .sidebar .flex-column {
@@ -1517,6 +1527,8 @@ const mobileMenuItems = computed(() => {
   white-space: nowrap;
   height: 100%;
   transition: opacity 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar .search-section {
@@ -1538,6 +1550,8 @@ const mobileMenuItems = computed(() => {
   min-width: 0;
   background: var(--bg-primary);
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .ellipsis {
@@ -1616,6 +1630,136 @@ const mobileMenuItems = computed(() => {
 @media (max-width: 768px) {
   .main-content {
     width: 100%;
+  }
+
+  /* Dialog font size adjustments for mobile */
+  :deep(.p-dialog .p-dialog-content) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.p-dialog .p-dialog-header) {
+    font-size: 1rem;
+  }
+
+  :deep(.p-dialog label) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.p-dialog .p-inputtext) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.p-dialog .p-button) {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  :deep(.p-dialog .p-dropdown-label),
+  :deep(.p-dialog .p-autocomplete-input),
+  :deep(.p-dialog .p-calendar-input) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.p-dialog .p-checkbox-label) {
+    font-size: 0.875rem;
+  }
+
+  /* Table responsive design for mobile */
+  :deep(.p-datatable) {
+    font-size: 0.75rem;
+    overflow-x: auto;
+  }
+
+  :deep(.p-datatable-table) {
+    font-size: 0.75rem;
+    min-width: 600px;
+    width: 100%;
+  }
+
+  :deep(.p-datatable .p-datatable-thead > tr > th) {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+    white-space: nowrap;
+  }
+
+  :deep(.p-datatable .p-datatable-tbody > tr > td) {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+    white-space: nowrap;
+  }
+
+  :deep(.p-datatable .p-button) {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  :deep(.p-tag) {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.375rem;
+    white-space: nowrap;
+  }
+
+  /* Make table container scrollable on mobile */
+  :deep(.p-accordion-content) {
+    padding: 0.5rem;
+    overflow-x: auto;
+  }
+
+  /* Adjust button groups for mobile */
+  :deep(.p-datatable .p-column-header-content) {
+    justify-content: center;
+  }
+
+  /* Ensure buttons don't wrap */
+  :deep(.p-datatable .flex.gap-2\.5) {
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+  }
+
+  /* Accordion adjustments for mobile */
+  :deep(.p-accordion .p-accordion-header) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.p-accordion .p-accordion-content) {
+    padding: 0.5rem;
+  }
+}
+
+/* Desktop table overflow handling */
+@media (min-width: 769px) {
+  :deep(.p-datatable) {
+    overflow-x: auto;
+  }
+
+  :deep(.p-datatable-table) {
+    min-width: 800px;
+    width: 100%;
+  }
+
+  :deep(.p-datatable .p-datatable-thead > tr > th),
+  :deep(.p-datatable .p-datatable-tbody > tr > td) {
+    white-space: nowrap;
+  }
+
+  :deep(.p-datatable .p-button) {
+    white-space: nowrap;
+  }
+
+  :deep(.p-tag) {
+    white-space: nowrap;
+  }
+
+  /* Make accordion content scrollable on desktop too */
+  :deep(.p-accordion-content) {
+    overflow-x: auto;
+  }
+
+  /* Ensure buttons don't wrap on desktop */
+  :deep(.p-datatable .flex.gap-2\.5) {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
   }
 }
 

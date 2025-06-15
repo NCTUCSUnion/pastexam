@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full px-4">
+  <div class="h-full">
     <div class="card h-full flex flex-col">
       <Tabs value="0" class="flex-1">
         <TabList>
@@ -8,10 +8,14 @@
         </TabList>
         <TabPanels>
           <TabPanel value="0">
-            <div class="p-4">
-              <div class="flex justify-content-between align-items-center mb-4">
-                <div class="flex gap-3">
-                  <div class="relative">
+            <div class="p-2 md:p-4">
+              <div
+                class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center mb-4 gap-3"
+              >
+                <div
+                  class="flex flex-column md:flex-row gap-3 w-full md:w-auto"
+                >
+                  <div class="relative w-full md:w-auto">
                     <i class="pi pi-search search-icon"></i>
                     <InputText
                       v-model="searchQuery"
@@ -34,6 +38,7 @@
                   icon="pi pi-plus"
                   severity="success"
                   @click="openCreateDialog"
+                  class="w-full md:w-auto"
                 />
               </div>
 
@@ -101,10 +106,14 @@
           </TabPanel>
 
           <TabPanel value="1">
-            <div class="p-4">
-              <div class="flex justify-content-between align-items-center mb-4">
-                <div class="flex gap-3">
-                  <div class="relative">
+            <div class="p-2 md:p-4">
+              <div
+                class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center mb-4 gap-3"
+              >
+                <div
+                  class="flex flex-column md:flex-row gap-3 w-full md:w-auto"
+                >
+                  <div class="relative w-full md:w-auto">
                     <i class="pi pi-search search-icon"></i>
                     <InputText
                       v-model="userSearchQuery"
@@ -127,6 +136,7 @@
                   icon="pi pi-plus"
                   severity="success"
                   @click="openCreateUserDialog"
+                  class="w-full md:w-auto"
                 />
               </div>
 
@@ -237,7 +247,7 @@
         :draggable="false"
         :closeOnEscape="false"
         :header="editingCourse ? '編輯課程' : '新增課程'"
-        :style="{ width: '30vw' }"
+        :style="{ width: '450px', maxWidth: '90vw' }"
       >
         <div class="flex flex-column gap-4">
           <div class="flex flex-column gap-2">
@@ -294,7 +304,7 @@
         :draggable="false"
         :closeOnEscape="false"
         :header="editingUser ? '編輯使用者' : '新增使用者'"
-        :style="{ width: '30vw' }"
+        :style="{ width: '450px', maxWidth: '90vw' }"
       >
         <div class="flex flex-column gap-4">
           <div class="flex flex-column gap-2">
@@ -921,5 +931,99 @@ onMounted(() => {
 
 .relative {
   position: relative;
+}
+
+.search-container {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .card {
+    margin: 0.5rem;
+  }
+  :deep(.p-dialog .p-dialog-content) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.p-dialog .p-dialog-header) {
+    font-size: 1rem;
+  }
+
+  :deep(.p-dialog label) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.p-dialog .p-inputtext) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.p-dialog .p-button) {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  :deep(.p-dialog .p-dropdown-label),
+  :deep(.p-dialog .p-password-input) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.p-dialog .p-checkbox-label) {
+    font-size: 0.875rem;
+  }
+
+  /* Table adjustments for mobile */
+  :deep(.p-datatable) {
+    font-size: 0.875rem;
+    overflow-x: auto;
+  }
+
+  :deep(.p-datatable-table) {
+    min-width: 600px;
+    width: 100%;
+  }
+
+  :deep(.p-datatable .p-datatable-thead > tr > th),
+  :deep(.p-datatable .p-datatable-tbody > tr > td) {
+    white-space: nowrap;
+  }
+
+  :deep(.p-datatable .p-button) {
+    white-space: nowrap;
+  }
+
+  :deep(.p-paginator) {
+    font-size: 0.875rem;
+  }
+}
+
+/* Desktop table overflow handling */
+@media (min-width: 769px) {
+  :deep(.p-datatable) {
+    overflow-x: auto;
+  }
+
+  :deep(.p-datatable-table) {
+    min-width: 800px;
+    width: 100%;
+  }
+
+  :deep(.p-datatable .p-datatable-thead > tr > th),
+  :deep(.p-datatable .p-datatable-tbody > tr > td) {
+    white-space: nowrap;
+  }
+
+  :deep(.p-datatable .p-button) {
+    white-space: nowrap;
+  }
+
+  /* Ensure buttons don't wrap on desktop */
+  :deep(.p-datatable .flex.gap-2) {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
 }
 </style>

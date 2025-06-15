@@ -7,7 +7,7 @@
       :draggable="false"
       :closeOnEscape="false"
       header="上傳考古題"
-      :style="{ width: '50vw' }"
+      :style="{ width: '700px', maxWidth: '90vw' }"
     >
       <Stepper :value="uploadStep" @update:value="uploadStep = $event" linear>
         <StepList>
@@ -679,3 +679,18 @@ watch(
   }
 );
 </script>
+
+<style scoped>
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.ellipsis {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+</style>

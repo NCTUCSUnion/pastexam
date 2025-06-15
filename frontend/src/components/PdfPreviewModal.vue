@@ -2,7 +2,7 @@
   <Dialog
     :visible="localVisible"
     @update:visible="localVisible = $event"
-    :style="{ width: '90vw', height: '90vh' }"
+    :style="{ width: '1200px', maxWidth: '95vw', height: '90vh' }"
     :contentStyle="{ height: '80vh' }"
     :modal="true"
     :draggable="false"
@@ -126,3 +126,29 @@ function handleDownload() {
   });
 }
 </script>
+
+<style scoped>
+.pdf-viewer {
+  width: 100%;
+  height: 80vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  :deep(.p-dialog .p-dialog-header) {
+    font-size: 1rem;
+  }
+
+  :deep(.p-dialog .p-button) {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .pdf-viewer {
+    height: 70vh;
+  }
+}
+</style>
