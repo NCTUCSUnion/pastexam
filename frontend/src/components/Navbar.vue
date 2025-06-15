@@ -242,7 +242,9 @@
           />
         </div>
 
-        <div class="mt-3 p-3 bg-blue-50 border-round text-sm">
+        <div
+          class="mt-3 p-3 bg-blue-50 border-round text-sm flex align-items-center"
+        >
           <i class="pi pi-info-circle text-blue-600 mr-2"></i>
           <span class="text-blue-800">
             點擊「提交到 GitHub」將會跳轉到 GitHub
