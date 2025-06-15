@@ -160,6 +160,7 @@ async def update_archive_course(
 ):
     """
     Update archive's course. Only admins can change archive's course.
+    Supports both transferring to existing course by ID or creating new course by name and category.
     """
     if not current_user.is_admin:
         raise HTTPException(
@@ -181,16 +182,59 @@ async def update_archive_course(
             detail="Archive not found"
         )
 
-    new_course_query = select(Course).where(Course.id == course_update.course_id)
-    new_course_result = await db.execute(new_course_query)
-    new_course = new_course_result.scalar_one_or_none()
+    # Determine target course
+    new_course = None
     
-    if not new_course:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Target course not found"
+    if course_update.course_id:
+        # Check if trying to transfer to the same course
+        if course_update.course_id == course_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot transfer archive to the same course"
+            )
+            
+        # Transfer to existing course by ID
+        new_course_query = select(Course).where(Course.id == course_update.course_id)
+        new_course_result = await db.execute(new_course_query)
+        new_course = new_course_result.scalar_one_or_none()
+        
+        if not new_course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Target course not found"
+            )
+    elif course_update.course_name and course_update.course_category:
+        # Transfer to course by name and category, create if not exists
+        new_course_query = select(Course).where(
+            Course.name == course_update.course_name,
+            Course.category == course_update.course_category
         )
-    archive.course_id = course_update.course_id
+        new_course_result = await db.execute(new_course_query)
+        new_course = new_course_result.scalar_one_or_none()
+        
+        if new_course:
+            # Check if trying to transfer to the same course
+            if new_course.id == course_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot transfer archive to the same course"
+                )
+        else:
+            # Create new course if it doesn't exist
+            new_course = Course(
+                name=course_update.course_name,
+                category=course_update.course_category
+            )
+            db.add(new_course)
+            await db.commit()
+            await db.refresh(new_course)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either course_id or both course_name and course_category must be provided"
+        )
+    
+    archive.course_id = new_course.id
     archive.updated_at = datetime.now(timezone.utc)
     
     await db.commit()
@@ -200,7 +244,7 @@ async def update_archive_course(
         "message": f"Archive moved to course '{new_course.name}'",
         "archive_id": archive.id,
         "old_course_id": course_id,
-        "new_course_id": course_update.course_id
+        "new_course_id": new_course.id
     }
 
 @router.delete("/{course_id}/archives/{archive_id}")

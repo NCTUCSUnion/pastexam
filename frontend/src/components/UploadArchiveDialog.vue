@@ -41,7 +41,7 @@
               </div>
 
               <div class="flex flex-column gap-2">
-                <label>科目名稱</label>
+                <label>科目</label>
                 <AutoComplete
                   v-model="form.subject"
                   :suggestions="availableSubjects"
@@ -50,7 +50,7 @@
                   @focus="() => searchSubject({ query: '' })"
                   @click="() => searchSubject({ query: '' })"
                   optionLabel="name"
-                  placeholder="選擇科目"
+                  placeholder="搜尋或輸入科目名稱"
                   class="w-full"
                   :disabled="!form.category"
                   dropdown
@@ -75,7 +75,7 @@
                   @focus="() => searchProfessor({ query: '' })"
                   @click="() => searchProfessor({ query: '' })"
                   optionLabel="name"
-                  placeholder="選擇教授"
+                  placeholder="搜尋或輸入教授名稱"
                   class="w-full"
                   :disabled="!form.subject"
                   dropdown

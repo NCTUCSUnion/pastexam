@@ -191,6 +191,8 @@ class CourseRead(BaseModel):
         from_attributes = True
 
 class ArchiveUpdateCourse(BaseModel):
-    course_id: int
+    course_id: Optional[int] = None
+    course_name: Optional[str] = None
+    course_category: Optional[CourseCategory] = None
 
  

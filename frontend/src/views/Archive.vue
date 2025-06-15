@@ -479,7 +479,7 @@
                     @focus="() => searchTargetCourse({ query: '' })"
                     @click="() => searchTargetCourse({ query: '' })"
                     optionLabel="label"
-                    placeholder="搜尋目標課程"
+                    placeholder="搜尋或輸入目標課程名稱"
                     class="w-full"
                     :disabled="!editForm.targetCategory"
                     dropdown
@@ -1060,9 +1060,18 @@ watch(
   () => groupedArchives.value,
   (newGroups) => {
     if (newGroups.length) {
-      expandedPanels.value = newGroups
-        .slice(0, 3)
-        .map((group) => group.year.toString());
+      // Only set default expanded panels if no panels are currently expanded
+      if (expandedPanels.value.length === 0) {
+        expandedPanels.value = newGroups
+          .slice(0, 3)
+          .map((group) => group.year.toString());
+      } else {
+        // Keep existing expanded panels that are still valid
+        const validYears = newGroups.map((group) => group.year.toString());
+        expandedPanels.value = expandedPanels.value.filter((panel) =>
+          validYears.includes(panel)
+        );
+      }
     }
   },
   { immediate: true }
@@ -1218,15 +1227,32 @@ const handleEdit = async () => {
       }
     );
 
-    if (editForm.value.shouldTransfer && editForm.value.targetCourseId) {
-      await archiveService.updateArchiveCourse(
-        selectedCourse.value,
-        editForm.value.id,
-        editForm.value.targetCourseId
-      );
+    if (editForm.value.shouldTransfer && editForm.value.targetCategory) {
+      if (editForm.value.targetCourseId) {
+        // Transfer to existing course
+        await archiveService.updateArchiveCourse(
+          selectedCourse.value,
+          editForm.value.id,
+          editForm.value.targetCourseId
+        );
+      } else if (editForm.value.targetCourse) {
+        // Transfer to new course (create if not exists)
+        await archiveService.updateArchiveCourseByCategoryAndName(
+          selectedCourse.value,
+          editForm.value.id,
+          editForm.value.targetCourse,
+          editForm.value.targetCategory
+        );
+      }
     }
 
     await fetchArchives();
+
+    // If transfer was performed, refresh the course list to show the new course
+    if (editForm.value.shouldTransfer) {
+      await fetchCourses();
+    }
+
     closeEditDialog();
 
     const successMessage = editForm.value.shouldTransfer
@@ -1396,8 +1422,30 @@ const onTargetCourseSelect = (event) => {
   if (event.value && typeof event.value === "object") {
     editForm.value.targetCourse = event.value.label;
     editForm.value.targetCourseId = event.value.id;
+  } else if (typeof event.value === "string") {
+    // User typed a new course name
+    editForm.value.targetCourse = event.value;
+    editForm.value.targetCourseId = null;
   }
 };
+
+// Handle direct input of course name
+watch(
+  () => editForm.value.targetCourse,
+  (newValue) => {
+    if (typeof newValue === "string" && newValue) {
+      // Check if it's an existing course
+      const existingCourse = allAvailableCoursesForTransfer.value.find(
+        (course) => course.label === newValue
+      );
+      if (existingCourse) {
+        editForm.value.targetCourseId = existingCourse.id;
+      } else {
+        editForm.value.targetCourseId = null;
+      }
+    }
+  }
+);
 
 watch(
   () => editForm.value.targetCategory,

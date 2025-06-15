@@ -32,4 +32,16 @@ export const archiveService = {
       course_id: newCourseId,
     });
   },
+
+  updateArchiveCourseByCategoryAndName(
+    courseId,
+    archiveId,
+    courseName,
+    courseCategory
+  ) {
+    return api.patch(`/courses/${courseId}/archives/${archiveId}/course`, {
+      course_name: courseName,
+      course_category: courseCategory,
+    });
+  },
 };
