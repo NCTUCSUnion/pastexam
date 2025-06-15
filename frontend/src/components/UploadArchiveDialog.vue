@@ -56,7 +56,6 @@
                   dropdown
                   completeOnFocus
                   :minLength="0"
-                  forceSelection="false"
                   autoHighlight="true"
                 >
                   <template #item="{ item }">
@@ -82,7 +81,6 @@
                   dropdown
                   completeOnFocus
                   :minLength="0"
-                  forceSelection="false"
                   autoHighlight="true"
                 >
                   <template #item="{ item }">
@@ -536,24 +534,7 @@ const handleUpload = async () => {
 
     await uploadWithProgress(data.upload_url, cleanFileWithName);
 
-    if (fileUpload.value) {
-      fileUpload.value.clear();
-    }
-
     emit("update:modelValue", false);
-    form.value = {
-      category: null,
-      subject: null,
-      subjectId: null,
-      professor: null,
-      filename: "",
-      type: null,
-      hasAnswers: false,
-      academicYear: null,
-      file: null,
-    };
-    uploadStep.value = "1";
-
     emit("upload-success");
 
     toast.add({
@@ -689,6 +670,40 @@ watch(
     }
   }
 );
+
+watch(
+  () => props.modelValue,
+  (newValue, oldValue) => {
+    if (oldValue === true && newValue === false) {
+      resetForm();
+    }
+  }
+);
+
+function resetForm() {
+  form.value = {
+    category: null,
+    subject: null,
+    subjectId: null,
+    professor: null,
+    filename: "",
+    type: null,
+    hasAnswers: false,
+    academicYear: null,
+    file: null,
+  };
+  uploadStep.value = "1";
+  isFilenameValid.value = false;
+  availableSubjects.value = [];
+  availableProfessors.value = [];
+  uploadFormProfessors.value = [];
+
+  if (fileUpload.value) {
+    fileUpload.value.clear();
+  }
+
+  closeUploadPreview();
+}
 </script>
 
 <style scoped>

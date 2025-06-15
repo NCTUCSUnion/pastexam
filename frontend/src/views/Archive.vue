@@ -394,7 +394,6 @@
                   dropdown
                   completeOnFocus
                   :minLength="0"
-                  forceSelection="false"
                   autoHighlight="true"
                 >
                   <template #item="{ item }">
@@ -486,7 +485,6 @@
                     dropdown
                     completeOnFocus
                     :minLength="0"
-                    forceSelection="false"
                     autoHighlight="true"
                   >
                     <template #item="{ item }">
