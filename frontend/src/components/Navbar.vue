@@ -12,39 +12,74 @@
           @click="$emit('toggle-sidebar')"
         />
         <span
-          class="font-bold text-xl pl-2 title-text clickable-title"
+          class="font-bold text-lg md:text-xl pl-2 title-text clickable-title"
           @click="handleTitleClick"
           >交大資工考古題系統</span
         >
       </template>
       <template #end>
         <div class="flex align-items-center gap-2">
-          <span
-            v-if="isAuthenticated"
-            class="user-name flex align-items-center mr-2"
-            :style="{ color: 'var(--text-secondary)' }"
-            >{{ userData?.name || "User" }}</span
-          >
-          <Button
-            v-if="isAuthenticated"
-            icon="pi pi-sign-out"
-            label="登出"
-            @click="handleLogout"
-            severity="secondary"
-            size="small"
-            outlined
-            aria-label="Logout"
-          />
-          <Button
-            v-else
-            icon="pi pi-sign-in"
-            label="登入"
-            @click="openLoginDialog"
-            severity="secondary"
-            size="small"
-            outlined
-            aria-label="Login"
-          />
+          <div class="hidden md:flex align-items-center gap-2">
+            <span
+              v-if="isAuthenticated"
+              class="user-name flex align-items-center mr-2"
+              :style="{ color: 'var(--text-secondary)' }"
+              >{{ userData?.name || "User" }}</span
+            >
+            <Button
+              v-if="isAuthenticated && userData?.is_admin"
+              icon="pi pi-cog"
+              label="系統管理"
+              @click="$router.push('/admin')"
+              severity="secondary"
+              size="small"
+              outlined
+            />
+            <Button
+              v-if="isAuthenticated"
+              icon="pi pi-sign-out"
+              label="登出"
+              @click="handleLogout"
+              severity="secondary"
+              size="small"
+              outlined
+              aria-label="Logout"
+            />
+            <Button
+              v-else
+              icon="pi pi-sign-in"
+              label="登入"
+              @click="openLoginDialog"
+              severity="secondary"
+              size="small"
+              outlined
+              aria-label="Login"
+            />
+          </div>
+
+          <div class="flex md:hidden align-items-center gap-2">
+            <Button
+              v-if="isAuthenticated"
+              icon="pi pi-sign-out"
+              label="登出"
+              @click="handleLogout"
+              severity="secondary"
+              size="small"
+              outlined
+              aria-label="Logout"
+            />
+            <Button
+              v-else
+              icon="pi pi-sign-in"
+              label="登入"
+              @click="openLoginDialog"
+              severity="secondary"
+              size="small"
+              outlined
+              aria-label="Login"
+            />
+          </div>
+
           <Button
             :icon="isDarkTheme ? 'pi pi-sun' : 'pi pi-moon'"
             severity="secondary"
@@ -63,7 +98,7 @@
       :modal="true"
       :draggable="false"
       :closeOnEscape="false"
-      :style="{ width: '25vw' }"
+      :style="{ width: '350px', maxWidth: '85vw' }"
     >
       <div class="p-fluid w-full">
         <div class="field mt-2 w-full">
@@ -129,6 +164,7 @@ import { useToast } from "primevue/usetoast";
 
 export default {
   name: "AppNavbar",
+  emits: ["toggle-sidebar"],
   data() {
     return {
       items: [],
@@ -144,6 +180,7 @@ export default {
     const { isDarkTheme, toggleTheme } = useTheme();
     const router = useRouter();
     const toast = useToast();
+
     return {
       isDarkTheme,
       toggleTheme,
@@ -236,7 +273,7 @@ export default {
         const user = getCurrentUser();
         if (user) {
           this.userData = user;
-          this.updateMenuItems(user);
+          this.updateMenuItems();
         } else {
           this.isAuthenticated = false;
           this.userData = null;
@@ -249,18 +286,8 @@ export default {
       }
     },
 
-    updateMenuItems(user) {
+    updateMenuItems() {
       this.items = [];
-
-      if (this.isAuthenticated && user.is_admin) {
-        this.items.push({
-          label: "系統管理",
-          icon: "pi pi-cog",
-          command: () => {
-            this.$router.push("/admin");
-          },
-        });
-      }
     },
 
     async handleLogout() {

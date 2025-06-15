@@ -1,49 +1,153 @@
 <template>
   <div class="h-full" ref="archiveView" @toggle-sidebar="toggleSidebar">
     <div class="flex h-full relative">
-      <div class="sidebar" :class="{ collapsed: !sidebarVisible }">
-        <div class="flex flex-column gap-3 p-3">
-          <div class="relative w-full">
-            <i class="pi pi-search absolute left-4 top-1/2 -mt-2 text-500"></i>
-            <InputText
-              v-model="searchQuery"
-              placeholder="搜尋課程"
-              class="w-full pl-6"
-            />
-          </div>
-          <div v-if="searchQuery" class="search-results">
-            <div
-              v-if="filteredCategories.length === 0"
-              class="p-3 text-center text-500"
-            >
-              <i class="pi pi-search text-2xl mb-2"></i>
-              <div>查無搜尋結果</div>
-            </div>
-            <div
-              v-for="category in filteredCategories"
-              :key="category.label"
-              class="mb-2"
-            >
-              <div class="text-sm mb-1" style="color: var(--text-secondary)">
-                {{ category.label }}
-              </div>
-              <div class="flex flex-col gap-1">
-                <Button
-                  v-for="course in category.items"
-                  :key="course.label"
-                  class="p-button-text search-result-btn text-color"
-                  @click="
-                    filterBySubject({ label: course.label, id: course.id })
-                  "
-                >
-                  <span class="ellipsis">{{ course.label }}</span>
-                </Button>
-              </div>
+      <!-- Desktop/Tablet Sidebar -->
+      <div
+        class="sidebar hidden md:block"
+        :class="{ collapsed: !sidebarVisible }"
+      >
+        <div class="flex flex-column h-full">
+          <!-- Fixed search section -->
+          <div class="search-section p-3">
+            <div class="relative w-full">
+              <i
+                class="pi pi-search absolute left-4 top-1/2 -mt-2 text-500"
+              ></i>
+              <InputText
+                v-model="searchQuery"
+                placeholder="搜尋課程"
+                class="w-full pl-6"
+              />
             </div>
           </div>
-          <PanelMenu v-else :model="menuItems" multiple class="w-full" />
+
+          <!-- Scrollable content section -->
+          <div class="flex-1 overflow-auto p-3 pt-0">
+            <div v-if="searchQuery" class="search-results">
+              <div
+                v-if="filteredCategories.length === 0"
+                class="p-3 text-center text-500"
+              >
+                <i class="pi pi-search text-2xl mb-2"></i>
+                <div>查無搜尋結果</div>
+              </div>
+              <div
+                v-for="category in filteredCategories"
+                :key="category.label"
+                class="mb-2"
+              >
+                <div class="text-sm mb-1" style="color: var(--text-secondary)">
+                  {{ category.label }}
+                </div>
+                <div class="flex flex-col gap-1">
+                  <Button
+                    v-for="course in category.items"
+                    :key="course.label"
+                    class="p-button-text search-result-btn text-color"
+                    @click="
+                      filterBySubject({ label: course.label, id: course.id })
+                    "
+                  >
+                    <span class="ellipsis">{{ course.label }}</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <PanelMenu v-else :model="menuItems" multiple class="w-full" />
+          </div>
         </div>
       </div>
+
+      <!-- Mobile Drawer -->
+      <Drawer
+        v-if="isMobile"
+        :visible="sidebarVisible"
+        @update:visible="sidebarVisible = $event"
+        class="mobile-drawer"
+        position="left"
+        :style="{ width: '300px', maxWidth: '85vw' }"
+      >
+        <template #header>
+          <div class="flex justify-content-between align-items-center w-full">
+            <span class="font-semibold">選單</span>
+          </div>
+        </template>
+        <div class="flex flex-column h-full">
+          <!-- Fixed search section -->
+          <div class="search-section pb-3">
+            <div class="relative w-full">
+              <i
+                class="pi pi-search absolute left-4 top-1/2 -mt-2 text-500"
+              ></i>
+              <InputText
+                v-model="searchQuery"
+                placeholder="搜尋課程"
+                class="w-full pl-6"
+              />
+            </div>
+          </div>
+
+          <!-- Scrollable course selection section -->
+          <div class="flex-1 overflow-auto">
+            <div v-if="searchQuery" class="search-results">
+              <div
+                v-if="filteredCategories.length === 0"
+                class="p-3 text-center text-500"
+              >
+                <i class="pi pi-search text-2xl mb-2"></i>
+                <div>查無搜尋結果</div>
+              </div>
+              <div
+                v-for="category in filteredCategories"
+                :key="category.label"
+                class="mb-2"
+              >
+                <div class="text-sm mb-1" style="color: var(--text-secondary)">
+                  {{ category.label }}
+                </div>
+                <div class="flex flex-col gap-1">
+                  <Button
+                    v-for="course in category.items"
+                    :key="course.label"
+                    class="p-button-text search-result-btn text-color"
+                    @click="
+                      filterBySubject({ label: course.label, id: course.id });
+                      sidebarVisible = false;
+                    "
+                  >
+                    <span class="ellipsis">{{ course.label }}</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <PanelMenu
+              v-else
+              :model="mobileMenuItems"
+              multiple
+              class="w-full"
+            />
+          </div>
+
+          <!-- Fixed admin actions section -->
+          <template v-if="isAuthenticatedRef && userData?.is_admin">
+            <div class="admin-section p-3">
+              <Button
+                icon="pi pi-cog"
+                label="系統管理"
+                @click="
+                  router.push('/admin');
+                  sidebarVisible = false;
+                "
+                severity="secondary"
+                size="small"
+                outlined
+                class="w-full"
+              />
+            </div>
+          </template>
+        </div>
+      </Drawer>
+
       <div class="main-content flex-1 h-full overflow-auto">
         <div class="card h-full flex flex-col">
           <div
@@ -408,18 +512,40 @@ defineOptions({
   name: "ArchiveView",
 });
 
-import { ref, computed, onMounted, watch, inject } from "vue";
+import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from "vue";
 import { courseService, archiveService } from "../api";
 import PdfPreviewModal from "../components/PdfPreviewModal.vue";
 import UploadArchiveDialog from "../components/UploadArchiveDialog.vue";
-import { getCurrentUser } from "../utils/auth";
+import { getCurrentUser, isAuthenticated } from "../utils/auth";
 import { useTheme } from "../utils/useTheme";
+import { useRouter } from "vue-router";
 
 const toast = inject("toast");
 const confirm = inject("confirm");
+const router = useRouter();
 
 const { isDarkTheme } = useTheme();
 const sidebarVisible = inject("sidebarVisible");
+
+// Check if we're on mobile
+const isMobile = ref(false);
+
+const checkDevice = () => {
+  isMobile.value = window.innerWidth < 768;
+};
+
+onMounted(() => {
+  checkDevice();
+  window.addEventListener("resize", checkDevice);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", checkDevice);
+});
+
+// Auth related data
+const isAuthenticatedRef = ref(false);
+const userData = ref(null);
 
 const archives = ref([]);
 const loading = ref(true);
@@ -1116,6 +1242,7 @@ const handleEdit = async () => {
 onMounted(async () => {
   const user = getCurrentUser();
   isAdmin.value = user?.is_admin || false;
+  checkAuthentication();
   await fetchCourses();
 });
 
@@ -1267,6 +1394,35 @@ watch(
     availableCoursesForTransfer.value = allAvailableCoursesForTransfer.value;
   }
 );
+
+const checkAuthentication = () => {
+  isAuthenticatedRef.value = isAuthenticated();
+  if (isAuthenticatedRef.value) {
+    const user = getCurrentUser();
+    if (user) {
+      userData.value = user;
+    } else {
+      isAuthenticatedRef.value = false;
+      userData.value = null;
+    }
+  } else {
+    isAuthenticatedRef.value = false;
+    userData.value = null;
+  }
+};
+
+const mobileMenuItems = computed(() => {
+  return menuItems.value.map((item) => ({
+    ...item,
+    items: item.items?.map((subItem) => ({
+      ...subItem,
+      command: () => {
+        subItem.command();
+        sidebarVisible.value = false;
+      },
+    })),
+  }));
+});
 </script>
 
 <style scoped>
@@ -1345,17 +1501,11 @@ watch(
 }
 
 .sidebar {
-  width: 20vw;
-  min-width: 220px;
-  max-width: 320px;
+  width: 300px;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
-  transition:
-    width 0.2s ease-in-out,
-    min-width 0.2s ease-in-out,
-    max-width 0.2s ease-in-out;
-  overflow-y: auto;
-  overflow-x: hidden;
+  transition: width 0.2s ease-in-out;
+  overflow: hidden;
   position: relative;
   z-index: 1;
   height: 100%;
@@ -1366,36 +1516,15 @@ watch(
   opacity: 1;
   white-space: nowrap;
   height: 100%;
-  overflow-y: auto;
+  transition: opacity 0.2s ease-in-out;
 }
 
-.sidebar .search-results {
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
-  padding: 0.5rem;
-}
-
-.sidebar :deep(.p-panelmenu) {
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
-}
-
-.sidebar .search-results .flex-wrap {
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.sidebar .search-results .p-button {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.sidebar .search-section {
+  flex-shrink: 0;
 }
 
 .sidebar.collapsed {
   width: 0;
-  min-width: 0;
-  max-width: 0;
-  padding: 0;
   border-right: none;
 }
 
@@ -1430,5 +1559,97 @@ watch(
 
 .search-results .text-sm {
   font-size: 0.875rem;
+}
+
+/* Mobile sidebar specific styles */
+.mobile-drawer {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-drawer {
+    display: block;
+  }
+}
+
+:deep(.mobile-drawer .p-sidebar) {
+  z-index: 1000;
+}
+
+:deep(.mobile-drawer .p-sidebar-content) {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+:deep(.mobile-drawer .p-sidebar-header) {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  position: relative;
+}
+
+:deep(.mobile-drawer .p-sidebar-close) {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+:deep(.mobile-drawer .p-sidebar-close:hover) {
+  background: var(--highlight-bg);
+}
+
+/* Ensure proper mobile responsiveness */
+@media (max-width: 768px) {
+  .main-content {
+    width: 100%;
+  }
+}
+
+/* Search section styles */
+.search-section {
+  flex-shrink: 0;
+}
+
+/* Scrollable content styles */
+.sidebar .search-results,
+.mobile-drawer .search-results {
+  padding: 0.5rem;
+}
+
+.sidebar .search-results {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar .search-results .p-button {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar :deep(.p-panelmenu) {
+  white-space: nowrap;
+}
+
+.sidebar :deep(.p-panelmenu .p-panelmenu-content) {
+  overflow: hidden;
+}
+
+.admin-section {
+  flex-shrink: 0;
 }
 </style>
