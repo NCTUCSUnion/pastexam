@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full">
+  <div class="h-full px-2 md:px-4 admin-container">
     <div class="card h-full flex flex-col">
       <Tabs value="0" class="flex-1">
         <TabList>
@@ -859,8 +859,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.admin-container {
+  background: var(--p-tabs-tabpanel-background);
+}
+
 .card {
   background-color: var(--bg-primary);
+}
+
+:deep(.p-tabs) {
+  background: var(--p-tabs-tabpanel-background);
 }
 
 :deep(.p-tabview-header) {
@@ -942,9 +950,6 @@ onMounted(() => {
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
-  .card {
-    margin: 0.5rem;
-  }
   :deep(.p-dialog .p-dialog-content) {
     font-size: 0.875rem;
   }
