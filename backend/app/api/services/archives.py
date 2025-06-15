@@ -47,7 +47,8 @@ async def upload_archive(
 
     query = select(Course).where(
         Course.name == subject,
-        Course.category == category
+        Course.category == category,
+        Course.deleted_at.is_(None)
     )
     result = await db.execute(query)
     course = result.scalar_one_or_none()

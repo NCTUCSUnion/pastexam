@@ -22,7 +22,7 @@ async def get_categorized_courses(
     Get all courses grouped by category.
     Returns courses with their IDs grouped by category.
     """
-    query = select(Course)
+    query = select(Course).where(Course.deleted_at.is_(None))
     result = await db.execute(query)
     courses = result.scalars().all()
     
@@ -42,7 +42,10 @@ async def get_course_archives(
     """
     Get all archives for a specific course.
     """
-    course_query = select(Course).where(Course.id == course_id)
+    course_query = select(Course).where(
+        Course.id == course_id,
+        Course.deleted_at.is_(None)
+    )
     result = await db.execute(course_query)
     course = result.scalar_one_or_none()
     
@@ -194,7 +197,10 @@ async def update_archive_course(
             )
             
         # Transfer to existing course by ID
-        new_course_query = select(Course).where(Course.id == course_update.course_id)
+        new_course_query = select(Course).where(
+            Course.id == course_update.course_id,
+            Course.deleted_at.is_(None)
+        )
         new_course_result = await db.execute(new_course_query)
         new_course = new_course_result.scalar_one_or_none()
         
@@ -207,7 +213,8 @@ async def update_archive_course(
         # Transfer to course by name and category, create if not exists
         new_course_query = select(Course).where(
             Course.name == course_update.course_name,
-            Course.category == course_update.course_category
+            Course.category == course_update.course_category,
+            Course.deleted_at.is_(None)
         )
         new_course_result = await db.execute(new_course_query)
         new_course = new_course_result.scalar_one_or_none()
@@ -302,7 +309,8 @@ async def create_course(
 
     query = select(Course).where(
         Course.name == course_data.name,
-        Course.category == course_data.category
+        Course.category == course_data.category,
+        Course.deleted_at.is_(None)
     )
     result = await db.execute(query)
     existing_course = result.scalar_one_or_none()
@@ -340,7 +348,10 @@ async def update_course(
             detail="Only admins can update courses"
         )
 
-    query = select(Course).where(Course.id == course_id)
+    query = select(Course).where(
+        Course.id == course_id,
+        Course.deleted_at.is_(None)
+    )
     result = await db.execute(query)
     course = result.scalar_one_or_none()
     
@@ -358,7 +369,8 @@ async def update_course(
             check_query = select(Course).where(
                 Course.name == new_name,
                 Course.category == new_category,
-                Course.id != course_id
+                Course.id != course_id,
+                Course.deleted_at.is_(None)
             )
             check_result = await db.execute(check_query)
             existing_course = check_result.scalar_one_or_none()
@@ -394,7 +406,10 @@ async def delete_course(
             detail="Only admins can delete courses"
         )
 
-    query = select(Course).where(Course.id == course_id)
+    query = select(Course).where(
+        Course.id == course_id,
+        Course.deleted_at.is_(None)
+    )
     result = await db.execute(query)
     course = result.scalar_one_or_none()
     
@@ -411,10 +426,14 @@ async def delete_course(
     archives_result = await db.execute(archives_query)
     archives = archives_result.scalars().all()
     
+    # Soft delete all associated archives and the course
     current_time = datetime.now(timezone.utc)
     for archive in archives:
         archive.deleted_at = current_time
-    await db.delete(course)
+    
+    # Soft delete the course
+    course.deleted_at = current_time
+    
     await db.commit()
     
     return {"message": f"Course '{course.name}' and {len(archives)} associated archives deleted successfully"}
@@ -433,7 +452,7 @@ async def list_all_courses(
             detail="Only admins can access all courses"
         )
 
-    query = select(Course).order_by(Course.category, Course.name)
+    query = select(Course).where(Course.deleted_at.is_(None)).order_by(Course.category, Course.name)
     result = await db.execute(query)
     courses = result.scalars().all()
     

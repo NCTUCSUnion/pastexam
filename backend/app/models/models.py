@@ -53,6 +53,12 @@ class Course(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     category: CourseCategory
+    deleted_at: Optional[datetime] = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=True
+        )
+    )
     
     archives: List["Archive"] = Relationship(back_populates="course")
 
