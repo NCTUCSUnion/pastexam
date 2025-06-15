@@ -37,6 +37,16 @@
             />
             <Button
               v-if="isAuthenticated"
+              icon="pi pi-github"
+              label="問題回報"
+              @click="openIssueReportDialog"
+              severity="secondary"
+              size="small"
+              outlined
+              aria-label="Report Issue"
+            />
+            <Button
+              v-if="isAuthenticated"
               icon="pi pi-sign-out"
               label="登出"
               @click="handleLogout"
@@ -153,6 +163,94 @@
         </div>
       </div>
     </Dialog>
+
+    <Dialog
+      :visible="issueReportVisible"
+      @update:visible="issueReportVisible = $event"
+      header="問題回報"
+      :modal="true"
+      :draggable="false"
+      :closeOnEscape="true"
+      :style="{ width: '700px', maxWidth: '90vw' }"
+      class="issue-report-dialog"
+    >
+      <div class="p-fluid w-full">
+        <div class="field">
+          <label for="issue-type" class="font-semibold">問題類型</label>
+          <Select
+            id="issue-type"
+            v-model="issueForm.type"
+            :options="issueTypes"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="選擇問題類型"
+            class="w-full mt-2"
+          />
+        </div>
+
+        <div class="field mt-3">
+          <label for="issue-title" class="font-semibold">問題標題</label>
+          <InputText
+            id="issue-title"
+            v-model="issueForm.title"
+            placeholder="簡短描述遇到的問題"
+            class="w-full mt-2"
+            :maxlength="100"
+          />
+          <small class="text-gray-500">{{ issueForm.title.length }}/100</small>
+        </div>
+
+        <div class="field mt-3">
+          <label for="issue-description" class="font-semibold">詳細描述</label>
+          <Textarea
+            id="issue-description"
+            v-model="issueForm.description"
+            placeholder="請詳細描述遇到的問題，包括：&#10;1. 操作步驟&#10;2. 預期結果&#10;3. 實際結果"
+            class="w-full mt-2"
+            rows="8"
+            :maxlength="2000"
+          />
+          <small class="text-gray-500"
+            >{{ issueForm.description.length }}/2000</small
+          >
+        </div>
+
+        <div class="field mt-3">
+          <label for="user-info" class="font-semibold">聯絡方式 (選填)</label>
+          <InputText
+            id="user-info"
+            v-model="issueForm.contact"
+            placeholder="Email 或其他聯絡方式，方便我們回覆"
+            class="w-full mt-2"
+          />
+        </div>
+
+        <div class="flex justify-between gap-3 mt-4">
+          <Button
+            label="取消"
+            severity="secondary"
+            outlined
+            @click="closeIssueReportDialog"
+            class="flex-1"
+          />
+          <Button
+            label="提交到 GitHub"
+            icon="pi pi-external-link"
+            @click="submitIssueReport"
+            :disabled="!canSubmitIssue"
+            class="flex-1"
+          />
+        </div>
+
+        <div class="mt-3 p-3 bg-blue-50 border-round text-sm">
+          <i class="pi pi-info-circle text-blue-600 mr-2"></i>
+          <span class="text-blue-800">
+            點擊「提交到 GitHub」將會跳轉到 GitHub
+            頁面，您可以在那裡完成問題提交
+          </span>
+        </div>
+      </div>
+    </Dialog>
   </div>
 </template>
 
@@ -175,6 +273,21 @@ export default {
       isAuthenticated: false,
       userData: null,
       loading: false,
+      issueReportVisible: false,
+      issueForm: {
+        type: "",
+        title: "",
+        description: "",
+        contact: "",
+      },
+      issueTypes: [
+        { label: "Bug / 程式錯誤", value: "bug" },
+        { label: "功能建議", value: "enhancement" },
+        { label: "文件問題", value: "documentation" },
+        { label: "效能問題", value: "performance" },
+        { label: "UI/UX 問題", value: "ui-ux" },
+        { label: "其他問題", value: "question" },
+      ],
     };
   },
   setup() {
@@ -309,6 +422,178 @@ export default {
       if (this.isAuthenticated) {
         this.$router.push("/archive");
       }
+    },
+
+    openIssueReportDialog() {
+      this.issueReportVisible = true;
+    },
+
+    closeIssueReportDialog() {
+      this.issueReportVisible = false;
+      this.issueForm = {
+        type: "",
+        title: "",
+        description: "",
+        contact: "",
+      };
+    },
+
+    submitIssueReport() {
+      const { type, title, description, contact } = this.issueForm;
+
+      const systemInfo = this.getSystemInfo();
+
+      const issueLabels = this.getIssueLabels(type);
+      const issueBody = this.formatIssueBody(description, contact, systemInfo);
+
+      const repoOwner = "nctucsunion";
+      const repoName = "pastexam";
+
+      const githubUrl =
+        `https://github.com/${repoOwner}/${repoName}/issues/new?` +
+        `title=${encodeURIComponent(title)}&` +
+        `body=${encodeURIComponent(issueBody)}&` +
+        `labels=${encodeURIComponent(issueLabels.join(","))}`;
+
+      window.open(githubUrl, "_blank");
+
+      this.closeIssueReportDialog();
+      this.toast.add({
+        severity: "success",
+        summary: "已跳轉到 GitHub",
+        detail: "請在 GitHub 頁面完成問題提交",
+        life: 3000,
+      });
+    },
+
+    getSystemInfo() {
+      const nav = navigator;
+      return {
+        userAgent: nav.userAgent,
+        platform: nav.platform,
+        language: nav.language,
+        url: window.location.href,
+        timestamp: new Date().toISOString(),
+      };
+    },
+
+    getBrowserInfo(userAgent) {
+      if (userAgent.includes("Chrome") && !userAgent.includes("Edge")) {
+        const chromeMatch = userAgent.match(/Chrome\/(\d+\.\d+)/);
+        return chromeMatch ? `Chrome ${chromeMatch[1]}` : "Chrome";
+      } else if (userAgent.includes("Firefox")) {
+        const firefoxMatch = userAgent.match(/Firefox\/(\d+\.\d+)/);
+        return firefoxMatch ? `Firefox ${firefoxMatch[1]}` : "Firefox";
+      } else if (
+        userAgent.includes("Safari") &&
+        !userAgent.includes("Chrome")
+      ) {
+        const safariMatch = userAgent.match(/Safari\/(\d+\.\d+)/);
+        return safariMatch ? `Safari ${safariMatch[1]}` : "Safari";
+      } else if (userAgent.includes("Edge")) {
+        const edgeMatch = userAgent.match(/Edge\/(\d+\.\d+)/);
+        return edgeMatch ? `Edge ${edgeMatch[1]}` : "Edge";
+      }
+      return "未知瀏覽器";
+    },
+
+    getOSInfo(platform, userAgent) {
+      if (userAgent.includes("Mac OS X")) {
+        const macMatch = userAgent.match(/Mac OS X (\d+_\d+)/);
+        if (macMatch) {
+          const version = macMatch[1].replace("_", ".");
+          return `macOS ${version}`;
+        }
+        return "macOS";
+      } else if (userAgent.includes("Windows")) {
+        if (userAgent.includes("Windows NT 10.0")) return "Windows 10/11";
+        if (userAgent.includes("Windows NT 6.3")) return "Windows 8.1";
+        if (userAgent.includes("Windows NT 6.1")) return "Windows 7";
+        return "Windows";
+      } else if (userAgent.includes("Linux")) {
+        return "Linux";
+      } else if (userAgent.includes("Android")) {
+        const androidMatch = userAgent.match(/Android (\d+\.\d+)/);
+        return androidMatch ? `Android ${androidMatch[1]}` : "Android";
+      } else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) {
+        const iosMatch = userAgent.match(/OS (\d+_\d+)/);
+        if (iosMatch) {
+          const version = iosMatch[1].replace("_", ".");
+          return `iOS ${version}`;
+        }
+        return "iOS";
+      }
+      return platform || "未知系統";
+    },
+
+    formatTimestamp(timestamp) {
+      const date = new Date(timestamp);
+      const options = {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "Asia/Taipei",
+        hour12: false,
+      };
+      return date.toLocaleString("zh-TW", options) + " (UTC+8)";
+    },
+
+    getIssueLabels(type) {
+      const labelMap = {
+        bug: ["bug"],
+        enhancement: ["enhancement"],
+        documentation: ["documentation"],
+        performance: ["enhancement"],
+        "ui-ux": ["enhancement"],
+        question: ["question"],
+      };
+      return labelMap[type] || ["question"];
+    },
+
+    formatIssueBody(description, contact, systemInfo) {
+      let body = "## 問題描述\n\n" + description + "\n\n";
+
+      if (contact) {
+        body += "## 聯絡方式\n\n" + contact + "\n\n";
+      }
+
+      const browserInfo = this.getBrowserInfo(systemInfo.userAgent);
+      const osInfo = this.getOSInfo(systemInfo.platform, systemInfo.userAgent);
+      const formattedTime = this.formatTimestamp(systemInfo.timestamp);
+
+      body += "## 環境資訊\n\n";
+      body += `| 項目 | 資訊 |\n`;
+      body += `|------|------|\n`;
+      body += `| 瀏覽器 | ${browserInfo} |\n`;
+      body += `| 作業系統 | ${osInfo} |\n`;
+      body += `| 語言設定 | ${systemInfo.language} |\n`;
+      body += `| 頁面位置 | ${systemInfo.url} |\n`;
+      body += `| 回報時間 | ${formattedTime} |\n\n`;
+
+      body += "<details>\n<summary>詳細系統資訊</summary>\n\n";
+      body += "```\n";
+      body += `User Agent: ${systemInfo.userAgent}\n`;
+      body += `Platform: ${systemInfo.platform}\n`;
+      body += `Timestamp: ${systemInfo.timestamp}\n`;
+      body += "```\n";
+      body += "</details>\n\n";
+
+      body += "---\n*此問題由交大資工考古題系統自動產生*";
+
+      return body;
+    },
+  },
+
+  computed: {
+    canSubmitIssue() {
+      return (
+        this.issueForm.type &&
+        this.issueForm.title.trim() &&
+        this.issueForm.description.trim()
+      );
     },
   },
 };
