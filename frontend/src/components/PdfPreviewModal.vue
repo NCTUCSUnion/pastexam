@@ -9,6 +9,7 @@
     :closeOnEscape="false"
     :dismissableMask="true"
     :maximizable="true"
+    :autoFocus="false"
     @hide="onHide"
   >
     <template #header>

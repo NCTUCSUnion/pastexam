@@ -248,6 +248,7 @@
         :closeOnEscape="false"
         :header="editingCourse ? '編輯課程' : '新增課程'"
         :style="{ width: '450px', maxWidth: '90vw' }"
+        :autoFocus="false"
       >
         <div class="flex flex-column gap-4">
           <div class="flex flex-column gap-2">
@@ -305,6 +306,7 @@
         :closeOnEscape="false"
         :header="editingUser ? '編輯使用者' : '新增使用者'"
         :style="{ width: '450px', maxWidth: '90vw' }"
+        :autoFocus="false"
       >
         <div class="flex flex-column gap-4">
           <div class="flex flex-column gap-2">

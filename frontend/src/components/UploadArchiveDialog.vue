@@ -8,6 +8,7 @@
       :closeOnEscape="false"
       header="上傳考古題"
       :style="{ width: '700px', maxWidth: '90vw' }"
+      :autoFocus="false"
     >
       <Stepper :value="uploadStep" @update:value="uploadStep = $event" linear>
         <StepList>

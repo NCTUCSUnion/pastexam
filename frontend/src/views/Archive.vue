@@ -78,6 +78,7 @@
         class="mobile-drawer"
         position="left"
         :style="{ width: '300px', maxWidth: '85vw' }"
+        :autoFocus="false"
       >
         <template #header>
           <div class="flex justify-content-between align-items-center w-full">
@@ -365,6 +366,7 @@
             :closeOnEscape="false"
             header="編輯考古題"
             :style="{ width: '600px', maxWidth: '90vw' }"
+            :autoFocus="false"
           >
             <div class="flex flex-column">
               <div class="flex flex-column gap-2">

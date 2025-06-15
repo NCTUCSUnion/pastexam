@@ -99,6 +99,7 @@
       :draggable="false"
       :closeOnEscape="false"
       :style="{ width: '350px', maxWidth: '85vw' }"
+      :autoFocus="false"
     >
       <div class="p-fluid w-full">
         <div class="field mt-2 w-full">
