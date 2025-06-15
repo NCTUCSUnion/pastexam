@@ -37,7 +37,7 @@
             />
             <Button
               v-if="isAuthenticated"
-              icon="pi pi-github"
+              icon="pi pi-comments"
               label="問題回報"
               @click="openIssueReportDialog"
               severity="secondary"
