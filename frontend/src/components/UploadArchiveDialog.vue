@@ -47,12 +47,17 @@
                   :suggestions="availableSubjects"
                   @complete="searchSubject"
                   @item-select="onSubjectSelect"
+                  @focus="() => searchSubject({ query: '' })"
+                  @click="() => searchSubject({ query: '' })"
                   optionLabel="name"
                   placeholder="選擇科目"
                   class="w-full"
                   :disabled="!form.category"
                   dropdown
-                  :dropdownOptions="{ showClear: true }"
+                  completeOnFocus
+                  :minLength="0"
+                  forceSelection="false"
+                  autoHighlight="true"
                 >
                   <template #item="{ item }">
                     <div>{{ item.name }}</div>
@@ -68,12 +73,17 @@
                   :suggestions="availableProfessors"
                   @complete="searchProfessor"
                   @item-select="onProfessorSelect"
+                  @focus="() => searchProfessor({ query: '' })"
+                  @click="() => searchProfessor({ query: '' })"
                   optionLabel="name"
                   placeholder="選擇教授"
                   class="w-full"
                   :disabled="!form.subject"
                   dropdown
-                  :dropdownOptions="{ showClear: true }"
+                  completeOnFocus
+                  :minLength="0"
+                  forceSelection="false"
+                  autoHighlight="true"
                 >
                   <template #item="{ item }">
                     <div>{{ item.name }}</div>
@@ -626,7 +636,7 @@ function closeUploadPreview() {
 }
 
 const searchSubject = (event) => {
-  const query = event.query.toLowerCase();
+  const query = event?.query?.toLowerCase() || "";
   const subjects = props.coursesList[form.value.category] || [];
   const filteredSubjects = subjects
     .map((course) => ({
@@ -640,7 +650,7 @@ const searchSubject = (event) => {
 };
 
 const searchProfessor = (event) => {
-  const query = event.query.toLowerCase();
+  const query = event?.query?.toLowerCase() || "";
   const filteredProfessors = uploadFormProfessors.value
     .filter((professor) => professor.name.toLowerCase().includes(query))
     .sort((a, b) => a.name.localeCompare(b.name));

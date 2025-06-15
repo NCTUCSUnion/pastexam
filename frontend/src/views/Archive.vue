@@ -386,11 +386,16 @@
                   :suggestions="availableEditProfessors"
                   @complete="searchEditProfessor"
                   @item-select="onEditProfessorSelect"
+                  @focus="() => searchEditProfessor({ query: '' })"
+                  @click="() => searchEditProfessor({ query: '' })"
                   optionLabel="name"
                   placeholder="選擇教授"
                   class="w-full"
                   dropdown
-                  :dropdownOptions="{ showClear: true }"
+                  completeOnFocus
+                  :minLength="0"
+                  forceSelection="false"
+                  autoHighlight="true"
                 >
                   <template #item="{ item }">
                     <div>{{ item.name }}</div>
@@ -472,12 +477,17 @@
                     :suggestions="availableCoursesForTransfer"
                     @complete="searchTargetCourse"
                     @item-select="onTargetCourseSelect"
+                    @focus="() => searchTargetCourse({ query: '' })"
+                    @click="() => searchTargetCourse({ query: '' })"
                     optionLabel="label"
                     placeholder="搜尋目標課程"
                     class="w-full"
                     :disabled="!editForm.targetCategory"
                     dropdown
-                    :dropdownOptions="{ showClear: true }"
+                    completeOnFocus
+                    :minLength="0"
+                    forceSelection="false"
+                    autoHighlight="true"
                   >
                     <template #item="{ item }">
                       <div>{{ item.label }}</div>
@@ -1345,7 +1355,7 @@ const getCurrentCategory = computed(() => {
 });
 
 const searchEditProfessor = (event) => {
-  const query = event.query.toLowerCase();
+  const query = event?.query?.toLowerCase() || "";
   const filteredProfessors = uploadFormProfessors.value
     .filter((professor) => professor.name.toLowerCase().includes(query))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -1376,7 +1386,7 @@ const closeEditDialog = () => {
 };
 
 const searchTargetCourse = (event) => {
-  const query = event.query.toLowerCase();
+  const query = event?.query?.toLowerCase() || "";
   const filteredCourses = allAvailableCoursesForTransfer.value
     .filter((course) => course.label.toLowerCase().includes(query))
     .sort((a, b) => a.label.localeCompare(b.label));

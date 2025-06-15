@@ -1,6 +1,6 @@
 <template>
   <div id="app" class="flex flex-column">
-    <Toast position="bottom-left" />
+    <Toast position="bottom-right" />
     <ConfirmDialog />
     <Navbar class="navbar px-1" @toggle-sidebar="toggleSidebar" />
     <div class="content-container">
