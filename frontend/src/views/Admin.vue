@@ -427,7 +427,7 @@ const filterUserType = ref(null);
 
 const userSortMeta = ref([
   { field: "is_admin", order: -1 },
-  { field: "name", order: -1 },
+  { field: "name", order: 1 },
 ]);
 
 const showUserDialog = ref(false);
