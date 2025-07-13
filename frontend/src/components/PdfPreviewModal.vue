@@ -2,7 +2,7 @@
   <Dialog
     :visible="localVisible"
     @update:visible="localVisible = $event"
-    :style="{ width: '1200px', maxWidth: '95vw', height: '90vh' }"
+    :style="{ width: '1200px', height: '90vh' }"
     :contentStyle="{ height: '80vh' }"
     :modal="true"
     :draggable="false"

@@ -10,7 +10,7 @@
 
    ```bash
    uv sync
-   uv run uvicorn app:main --reload --host 0.0.0.0 --port 8000
+   uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 3. 開啟瀏覽器到 http://localhost:8000/docs，可看到 Swagger UI，並測試各 API。
