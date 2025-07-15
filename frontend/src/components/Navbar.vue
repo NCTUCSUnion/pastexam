@@ -22,7 +22,7 @@
                 : '/favicon-bright/android-chrome-192x192.png'
             "
             alt="favicon"
-            class="mr-2"
+            class="mr-2 hidden md:block"
             style="
               width: 24px;
               height: 24px;
