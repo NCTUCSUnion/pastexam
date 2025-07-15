@@ -12,10 +12,26 @@
           @click="$emit('toggle-sidebar')"
         />
         <span
-          class="font-bold text-lg md:text-xl pl-2 title-text clickable-title"
+          class="font-bold text-lg md:text-xl pl-2 title-text clickable-title flex align-items-center"
           @click="handleTitleClick"
-          >交大資工考古題系統</span
         >
+          <img
+            :src="
+              isDarkTheme
+                ? '/favicon-dark/android-chrome-192x192.png'
+                : '/favicon-bright/android-chrome-192x192.png'
+            "
+            alt="favicon"
+            class="mr-2"
+            style="
+              width: 24px;
+              height: 24px;
+              vertical-align: middle;
+              display: inline-block;
+            "
+          />
+          交大資工考古題系統
+        </span>
       </template>
       <template #end>
         <div class="flex align-items-center gap-2">
