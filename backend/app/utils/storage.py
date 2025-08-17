@@ -17,21 +17,6 @@ def get_minio_client() -> Minio:
             _minio_client.make_bucket(settings.MINIO_BUCKET_NAME)
     return _minio_client
 
-def presigned_put_url(object_name: str, expires: timedelta = timedelta(minutes=10)) -> str:
-    """
-    Get a presigned PUT URL for frontend to upload PDF files.
-    """
-    client = get_minio_client()
-    presigned_url = client.presigned_put_object(
-        bucket_name=settings.MINIO_BUCKET_NAME,
-        object_name=object_name,
-        expires=expires
-    )
-    
-    presigned_url = presigned_url.replace(f"http://{settings.MINIO_ENDPOINT}", f"{settings.EXTERNAL_ENDPOINT}", 1)
-    
-    return presigned_url
-
 def presigned_get_url(object_name: str, expires: timedelta = timedelta(hours=1)) -> str:
     """
     Get a presigned GET URL for frontend to download/preview PDF files.

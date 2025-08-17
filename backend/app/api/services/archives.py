@@ -1,21 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from typing import List
-from datetime import datetime, timezone, timedelta
 import uuid
 import os
+import io
 
 from app.db.init_db import get_session
-from app.models.models import User, Course, Archive, ArchiveRead, CourseCategory, ArchiveType
+from app.models.models import User, Course, Archive, CourseCategory
 from app.utils.auth import get_current_user
-from app.utils.storage import presigned_put_url
+from app.utils.storage import get_minio_client
 from app.core.config import settings
-from pydantic import BaseModel
-
-class ArchiveUrlResponse(BaseModel):
-    download_url: str
-    preview_url: str
 
 router = APIRouter()
 
@@ -62,38 +56,69 @@ async def upload_archive(
         await db.commit()
         await db.refresh(course)
 
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF files are allowed"
+        )
+    
+    file_content = await file.read()
+    file_size = len(file_content)
+    
+    max_size = 10 * 1024 * 1024  # 10MB
+    if file_size > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size exceeds 10MB limit"
+        )
+    
     _, file_extension = os.path.splitext(file.filename)
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     object_name = f"archives/{course.id}/{unique_filename}"
 
-    archive = Archive(
-        course_id=course.id,
-        name=filename,
-        professor=professor,
-        archive_type=archive_type,
-        has_answers=has_answers,
-        object_name=object_name,
-        academic_year=academic_year,
-        uploader_id=current_user.user_id
-    )
-    
-    db.add(archive)
-    await db.commit()
-    await db.refresh(archive)
-
-    upload_url = presigned_put_url(
-        object_name=object_name,
-        expires=timedelta(hours=1)
-    )
-    
-    return {
-        "upload_url": upload_url,
-        "archive": {
-            "id": archive.id,
-            "name": archive.name,
-            "professor": archive.professor,
-            "archive_type": archive.archive_type,
-            "has_answers": archive.has_answers,
-            "created_at": archive.created_at,
+    try:
+        minio_client = get_minio_client()
+        file_data = io.BytesIO(file_content)
+        
+        minio_client.put_object(
+            bucket_name=settings.MINIO_BUCKET_NAME,
+            object_name=object_name,
+            data=file_data,
+            length=file_size,
+            content_type="application/pdf"
+        )
+        
+        archive = Archive(
+            course_id=course.id,
+            name=filename,
+            professor=professor,
+            archive_type=archive_type,
+            has_answers=has_answers,
+            object_name=object_name,
+            academic_year=academic_year,
+            uploader_id=current_user.user_id
+        )
+        
+        db.add(archive)
+        await db.commit()
+        await db.refresh(archive)
+        
+        return {
+            "success": True,
+            "message": "File uploaded successfully",
+            "archive": {
+                "id": archive.id,
+                "name": archive.name,
+                "professor": archive.professor,
+                "archive_type": archive.archive_type,
+                "has_answers": archive.has_answers,
+                "created_at": archive.created_at,
+                "file_size": file_size
+            }
         }
-    }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload file: {str(e)}"
+        )

@@ -482,22 +482,6 @@ async function fetchProfessorsForSubject(subjectId) {
   }
 }
 
-function uploadWithProgress(url, file) {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url, true);
-    xhr.setRequestHeader("Content-Type", file.type);
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error("Upload failed"));
-    };
-
-    xhr.onerror = () => reject(new Error("Upload failed"));
-    xhr.send(file);
-  });
-}
-
 const handleUpload = async () => {
   try {
     uploading.value = true;
@@ -530,9 +514,7 @@ const handleUpload = async () => {
     const year = new Date(form.value.academicYear).getFullYear();
     formData.append("academic_year", year);
 
-    const { data } = await archiveService.uploadArchive(formData);
-
-    await uploadWithProgress(data.upload_url, cleanFileWithName);
+    await archiveService.uploadArchive(formData);
 
     emit("update:modelValue", false);
     emit("upload-success");
@@ -545,10 +527,18 @@ const handleUpload = async () => {
     });
   } catch (error) {
     console.error("Upload error:", error);
+
+    let errorMessage = "請稍後再試";
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
     toast.add({
       severity: "error",
       summary: "上傳失敗",
-      detail: "請稍後再試",
+      detail: errorMessage,
       life: 3000,
     });
   } finally {

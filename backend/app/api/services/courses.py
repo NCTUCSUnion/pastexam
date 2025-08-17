@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, Form
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import List
 from datetime import datetime, timezone, timedelta
 import uuid
-import os
 
 from app.db.init_db import get_session
 from app.models.models import User, Course, CourseInfo, CoursesByCategory, Archive, ArchiveRead, CourseCategory, ArchiveType, CourseCreate, CourseUpdate, CourseRead, ArchiveUpdateCourse
