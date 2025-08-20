@@ -454,15 +454,7 @@
                   <label>目標課程分類</label>
                   <Select
                     v-model="editForm.targetCategory"
-                    :options="[
-                      { name: '大一課程', value: 'freshman' },
-                      { name: '大二課程', value: 'sophomore' },
-                      { name: '大三課程', value: 'junior' },
-                      { name: '大四課程', value: 'senior' },
-                      { name: '研究所課程', value: 'graduate' },
-                      { name: '跨領域課程', value: 'interdisciplinary' },
-                      { name: '通識課程', value: 'general' },
-                    ]"
+                    :options="categoryOptions"
                     optionLabel="name"
                     optionValue="value"
                     placeholder="選擇課程分類"
@@ -575,19 +567,26 @@ const selectedArchive = ref(null);
 const selectedSubject = ref(null);
 const selectedCourse = ref(null);
 const showUploadDialog = ref(false);
-const uploadForm = ref({
-  category: null,
-  subject: "",
-  professor: "",
-  filename: "",
-  type: null,
-  hasAnswers: false,
-  academicYear: null,
-  file: null,
-});
-
 const uploadFormProfessors = ref([]);
 const expandedPanels = ref([]);
+
+const CATEGORIES = {
+  freshman: { name: "大一課程", icon: "pi pi-fw pi-book", tag: "大一" },
+  sophomore: { name: "大二課程", icon: "pi pi-fw pi-book", tag: "大二" },
+  junior: { name: "大三課程", icon: "pi pi-fw pi-book", tag: "大三" },
+  senior: { name: "大四課程", icon: "pi pi-fw pi-book", tag: "大四" },
+  graduate: {
+    name: "研究所課程",
+    icon: "pi pi-fw pi-graduation-cap",
+    tag: "研究所",
+  },
+  interdisciplinary: {
+    name: "跨領域課程",
+    icon: "pi pi-fw pi-globe",
+    tag: "跨領域",
+  },
+  general: { name: "通識課程", icon: "pi pi-fw pi-lightbulb", tag: "通識" },
+};
 
 const coursesList = ref({
   freshman: [],
@@ -596,6 +595,7 @@ const coursesList = ref({
   senior: [],
   graduate: [],
   interdisciplinary: [],
+  general: [],
 });
 
 const archiveTypeConfig = {
@@ -624,95 +624,18 @@ const archiveTypes = ref([]);
 const searchQuery = ref("");
 
 const menuItems = computed(() => {
-  const items = [];
+  if (!coursesList.value) return [];
 
-  if (!coursesList.value) return items;
-
-  items.push({
-    label: "大一課程",
-    icon: "pi pi-fw pi-book",
-    items:
-      coursesList.value?.freshman
-        ?.map((course) => ({
-          label: course.name,
-          command: () => filterBySubject({ label: course.name, id: course.id }),
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)) || [],
-  });
-
-  items.push({
-    label: "大二課程",
-    icon: "pi pi-fw pi-book",
-    items:
-      coursesList.value?.sophomore
-        ?.map((course) => ({
-          label: course.name,
-          command: () => filterBySubject({ label: course.name, id: course.id }),
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)) || [],
-  });
-
-  items.push({
-    label: "大三課程",
-    icon: "pi pi-fw pi-book",
-    items:
-      coursesList.value?.junior
-        ?.map((course) => ({
-          label: course.name,
-          command: () => filterBySubject({ label: course.name, id: course.id }),
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)) || [],
-  });
-
-  items.push({
-    label: "大四課程",
-    icon: "pi pi-fw pi-book",
-    items:
-      coursesList.value?.senior
-        ?.map((course) => ({
-          label: course.name,
-          command: () => filterBySubject({ label: course.name, id: course.id }),
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)) || [],
-  });
-
-  items.push({
-    label: "研究所課程",
-    icon: "pi pi-fw pi-graduation-cap",
-    items:
-      coursesList.value?.graduate
-        ?.map((course) => ({
-          label: course.name,
-          command: () => filterBySubject({ label: course.name, id: course.id }),
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)) || [],
-  });
-
-  items.push({
-    label: "跨領域課程",
-    icon: "pi pi-fw pi-globe",
-    items:
-      coursesList.value?.interdisciplinary
-        ?.map((course) => ({
-          label: course.name,
-          command: () => filterBySubject({ label: course.name, id: course.id }),
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)) || [],
-  });
-
-  items.push({
-    label: "通識課程",
-    icon: "pi pi-fw pi-lightbulb",
-    items:
-      coursesList.value?.general
-        ?.map((course) => ({
-          label: course.name,
-          command: () => filterBySubject({ label: course.name, id: course.id }),
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)) || [],
-  });
-
-  return items;
+  return Object.entries(CATEGORIES).map(([key, category]) => ({
+    label: category.name,
+    icon: category.icon,
+    items: (coursesList.value[key] || [])
+      .map((course) => ({
+        label: course.name,
+        command: () => filterBySubject({ label: course.name, id: course.id }),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+  }));
 });
 
 const filteredCategories = computed(() => {
@@ -752,16 +675,11 @@ const filteredCategories = computed(() => {
 });
 
 function getCategoryKey(categoryLabel) {
-  const categoryMap = {
-    大一課程: "freshman",
-    大二課程: "sophomore",
-    大三課程: "junior",
-    大四課程: "senior",
-    研究所課程: "graduate",
-    跨領域課程: "interdisciplinary",
-    通識課程: "general",
-  };
-  return categoryMap[categoryLabel] || "";
+  return (
+    Object.keys(CATEGORIES).find(
+      (key) => CATEGORIES[key].name === categoryLabel
+    ) || ""
+  );
 }
 
 const groupedArchives = computed(() => {
@@ -907,7 +825,6 @@ async function fetchArchives() {
 }
 
 const downloadingId = ref(null);
-const previewingId = ref(null);
 
 async function downloadArchive(archive) {
   try {
@@ -959,7 +876,6 @@ const previewError = ref(false);
 
 async function previewArchive(archive) {
   try {
-    previewingId.value = archive.id;
     previewLoading.value = true;
     previewError.value = false;
     showPreview.value = true;
@@ -984,7 +900,6 @@ async function previewArchive(archive) {
     });
   } finally {
     previewLoading.value = false;
-    previewingId.value = null;
   }
 }
 
@@ -999,77 +914,15 @@ function closePreview() {
 }
 
 function getCategoryName(code) {
-  const categories = {
-    freshman: "大一課程",
-    sophomore: "大二課程",
-    junior: "大三課程",
-    senior: "大四課程",
-    graduate: "研究所課程",
-    interdisciplinary: "跨領域課程",
-    general: "通識課程",
-  };
-  return categories[code] || code;
+  return CATEGORIES[code]?.name || code;
 }
 
 const availableEditProfessors = ref([]);
 
-async function fetchProfessorsForSubject(subject) {
-  if (!subject) return;
-
-  try {
-    let courseId = null;
-    const category = uploadForm.value.category;
-
-    if (category && coursesList.value[category]) {
-      const course = coursesList.value[category].find(
-        (c) => c.name === subject
-      );
-      if (course) {
-        courseId = course.id;
-      }
-    }
-
-    if (!courseId) return;
-
-    const response = await courseService.getCourseArchives(courseId);
-    const archiveData = response.data;
-
-    const uniqueProfessors = new Set();
-    archiveData.forEach((item) => {
-      if (item.professor) uniqueProfessors.add(item.professor);
-    });
-
-    uploadFormProfessors.value = Array.from(uniqueProfessors)
-      .sort()
-      .map((professor) => ({
-        name: professor,
-        code: professor,
-      }));
-  } catch (error) {
-    console.error("Error fetching professors for subject:", error);
-    uploadFormProfessors.value = [];
-  }
-}
-
-watch(
-  () => uploadForm.value.subject,
-  (newSubject) => {
-    uploadForm.value.professor = "";
-    if (newSubject) {
-      fetchProfessorsForSubject(newSubject);
-    } else {
-      uploadFormProfessors.value = [];
-    }
-  }
-);
-
-watch(
-  () => uploadForm.value.category,
-  () => {
-    uploadForm.value.subject = "";
-    uploadForm.value.professor = "";
-  }
-);
+const categoryOptions = Object.entries(CATEGORIES).map(([value, category]) => ({
+  name: category.name,
+  value: value,
+}));
 
 watch(
   () => groupedArchives.value,
@@ -1310,16 +1163,10 @@ async function handleUploadSuccess() {
 }
 
 function getCategoryTag(categoryLabel) {
-  const categoryMap = {
-    大一課程: "大一",
-    大二課程: "大二",
-    大三課程: "大三",
-    大四課程: "大四",
-    研究所課程: "研究所",
-    跨領域課程: "跨領域",
-    通識課程: "通識",
-  };
-  return categoryMap[categoryLabel] || categoryLabel;
+  const category = Object.values(CATEGORIES).find(
+    (cat) => cat.name === categoryLabel
+  );
+  return category?.tag || categoryLabel;
 }
 
 function formatDownloadCount(count) {
