@@ -14,14 +14,13 @@ class CourseCategory(str, PyEnum):
     SENIOR = "senior"
     GRADUATE = "graduate"
     INTERDISCIPLINARY = "interdisciplinary"
+    GENERAL = "general"
 
 class ArchiveType(str, PyEnum):
     QUIZ = "quiz"
     MIDTERM = "midterm"
     FINAL = "final"
     OTHER = "other"
-
-
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
@@ -162,6 +161,7 @@ class CoursesByCategory(BaseModel):
     senior: List[CourseInfo] = []
     graduate: List[CourseInfo] = []
     interdisciplinary: List[CourseInfo] = []
+    general: List[CourseInfo] = []
 
     class Config:
         from_attributes = True
