@@ -1023,7 +1023,7 @@ const deleteArchive = async (archive) => {
     toast.add({
       severity: "error",
       summary: "刪除失敗",
-      detail: error.response?.data?.detail || "請稍後再試",
+      detail: "發生錯誤，請稍後再試",
       life: 3000,
     });
   }
@@ -1138,7 +1138,7 @@ const handleEdit = async () => {
     toast.add({
       severity: "error",
       summary: "更新失敗",
-      detail: error.response?.data?.detail || "請稍後再試",
+      detail: "發生錯誤，請稍後再試",
       life: 3000,
     });
   } finally {

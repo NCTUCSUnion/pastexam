@@ -530,17 +530,10 @@ const handleUpload = async () => {
   } catch (error) {
     console.error("Upload error:", error);
 
-    let errorMessage = "請稍後再試";
-    if (error.response?.data?.detail) {
-      errorMessage = error.response.data.detail;
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-
     toast.add({
       severity: "error",
       summary: "上傳失敗",
-      detail: errorMessage,
+      detail: "發生錯誤，請稍後再試",
       life: 3000,
     });
   } finally {
