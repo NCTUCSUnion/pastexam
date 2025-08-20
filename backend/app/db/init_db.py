@@ -77,6 +77,10 @@ async def init_db():
                     "category": CourseCategory.FRESHMAN
                 },
                 {
+                    "name": "MATLAB 程式語言",
+                    "category": CourseCategory.FRESHMAN,
+                },
+                {
                     "name": "機率",
                     "category": CourseCategory.SOPHOMORE
                 },
@@ -125,6 +129,22 @@ async def init_db():
                     "category": CourseCategory.SOPHOMORE
                 },
                 {
+                    "name": "訊號與系統",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "數位訊號處理概論",
+                    "category": CourseCategory.SOPHOMORE
+                },
+                {
+                    "name": "數位系統設計",
+                    "category": CourseCategory.SOPHOMORE,
+                },
+                {
+                    "name": "圖形理論導論",
+                    "category": CourseCategory.SOPHOMORE,
+                },
+                {
                     "name": "作業系統概論",
                     "category": CourseCategory.JUNIOR
                 },
@@ -165,8 +185,28 @@ async def init_db():
                     "category": CourseCategory.JUNIOR
                 },
                 {
+                    "name": "微處理機系統實驗",
+                    "category": CourseCategory.JUNIOR
+                },
+                {
                     "name": "嵌入式系統總整與實作",
                     "category": CourseCategory.JUNIOR
+                },
+                {
+                    "name": "企業網路安全",
+                    "category": CourseCategory.JUNIOR,
+                },
+                {
+                    "name": "多媒體資訊系統概論",
+                    "category": CourseCategory.JUNIOR,
+                },
+                {
+                    "name": "軟體工程概論",
+                    "category": CourseCategory.JUNIOR,
+                },
+                {
+                    "name": "網路規劃與管理實務",
+                    "category": CourseCategory.JUNIOR,
                 },
                 {
                     "name": "多媒體與人機互動總整與實作",
@@ -191,6 +231,250 @@ async def init_db():
                 {
                     "name": "高等 UNIX 程式設計",
                     "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "計算機網路(研)",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "演算法(研)",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "網路程式設計(研)",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "網路安全",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "演化計算",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "視訊壓縮",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "圖形理論",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "計算機架構",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "分散式演算法",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "圖形識別",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "資料探勘",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "作業系統",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "編譯器設計",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "影像處理",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "計算機圖學",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "正規語言",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "軟體測試",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "無線網路",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "容錯計算",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "網路安全實務-攻擊與防禦",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "深度學習與實務",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "賽局理論及應用",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "電腦對局理論",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "生醫資料探勘",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "嵌入式即時系統",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "計算機系統安全",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "計算機網路安全",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "軟體工程",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "軟體架構",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "組合語言與系統程式",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "電腦安全概論",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "物聯網概論",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "嵌入式系統設計(研)",
+                    "category": CourseCategory.GRADUATE,
+                },
+                {
+                    "name": "電子學(一)",
+                    "category": CourseCategory.INTERDISCIPLINARY,
+                },
+                {
+                    "name": "電路與電子學(一)",
+                    "category": CourseCategory.INTERDISCIPLINARY,
+                },
+                {
+                    "name": "電路與電子學(二)",
+                    "category": CourseCategory.INTERDISCIPLINARY,
+                },
+                {
+                    "name": "分析導論(一)",
+                    "category": CourseCategory.INTERDISCIPLINARY,
+                },
+                {
+                    "name": "微分方程",
+                    "category": CourseCategory.INTERDISCIPLINARY,
+                },
+                {
+                    "name": "有機化學(二)",
+                    "category": CourseCategory.INTERDISCIPLINARY,
+                },
+                {
+                    "name": "基礎圖論",
+                    "category": CourseCategory.INTERDISCIPLINARY,
+                },
+                {
+                    "name": "音樂理論導論",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "統計學",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "經濟學概論",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "全球化與兩岸關係",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "地球科學概論",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "日本文化論",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "營建管理",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "法學緒論",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "財務管理",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "伊斯蘭文明",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "投資學",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "會計學(一)",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "會計學(二)",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "財務工程導論",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "普通心理學",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "統計學(一)",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "統計學(二)",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "邏輯學",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "日文(二)",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "期貨與選擇權",
+                    "category": CourseCategory.GENERAL,
+                },
+                {
+                    "name": "公司法",
+                    "category": CourseCategory.GENERAL,
                 },
             ]
 

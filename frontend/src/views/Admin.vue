@@ -25,7 +25,7 @@
                   </div>
                   <Select
                     v-model="filterCategory"
-                    :options="categoryFilterOptions"
+                    :options="categoryOptions"
                     optionLabel="name"
                     optionValue="value"
                     placeholder="篩選分類"
@@ -452,15 +452,7 @@ const categoryOptions = [
   { name: "大四課程", value: "senior" },
   { name: "研究所課程", value: "graduate" },
   { name: "跨領域課程", value: "interdisciplinary" },
-];
-
-const categoryFilterOptions = [
-  { name: "大一課程", value: "freshman" },
-  { name: "大二課程", value: "sophomore" },
-  { name: "大三課程", value: "junior" },
-  { name: "大四課程", value: "senior" },
-  { name: "研究所課程", value: "graduate" },
-  { name: "跨領域課程", value: "interdisciplinary" },
+  { name: "通識課程", value: "general" },
 ];
 
 const userTypeFilterOptions = [
@@ -476,6 +468,7 @@ const getCategoryName = (category) => {
     senior: "大四課程",
     graduate: "研究所課程",
     interdisciplinary: "跨領域課程",
+    general: "通識課程",
   };
   return categoryMap[category] || category;
 };

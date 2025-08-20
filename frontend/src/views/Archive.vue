@@ -461,6 +461,7 @@
                       { name: '大四課程', value: 'senior' },
                       { name: '研究所課程', value: 'graduate' },
                       { name: '跨領域課程', value: 'interdisciplinary' },
+                      { name: '通識課程', value: 'general' },
                     ]"
                     optionLabel="name"
                     optionValue="value"
@@ -699,6 +700,18 @@ const menuItems = computed(() => {
         .sort((a, b) => a.label.localeCompare(b.label)) || [],
   });
 
+  items.push({
+    label: "通識課程",
+    icon: "pi pi-fw pi-lightbulb",
+    items:
+      coursesList.value?.general
+        ?.map((course) => ({
+          label: course.name,
+          command: () => filterBySubject({ label: course.name, id: course.id }),
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)) || [],
+  });
+
   return items;
 });
 
@@ -746,6 +759,7 @@ function getCategoryKey(categoryLabel) {
     大四課程: "senior",
     研究所課程: "graduate",
     跨領域課程: "interdisciplinary",
+    通識課程: "general",
   };
   return categoryMap[categoryLabel] || "";
 }
@@ -992,6 +1006,7 @@ function getCategoryName(code) {
     senior: "大四課程",
     graduate: "研究所課程",
     interdisciplinary: "跨領域課程",
+    general: "通識課程",
   };
   return categories[code] || code;
 }
@@ -1302,6 +1317,7 @@ function getCategoryTag(categoryLabel) {
     大四課程: "大四",
     研究所課程: "研究所",
     跨領域課程: "跨領域",
+    通識課程: "通識",
   };
   return categoryMap[categoryLabel] || categoryLabel;
 }

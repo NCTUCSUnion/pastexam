@@ -32,6 +32,7 @@
                     { name: '大四課程', value: 'senior' },
                     { name: '研究所課程', value: 'graduate' },
                     { name: '跨領域課程', value: 'interdisciplinary' },
+                    { name: '通識課程', value: 'general' },
                   ]"
                   optionLabel="name"
                   optionValue="value"
@@ -434,6 +435,7 @@ function getCategoryName(code) {
     senior: "大四課程",
     graduate: "研究所課程",
     interdisciplinary: "跨領域課程",
+    general: "通識課程",
   };
   return categories[code] || code;
 }
