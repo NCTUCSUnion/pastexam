@@ -1,6 +1,8 @@
 from sqlalchemy import text
 from sqlmodel import select, func, SQLModel
 import unicodedata
+import os
+import subprocess
 
 from app.core.config import settings
 from app.models.models import User, Archive, Meme, Course, CourseCategory, ArchiveType
@@ -8,9 +10,29 @@ from app.utils.auth import get_password_hash
 from app.db.session import engine, AsyncSessionLocal
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-        await conn.commit()
+    # Run Alembic migrations instead of create_all
+    try:
+        # Run alembic upgrade head to apply all migrations
+        result = subprocess.run(
+            ["uv", "run", "alembic", "upgrade", "head"],
+            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            print(f"Alembic migration failed: {result.stderr}")
+            # Fallback to create_all if migration fails
+            async with engine.begin() as conn:
+                await conn.run_sync(SQLModel.metadata.create_all)
+                await conn.commit()
+        else:
+            print("Database migrations applied successfully")
+    except Exception as e:
+        print(f"Error running migrations: {e}")
+        # Fallback to create_all
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
+            await conn.commit()
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(User).where(User.name == settings.DEFAULT_ADMIN_NAME))
