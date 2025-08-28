@@ -98,10 +98,7 @@ networks:
 volumes:
   pg_data:
     name: pastexam-postgres-data
-    external: true
   minio_data:
     name: pastexam-minio-data
-    external: true
   redis_data:
     name: pastexam-redis-data
-    external: true
