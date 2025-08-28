@@ -16,6 +16,10 @@ mkdir -p $BACKUP_DIR
 echo "開始備份 Docker 容器資料..."
 echo "備份時間: $DATE"
 
+# 停止容器以確保資料一致性
+echo "停止容器以確保備份資料一致性..."
+docker compose -f docker/docker-compose.yml down
+
 # 備份 Volume 資料
 echo "備份 Docker Volumes..."
 
@@ -37,7 +41,6 @@ echo "所有備份已完成！備份檔案位於: $BACKUP_DIR"
 echo "備份檔案列表:"
 ls -la $BACKUP_DIR/*$DATE*
 
-# 保留最近 4 週的備份，刪除舊的 (每週備份，保留 4 份)
-echo "清理 4 週前的備份檔案..."
-find $BACKUP_DIR -name "*.tar.gz" -mtime +28 -delete
-echo "備份腳本執行完成！"
+echo "重新啟動容器..."
+docker compose -f docker/docker-compose.yml up -d
+
