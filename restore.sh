@@ -21,7 +21,7 @@ echo "還原日期: $BACKUP_DATE"
 
 # 確保容器停止
 echo "停止容器..."
-docker compose down
+docker compose -f docker/docker-compose.yml down
 
 # 還原 Volume 資料
 echo "還原 Docker Volumes..."
@@ -44,7 +44,4 @@ if [ -f "$BACKUP_DIR/minio-volume-$BACKUP_DATE.tar.gz" ]; then
     echo "MinIO volume 還原完成"
 fi
 
-
-
-echo "還原完成！現在可以啟動服務："
-echo "docker compose up -d"
+echo "還原完成！現在可以啟動服務"
