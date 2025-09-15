@@ -27,7 +27,7 @@ services:
       - app_network
 
   db:
-    image: postgres:15-alpine
+    image: postgres:15.8-alpine3.20
     container_name: pastexam-postgres
     restart: always
     environment:
@@ -68,7 +68,7 @@ services:
       - app_network
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.2.5-alpine3.20
     container_name: pastexam-redis
     # ports:
     #   - "6379:6379"
@@ -78,7 +78,7 @@ services:
       - app_network
 
   nginx:
-    image: nginx:latest
+    image: nginx:1.27.2-alpine3.20
     container_name: pastexam-nginx
     restart: always
     ports:
