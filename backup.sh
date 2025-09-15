@@ -22,14 +22,14 @@ echo "Backing up Docker Volumes..."
 # PostgreSQL Volume backup
 if docker volume ls --format "{{.Name}}" | grep -q "pastexam-postgres-data"; then
     echo "Backing up PostgreSQL volume..."
-    docker run --rm -v pastexam-postgres-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine tar czf /backup/postgres-volume-$DATE.tar.gz -C /data .
+    docker run --rm -v pastexam-postgres-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine:3.22 tar czf /backup/postgres-volume-$DATE.tar.gz -C /data .
     echo "PostgreSQL volume backup completed"
 fi
 
 # MinIO Volume backup
 if docker volume ls --format "{{.Name}}" | grep -q "pastexam-minio-data"; then
     echo "Backing up MinIO volume..."
-    docker run --rm -v pastexam-minio-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine tar czf /backup/minio-volume-$DATE.tar.gz -C /data .
+    docker run --rm -v pastexam-minio-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine:3.22 tar czf /backup/minio-volume-$DATE.tar.gz -C /data .
     echo "MinIO volume backup completed"
 fi
 

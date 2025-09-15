@@ -29,7 +29,7 @@ if [ -f "$BACKUP_DIR/postgres-volume-$BACKUP_DATE.tar.gz" ]; then
     echo "Restoring PostgreSQL volume..."
     docker volume rm pastexam-postgres-data 2>/dev/null || true
     docker volume create pastexam-postgres-data
-    docker run --rm -v pastexam-postgres-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine tar xzf /backup/postgres-volume-$BACKUP_DATE.tar.gz -C /data
+    docker run --rm -v pastexam-postgres-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine:3.22 tar xzf /backup/postgres-volume-$BACKUP_DATE.tar.gz -C /data
     echo "PostgreSQL volume restore completed"
 fi
 
@@ -38,7 +38,7 @@ if [ -f "$BACKUP_DIR/minio-volume-$BACKUP_DATE.tar.gz" ]; then
     echo "Restoring MinIO volume..."
     docker volume rm pastexam-minio-data 2>/dev/null || true
     docker volume create pastexam-minio-data
-    docker run --rm -v pastexam-minio-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine tar xzf /backup/minio-volume-$BACKUP_DATE.tar.gz -C /data
+    docker run --rm -v pastexam-minio-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine:3.22 tar xzf /backup/minio-volume-$BACKUP_DATE.tar.gz -C /data
     echo "MinIO volume restore completed"
 fi
 
