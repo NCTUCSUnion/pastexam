@@ -760,6 +760,8 @@ function filterBySubject(course) {
   filters.value.professor = "";
   filters.value.year = "";
   filters.value.type = "";
+  // Reset expanded panels when switching subjects
+  expandedPanels.value = [];
   fetchArchives();
 }
 
@@ -928,18 +930,14 @@ watch(
   () => groupedArchives.value,
   (newGroups) => {
     if (newGroups.length) {
-      // Only set default expanded panels if no panels are currently expanded
-      if (expandedPanels.value.length === 0) {
-        expandedPanels.value = newGroups
-          .slice(0, 3)
-          .map((group) => group.year.toString());
-      } else {
-        // Keep existing expanded panels that are still valid
-        const validYears = newGroups.map((group) => group.year.toString());
-        expandedPanels.value = expandedPanels.value.filter((panel) =>
-          validYears.includes(panel)
-        );
-      }
+      // Always set default expanded panels to first 3 years when switching subjects
+      // This ensures consistent behavior regardless of previous state
+      expandedPanels.value = newGroups
+        .slice(0, 3)
+        .map((group) => group.year.toString());
+    } else {
+      // Clear expanded panels if no groups available
+      expandedPanels.value = [];
     }
   },
   { immediate: true }
