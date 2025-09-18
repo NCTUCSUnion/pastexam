@@ -99,8 +99,10 @@
                     :key="course.label"
                     class="p-button-text search-result-btn text-color"
                     @click="
-                      filterBySubject({ label: course.label, id: course.id })
-                      sidebarVisible = false
+                      () => {
+                        filterBySubject({ label: course.label, id: course.id })
+                        sidebarVisible = false
+                      }
                     "
                   >
                     <span class="ellipsis">{{ course.label }}</span>
@@ -118,8 +120,10 @@
                 icon="pi pi-cog"
                 label="系統管理"
                 @click="
-                  router.push('/admin')
-                  sidebarVisible = false
+                  () => {
+                    router.push('/admin')
+                    sidebarVisible = false
+                  }
                 "
                 severity="secondary"
                 size="small"
