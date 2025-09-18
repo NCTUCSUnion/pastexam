@@ -459,18 +459,13 @@ export default {
       const { type, title, description, contact } = this.issueForm
 
       const systemInfo = this.getSystemInfo()
-
-      // const issueLabels = this.getIssueLabels(type)
       const issueBody = this.formatIssueBody(description, contact, systemInfo, type)
-
       const repoOwner = 'nctucsunion'
       const repoName = 'pastexam'
-
       const githubUrl =
         `https://github.com/${repoOwner}/${repoName}/issues/new?` +
         `title=${encodeURIComponent(title)}&` +
         `body=${encodeURIComponent(issueBody)}`
-      // `&labels=${encodeURIComponent(issueLabels.join(','))}`
 
       window.open(githubUrl, '_blank')
 
@@ -508,7 +503,7 @@ export default {
         const edgeMatch = userAgent.match(/Edge\/(\d+\.\d+)/)
         return edgeMatch ? `Edge ${edgeMatch[1]}` : 'Edge'
       }
-      return '未知瀏覽器'
+      return 'Unknown Browser'
     },
 
     getOSInfo(platform, userAgent) {
@@ -537,7 +532,7 @@ export default {
         }
         return 'iOS'
       }
-      return platform || '未知系統'
+      return platform || 'Unknown System'
     },
 
     formatTimestamp(timestamp) {
@@ -553,17 +548,6 @@ export default {
         hour12: false,
       }
       return date.toLocaleString('zh-TW', options) + ' (UTC+8)'
-    },
-
-    getIssueLabels(type) {
-      const labelMap = {
-        bug: 'bug',
-        enhancement: 'enhancement',
-        performance: 'performance',
-        'ui-ux': 'enhancement',
-        question: 'question',
-      }
-      return [labelMap[type] || 'question']
     },
 
     formatIssueBody(description, contact, systemInfo, type) {
