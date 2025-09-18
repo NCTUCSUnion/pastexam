@@ -1,0 +1,44 @@
+name: Auto label on issue open/edit
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse type from issue body and apply labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = context.payload.issue.body || "";
+            const m = body.match(/<!--\s*type:\s*([a-z0-9\-]+)\s*-->/i);
+            const type = m ? m[1].toLowerCase() : "question";
+
+            const map = {
+              "bug": "bug",
+              "enhancement": "enhancement", 
+              "performance": "performance",
+              "ui-ux": "ui-ux",
+              "question": "question"
+            };
+
+            const label = map[type] || "question";
+
+            const {owner, repo} = context.repo;
+            const issue_number = context.payload.issue.number;
+
+            const existing = context.payload.issue.labels.map(l => l.name);
+
+            if (!existing.includes(label)) {
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number,
+                labels: [label]
+              });
+            }

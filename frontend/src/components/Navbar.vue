@@ -182,7 +182,7 @@
 
     <Dialog
       :visible="issueReportVisible"
-      @update:visible="issueReportVisible = $event"
+      @update:visible="handleIssueReportDialogClose"
       header="問題回報"
       :modal="true"
       :draggable="false"
@@ -301,7 +301,6 @@ export default {
       issueTypes: [
         { label: "Bug / 程式錯誤", value: "bug" },
         { label: "功能建議", value: "enhancement" },
-        { label: "文件問題", value: "documentation" },
         { label: "效能問題", value: "performance" },
         { label: "UI/UX 問題", value: "ui-ux" },
         { label: "其他問題", value: "question" },
@@ -456,13 +455,30 @@ export default {
       };
     },
 
+    handleIssueReportDialogClose(visible) {
+      this.issueReportVisible = visible;
+      if (!visible) {
+        this.issueForm = {
+          type: "",
+          title: "",
+          description: "",
+          contact: "",
+        };
+      }
+    },
+
     submitIssueReport() {
       const { type, title, description, contact } = this.issueForm;
 
       const systemInfo = this.getSystemInfo();
 
       const issueLabels = this.getIssueLabels(type);
-      const issueBody = this.formatIssueBody(description, contact, systemInfo);
+      const issueBody = this.formatIssueBody(
+        description,
+        contact,
+        systemInfo,
+        type
+      );
 
       const repoOwner = "nctucsunion";
       const repoName = "pastexam";
@@ -561,18 +577,21 @@ export default {
 
     getIssueLabels(type) {
       const labelMap = {
-        bug: ["bug"],
-        enhancement: ["enhancement"],
-        documentation: ["documentation"],
-        performance: ["enhancement"],
-        "ui-ux": ["enhancement"],
-        question: ["question"],
+        bug: "bug",
+        enhancement: "enhancement",
+        performance: "performance",
+        "ui-ux": "ui-ux",
+        question: "question",
       };
-      return labelMap[type] || ["question"];
+      return [labelMap[type] || "question"];
     },
 
-    formatIssueBody(description, contact, systemInfo) {
-      let body = "## 問題描述\n\n" + description + "\n\n";
+    formatIssueBody(description, contact, systemInfo, type) {
+      let body = "";
+
+      body += `<!-- type: ${type || "question"} -->\n\n`;
+
+      body += "## 問題描述\n\n" + description + "\n\n";
 
       if (contact) {
         body += "## 聯絡方式\n\n" + contact + "\n\n";
