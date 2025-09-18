@@ -53,7 +53,13 @@
                 </div>
               </div>
             </div>
-            <PanelMenu v-else :model="menuItems" multiple class="w-full" />
+            <PanelMenu
+              v-else
+              :model="menuItems"
+              :expandedKeys="expandedMenuItems"
+              @update:expandedKeys="expandedMenuItems = $event"
+              class="w-full"
+            />
           </div>
 
           <!-- Fixed upload section for desktop -->
@@ -569,6 +575,7 @@ const selectedCourse = ref(null);
 const showUploadDialog = ref(false);
 const uploadFormProfessors = ref([]);
 const expandedPanels = ref([]);
+const expandedMenuItems = ref({});
 
 const CATEGORIES = {
   freshman: { name: "大一課程", icon: "pi pi-fw pi-book", tag: "大一" },
@@ -627,6 +634,7 @@ const menuItems = computed(() => {
   if (!coursesList.value) return [];
 
   return Object.entries(CATEGORIES).map(([key, category]) => ({
+    key: key,
     label: category.name,
     icon: category.icon,
     items: (coursesList.value[key] || [])
@@ -682,6 +690,15 @@ function getCategoryKey(categoryLabel) {
   );
 }
 
+function getCategoryKeyForCourse(courseId) {
+  for (const [categoryKey, courses] of Object.entries(coursesList.value)) {
+    if (courses.some((course) => course.id === courseId)) {
+      return categoryKey;
+    }
+  }
+  return null;
+}
+
 const groupedArchives = computed(() => {
   if (!archives.value) return [];
 
@@ -707,6 +724,27 @@ const groupedArchives = computed(() => {
       };
     }
     groups[archive.year].list.push(archive);
+  });
+
+  Object.values(groups).forEach((group) => {
+    group.list.sort((a, b) => {
+      // Define exam type priority
+      const typePriority = {
+        midterm: 1,
+        final: 2,
+        quiz: 3,
+        other: 4,
+      };
+
+      const aPriority = typePriority[a.type] || 4;
+      const bPriority = typePriority[b.type] || 4;
+
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+
+      return a.name.localeCompare(b.name, "en");
+    });
   });
 
   return Object.values(groups).sort((a, b) => b.year - a.year);
@@ -754,14 +792,36 @@ async function fetchCourses() {
 }
 
 function filterBySubject(course) {
-  if (!course || !course.id) return;
+  if (!course || !course.id) {
+    selectedSubject.value = null;
+    selectedCourse.value = null;
+    archives.value = [];
+    expandedMenuItems.value = {};
+    localStorage.removeItem("selectedSubject");
+    return;
+  }
+
   selectedSubject.value = course.label;
   selectedCourse.value = course.id;
   filters.value.professor = "";
   filters.value.year = "";
   filters.value.type = "";
-  // Reset expanded panels when switching subjects
   expandedPanels.value = [];
+
+  const categoryKey = getCategoryKeyForCourse(course.id);
+  if (categoryKey) {
+    expandedMenuItems.value = { [categoryKey]: true };
+    console.log("Expanding category:", categoryKey, expandedMenuItems.value);
+  }
+
+  localStorage.setItem(
+    "selectedSubject",
+    JSON.stringify({
+      label: course.label,
+      id: course.id,
+    })
+  );
+
   fetchArchives();
 }
 
@@ -1149,6 +1209,37 @@ onMounted(async () => {
   isAdmin.value = user?.is_admin || false;
   checkAuthentication();
   await fetchCourses();
+
+  const savedSubject = localStorage.getItem("selectedSubject");
+  if (savedSubject) {
+    try {
+      const subjectData = JSON.parse(savedSubject);
+      // Verify the course still exists in the current course list
+      const courseExists = Object.values(coursesList.value).some((category) =>
+        category.some(
+          (course) =>
+            course.id === subjectData.id && course.name === subjectData.label
+        )
+      );
+
+      if (courseExists) {
+        selectedSubject.value = subjectData.label;
+        selectedCourse.value = subjectData.id;
+
+        const categoryKey = getCategoryKeyForCourse(subjectData.id);
+        if (categoryKey) {
+          expandedMenuItems.value = { [categoryKey]: true };
+        }
+
+        await fetchArchives();
+      } else {
+        localStorage.removeItem("selectedSubject");
+      }
+    } catch (error) {
+      console.error("Error parsing saved subject:", error);
+      localStorage.removeItem("selectedSubject");
+    }
+  }
 });
 
 watch(isDarkTheme, () => {});

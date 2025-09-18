@@ -429,6 +429,7 @@ export default {
       }
 
       sessionStorage.removeItem("authToken");
+      localStorage.removeItem("selectedSubject");
       this.isAuthenticated = false;
       this.userData = null;
 
