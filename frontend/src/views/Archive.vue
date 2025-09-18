@@ -811,7 +811,7 @@ function filterBySubject(course) {
   const categoryKey = getCategoryKeyForCourse(course.id);
   if (categoryKey) {
     expandedMenuItems.value = { [categoryKey]: true };
-    console.log("Expanding category:", categoryKey, expandedMenuItems.value);
+    // console.log("Expanding category:", categoryKey, expandedMenuItems.value);
   }
 
   localStorage.setItem(
