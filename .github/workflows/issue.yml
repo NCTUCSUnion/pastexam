@@ -25,7 +25,7 @@ jobs:
               "bug": "bug",
               "enhancement": "enhancement", 
               "performance": "performance",
-              "ui-ux": "ui-ux",
+              "ui-ux": "enhancement",
               "question": "question"
             };
 

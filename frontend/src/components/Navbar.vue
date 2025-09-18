@@ -460,7 +460,7 @@ export default {
 
       const systemInfo = this.getSystemInfo()
 
-      const issueLabels = this.getIssueLabels(type)
+      // const issueLabels = this.getIssueLabels(type)
       const issueBody = this.formatIssueBody(description, contact, systemInfo, type)
 
       const repoOwner = 'nctucsunion'
@@ -469,8 +469,8 @@ export default {
       const githubUrl =
         `https://github.com/${repoOwner}/${repoName}/issues/new?` +
         `title=${encodeURIComponent(title)}&` +
-        `body=${encodeURIComponent(issueBody)}&` +
-        `labels=${encodeURIComponent(issueLabels.join(','))}`
+        `body=${encodeURIComponent(issueBody)}`
+      // `&labels=${encodeURIComponent(issueLabels.join(','))}`
 
       window.open(githubUrl, '_blank')
 
@@ -560,7 +560,7 @@ export default {
         bug: 'bug',
         enhancement: 'enhancement',
         performance: 'performance',
-        'ui-ux': 'ui-ux',
+        'ui-ux': 'enhancement',
         question: 'question',
       }
       return [labelMap[type] || 'question']
