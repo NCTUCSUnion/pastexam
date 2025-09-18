@@ -70,6 +70,7 @@ services:
   redis:
     image: redis:7.4.5-alpine3.21
     container_name: pastexam-redis
+    restart: always
     # ports:
     #   - "6379:6379"
     volumes:
