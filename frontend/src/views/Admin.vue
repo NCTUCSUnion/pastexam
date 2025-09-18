@@ -12,16 +12,10 @@
               <div
                 class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center mb-4 gap-3"
               >
-                <div
-                  class="flex flex-column md:flex-row gap-3 w-full md:w-auto"
-                >
+                <div class="flex flex-column md:flex-row gap-3 w-full md:w-auto">
                   <div class="relative w-full md:w-auto">
                     <i class="pi pi-search search-icon"></i>
-                    <InputText
-                      v-model="searchQuery"
-                      placeholder="搜尋課程"
-                      class="w-full pl-6"
-                    />
+                    <InputText v-model="searchQuery" placeholder="搜尋課程" class="w-full pl-6" />
                   </div>
                   <Select
                     v-model="filterCategory"
@@ -60,23 +54,10 @@
                 sortMode="multiple"
                 removableSort
               >
-                <Column
-                  field="name"
-                  header="課程名稱"
-                  sortable
-                  style="width: 35%"
-                ></Column>
-                <Column
-                  field="category"
-                  header="分類"
-                  sortable
-                  style="width: 25%"
-                >
+                <Column field="name" header="課程名稱" sortable style="width: 35%"></Column>
+                <Column field="category" header="分類" sortable style="width: 25%">
                   <template #body="{ data }">
-                    <Tag
-                      :severity="getCategorySeverity(data.category)"
-                      class="text-sm"
-                    >
+                    <Tag :severity="getCategorySeverity(data.category)" class="text-sm">
                       {{ getCategoryName(data.category) }}
                     </Tag>
                   </template>
@@ -110,9 +91,7 @@
               <div
                 class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center mb-4 gap-3"
               >
-                <div
-                  class="flex flex-column md:flex-row gap-3 w-full md:w-auto"
-                >
+                <div class="flex flex-column md:flex-row gap-3 w-full md:w-auto">
                   <div class="relative w-full md:w-auto">
                     <i class="pi pi-search search-icon"></i>
                     <InputText
@@ -158,54 +137,23 @@
                 sortMode="multiple"
                 removableSort
               >
-                <Column
-                  field="name"
-                  header="使用者名稱"
-                  sortable
-                  style="width: 15%"
-                ></Column>
-                <Column
-                  field="email"
-                  header="電子郵件"
-                  sortable
-                  style="width: 20%"
-                ></Column>
-                <Column
-                  field="is_admin"
-                  header="管理員權限"
-                  sortable
-                  style="width: 15%"
-                >
+                <Column field="name" header="使用者名稱" sortable style="width: 15%"></Column>
+                <Column field="email" header="電子郵件" sortable style="width: 20%"></Column>
+                <Column field="is_admin" header="管理員權限" sortable style="width: 15%">
                   <template #body="{ data }">
-                    <Tag
-                      :severity="data.is_admin ? 'success' : 'secondary'"
-                      class="text-sm"
-                    >
-                      {{ data.is_admin ? "是" : "否" }}
+                    <Tag :severity="data.is_admin ? 'success' : 'secondary'" class="text-sm">
+                      {{ data.is_admin ? '是' : '否' }}
                     </Tag>
                   </template>
                 </Column>
-                <Column
-                  field="is_local"
-                  header="帳號類型"
-                  sortable
-                  style="width: 15%"
-                >
+                <Column field="is_local" header="帳號類型" sortable style="width: 15%">
                   <template #body="{ data }">
-                    <Tag
-                      :severity="data.is_local ? 'info' : 'warning'"
-                      class="text-sm"
-                    >
-                      {{ data.is_local ? "本地帳號" : "OAuth 帳號" }}
+                    <Tag :severity="data.is_local ? 'info' : 'warning'" class="text-sm">
+                      {{ data.is_local ? '本地帳號' : 'OAuth 帳號' }}
                     </Tag>
                   </template>
                 </Column>
-                <Column
-                  field="last_login"
-                  header="最近登入"
-                  sortable
-                  style="width: 15%"
-                >
+                <Column field="last_login" header="最近登入" sortable style="width: 15%">
                   <template #body="{ data }">
                     <span v-if="data.last_login" class="text-sm">
                       {{ formatDateTime(data.last_login) }}
@@ -282,12 +230,7 @@
         </div>
 
         <div class="flex pt-6 justify-end gap-2.5">
-          <Button
-            label="取消"
-            icon="pi pi-times"
-            severity="secondary"
-            @click="closeCourseDialog"
-          />
+          <Button label="取消" icon="pi pi-times" severity="secondary" @click="closeCourseDialog" />
           <Button
             :label="editingCourse ? '更新' : '新增'"
             :icon="editingCourse ? 'pi pi-check' : 'pi pi-plus'"
@@ -358,12 +301,7 @@
         </div>
 
         <div class="flex pt-6 justify-end gap-2.5">
-          <Button
-            label="取消"
-            icon="pi pi-times"
-            severity="secondary"
-            @click="closeUserDialog"
-          />
+          <Button label="取消" icon="pi pi-times" severity="secondary" @click="closeUserDialog" />
           <Button
             :label="editingUser ? '更新' : '新增'"
             :icon="editingUser ? 'pi pi-check' : 'pi pi-plus'"
@@ -379,13 +317,13 @@
 
 <script setup>
 defineOptions({
-  name: "AdminView",
-});
+  name: 'AdminView',
+})
 
-import { ref, computed, onMounted } from "vue";
-import { useConfirm } from "primevue/useconfirm";
-import { useToast } from "primevue/usetoast";
-import { getCurrentUser } from "../utils/auth";
+import { ref, computed, onMounted } from 'vue'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
+import { getCurrentUser } from '../utils/auth'
 import {
   getCourses,
   createCourse,
@@ -395,462 +333,454 @@ import {
   createUser,
   updateUser,
   deleteUser,
-} from "../api";
+} from '../api'
 
-const confirm = useConfirm();
-const toast = useToast();
+const confirm = useConfirm()
+const toast = useToast()
 
-const courses = ref([]);
-const coursesLoading = ref(false);
-const searchQuery = ref("");
-const filterCategory = ref(null);
+const courses = ref([])
+const coursesLoading = ref(false)
+const searchQuery = ref('')
+const filterCategory = ref(null)
 
 const courseSortMeta = ref([
-  { field: "category", order: 1 },
-  { field: "name", order: 1 },
-]);
+  { field: 'category', order: 1 },
+  { field: 'name', order: 1 },
+])
 
-const showCourseDialog = ref(false);
-const editingCourse = ref(null);
-const saveLoading = ref(false);
+const showCourseDialog = ref(false)
+const editingCourse = ref(null)
+const saveLoading = ref(false)
 
 const courseForm = ref({
-  name: "",
-  category: "",
-});
+  name: '',
+  category: '',
+})
 
-const courseFormErrors = ref({});
-const users = ref([]);
-const usersLoading = ref(false);
-const userSearchQuery = ref("");
-const filterUserType = ref(null);
+const courseFormErrors = ref({})
+const users = ref([])
+const usersLoading = ref(false)
+const userSearchQuery = ref('')
+const filterUserType = ref(null)
 
 const userSortMeta = ref([
-  { field: "is_admin", order: -1 },
-  { field: "name", order: 1 },
-]);
+  { field: 'is_admin', order: -1 },
+  { field: 'name', order: 1 },
+])
 
-const showUserDialog = ref(false);
-const editingUser = ref(null);
-const userSaveLoading = ref(false);
+const showUserDialog = ref(false)
+const editingUser = ref(null)
+const userSaveLoading = ref(false)
 
 const userForm = ref({
-  name: "",
-  email: "",
-  password: "",
+  name: '',
+  email: '',
+  password: '',
   is_admin: false,
-});
+})
 
-const userFormErrors = ref({});
+const userFormErrors = ref({})
 
-const currentUserId = computed(() => getCurrentUser()?.id);
+const currentUserId = computed(() => getCurrentUser()?.id)
 
 const categoryOptions = [
-  { name: "大一課程", value: "freshman" },
-  { name: "大二課程", value: "sophomore" },
-  { name: "大三課程", value: "junior" },
-  { name: "大四課程", value: "senior" },
-  { name: "研究所課程", value: "graduate" },
-  { name: "跨領域課程", value: "interdisciplinary" },
-  { name: "通識課程", value: "general" },
-];
+  { name: '大一課程', value: 'freshman' },
+  { name: '大二課程', value: 'sophomore' },
+  { name: '大三課程', value: 'junior' },
+  { name: '大四課程', value: 'senior' },
+  { name: '研究所課程', value: 'graduate' },
+  { name: '跨領域課程', value: 'interdisciplinary' },
+  { name: '通識課程', value: 'general' },
+]
 
 const userTypeFilterOptions = [
-  { name: "管理員", value: true },
-  { name: "一般使用者", value: false },
-];
+  { name: '管理員', value: true },
+  { name: '一般使用者', value: false },
+]
 
 const getCategoryName = (category) => {
   const categoryMap = {
-    freshman: "大一課程",
-    sophomore: "大二課程",
-    junior: "大三課程",
-    senior: "大四課程",
-    graduate: "研究所課程",
-    interdisciplinary: "跨領域課程",
-    general: "通識課程",
-  };
-  return categoryMap[category] || category;
-};
+    freshman: '大一課程',
+    sophomore: '大二課程',
+    junior: '大三課程',
+    senior: '大四課程',
+    graduate: '研究所課程',
+    interdisciplinary: '跨領域課程',
+    general: '通識課程',
+  }
+  return categoryMap[category] || category
+}
 
 const getCategorySeverity = (category) => {
   const severityMap = {
-    freshman: "info",
-    sophomore: "success",
-    junior: "warning",
-    senior: "danger",
-    graduate: "contrast",
-    interdisciplinary: "secondary",
-  };
-  return severityMap[category] || "secondary";
-};
+    freshman: 'info',
+    sophomore: 'success',
+    junior: 'warning',
+    senior: 'danger',
+    graduate: 'contrast',
+    interdisciplinary: 'secondary',
+  }
+  return severityMap[category] || 'secondary'
+}
 
 const filteredCourses = computed(() => {
-  let filtered = courses.value;
+  let filtered = courses.value
 
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter((course) =>
-      course.name.toLowerCase().includes(query)
-    );
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter((course) => course.name.toLowerCase().includes(query))
   }
 
   if (filterCategory.value) {
-    filtered = filtered.filter(
-      (course) => course.category === filterCategory.value
-    );
+    filtered = filtered.filter((course) => course.category === filterCategory.value)
   }
 
-  return filtered;
-});
+  return filtered
+})
 
 const filteredUsers = computed(() => {
-  let filtered = users.value;
+  let filtered = users.value
 
   if (userSearchQuery.value) {
-    const query = userSearchQuery.value.toLowerCase();
+    const query = userSearchQuery.value.toLowerCase()
     filtered = filtered.filter(
-      (user) =>
-        user.name.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query)
-    );
+      (user) => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query)
+    )
   }
 
   if (filterUserType.value !== null) {
-    filtered = filtered.filter(
-      (user) => user.is_admin === filterUserType.value
-    );
+    filtered = filtered.filter((user) => user.is_admin === filterUserType.value)
   }
 
-  return filtered;
-});
+  return filtered
+})
 
 const loadCourses = async () => {
-  coursesLoading.value = true;
+  coursesLoading.value = true
   try {
-    const response = await getCourses();
-    courses.value = response.data;
+    const response = await getCourses()
+    courses.value = response.data
   } catch (error) {
-    console.error("載入課程失敗:", error);
+    console.error('載入課程失敗:', error)
     toast.add({
-      severity: "error",
-      summary: "錯誤",
-      detail: "載入課程失敗",
+      severity: 'error',
+      summary: '錯誤',
+      detail: '載入課程失敗',
       life: 3000,
-    });
+    })
   } finally {
-    coursesLoading.value = false;
+    coursesLoading.value = false
   }
-};
+}
 
 const loadUsers = async () => {
-  usersLoading.value = true;
+  usersLoading.value = true
   try {
-    const response = await getUsers();
-    users.value = response.data;
+    const response = await getUsers()
+    users.value = response.data
   } catch (error) {
-    console.error("載入使用者失敗:", error);
+    console.error('載入使用者失敗:', error)
     toast.add({
-      severity: "error",
-      summary: "錯誤",
-      detail: "載入使用者失敗",
+      severity: 'error',
+      summary: '錯誤',
+      detail: '載入使用者失敗',
       life: 3000,
-    });
+    })
   } finally {
-    usersLoading.value = false;
+    usersLoading.value = false
   }
-};
+}
 
 const openCreateDialog = () => {
   courseForm.value = {
-    name: "",
-    category: "",
-  };
-  courseFormErrors.value = {};
-  editingCourse.value = null;
-  showCourseDialog.value = true;
-};
+    name: '',
+    category: '',
+  }
+  courseFormErrors.value = {}
+  editingCourse.value = null
+  showCourseDialog.value = true
+}
 
 const openEditDialog = (course) => {
   courseForm.value = {
     name: course.name,
     category: course.category,
-  };
-  courseFormErrors.value = {};
-  editingCourse.value = course;
-  showCourseDialog.value = true;
-};
+  }
+  courseFormErrors.value = {}
+  editingCourse.value = course
+  showCourseDialog.value = true
+}
 
 const closeCourseDialog = () => {
-  showCourseDialog.value = false;
+  showCourseDialog.value = false
   courseForm.value = {
-    name: "",
-    category: "",
-  };
-  courseFormErrors.value = {};
-  editingCourse.value = null;
-};
+    name: '',
+    category: '',
+  }
+  courseFormErrors.value = {}
+  editingCourse.value = null
+}
 
 const validateCourseForm = () => {
-  const errors = {};
+  const errors = {}
 
   if (!courseForm.value.name.trim()) {
-    errors.name = "課程名稱是必填欄位";
+    errors.name = '課程名稱是必填欄位'
   }
 
   if (!courseForm.value.category) {
-    errors.category = "分類是必填欄位";
+    errors.category = '分類是必填欄位'
   }
 
-  courseFormErrors.value = errors;
-  return Object.keys(errors).length === 0;
-};
+  courseFormErrors.value = errors
+  return Object.keys(errors).length === 0
+}
 
 const saveCourse = async () => {
-  if (!validateCourseForm()) return;
+  if (!validateCourseForm()) return
 
-  saveLoading.value = true;
+  saveLoading.value = true
   try {
     if (editingCourse.value) {
-      await updateCourse(editingCourse.value.id, courseForm.value);
+      await updateCourse(editingCourse.value.id, courseForm.value)
       toast.add({
-        severity: "success",
-        summary: "成功",
-        detail: "課程更新成功",
+        severity: 'success',
+        summary: '成功',
+        detail: '課程更新成功',
         life: 3000,
-      });
+      })
     } else {
-      await createCourse(courseForm.value);
+      await createCourse(courseForm.value)
       toast.add({
-        severity: "success",
-        summary: "成功",
-        detail: "課程新增成功",
+        severity: 'success',
+        summary: '成功',
+        detail: '課程新增成功',
         life: 3000,
-      });
+      })
     }
-    closeCourseDialog();
-    await loadCourses();
+    closeCourseDialog()
+    await loadCourses()
   } catch (error) {
-    console.error("儲存課程失敗:", error);
+    console.error('儲存課程失敗:', error)
     toast.add({
-      severity: "error",
-      summary: "錯誤",
-      detail: editingCourse.value ? "課程更新失敗" : "課程新增失敗",
+      severity: 'error',
+      summary: '錯誤',
+      detail: editingCourse.value ? '課程更新失敗' : '課程新增失敗',
       life: 3000,
-    });
+    })
   } finally {
-    saveLoading.value = false;
+    saveLoading.value = false
   }
-};
+}
 
 const confirmDeleteCourse = (course) => {
   confirm.require({
     message: `確定要刪除課程「${course.name}」嗎？`,
-    header: "刪除確認",
-    icon: "pi pi-exclamation-triangle",
-    rejectClass: "p-button-secondary p-button-outlined",
-    acceptClass: "p-button-danger",
-    rejectLabel: "取消",
-    acceptLabel: "刪除",
+    header: '刪除確認',
+    icon: 'pi pi-exclamation-triangle',
+    rejectClass: 'p-button-secondary p-button-outlined',
+    acceptClass: 'p-button-danger',
+    rejectLabel: '取消',
+    acceptLabel: '刪除',
     accept: () => deleteCourseAction(course),
-  });
-};
+  })
+}
 
 const deleteCourseAction = async (course) => {
   try {
-    await deleteCourse(course.id);
+    await deleteCourse(course.id)
     toast.add({
-      severity: "success",
-      summary: "成功",
-      detail: "課程刪除成功",
+      severity: 'success',
+      summary: '成功',
+      detail: '課程刪除成功',
       life: 3000,
-    });
-    await loadCourses();
+    })
+    await loadCourses()
   } catch (error) {
-    console.error("刪除課程失敗:", error);
+    console.error('刪除課程失敗:', error)
     toast.add({
-      severity: "error",
-      summary: "錯誤",
-      detail: "課程刪除失敗",
+      severity: 'error',
+      summary: '錯誤',
+      detail: '課程刪除失敗',
       life: 3000,
-    });
+    })
   }
-};
+}
 
 const openCreateUserDialog = () => {
   userForm.value = {
-    name: "",
-    email: "",
-    password: "",
+    name: '',
+    email: '',
+    password: '',
     is_admin: false,
-  };
-  userFormErrors.value = {};
-  editingUser.value = null;
-  showUserDialog.value = true;
-};
+  }
+  userFormErrors.value = {}
+  editingUser.value = null
+  showUserDialog.value = true
+}
 
 const openEditUserDialog = (user) => {
   userForm.value = {
     name: user.name,
     email: user.email,
-    password: "",
+    password: '',
     is_admin: user.is_admin,
-  };
-  userFormErrors.value = {};
-  editingUser.value = user;
-  showUserDialog.value = true;
-};
+  }
+  userFormErrors.value = {}
+  editingUser.value = user
+  showUserDialog.value = true
+}
 
 const closeUserDialog = () => {
-  showUserDialog.value = false;
+  showUserDialog.value = false
   userForm.value = {
-    name: "",
-    email: "",
-    password: "",
+    name: '',
+    email: '',
+    password: '',
     is_admin: false,
-  };
-  userFormErrors.value = {};
-  editingUser.value = null;
-};
+  }
+  userFormErrors.value = {}
+  editingUser.value = null
+}
 
 const validateUserForm = () => {
-  const errors = {};
+  const errors = {}
 
   if (!userForm.value.name.trim()) {
-    errors.name = "使用者名稱是必填欄位";
+    errors.name = '使用者名稱是必填欄位'
   }
 
   if (!userForm.value.email.trim()) {
-    errors.email = "電子郵件是必填欄位";
+    errors.email = '電子郵件是必填欄位'
   } else if (!/\S+@\S+\.\S+/.test(userForm.value.email)) {
-    errors.email = "電子郵件格式不正確";
+    errors.email = '電子郵件格式不正確'
   }
 
   if (!editingUser.value && !userForm.value.password.trim()) {
-    errors.password = "密碼是必填欄位";
+    errors.password = '密碼是必填欄位'
   }
 
-  userFormErrors.value = errors;
-  return Object.keys(errors).length === 0;
-};
+  userFormErrors.value = errors
+  return Object.keys(errors).length === 0
+}
 
 const saveUser = async () => {
-  if (!validateUserForm()) return;
+  if (!validateUserForm()) return
 
-  userSaveLoading.value = true;
+  userSaveLoading.value = true
   try {
     if (editingUser.value) {
       const updateData = {
         name: userForm.value.name,
         email: userForm.value.email,
         is_admin: userForm.value.is_admin,
-      };
-      if (userForm.value.password.trim()) {
-        updateData.password = userForm.value.password;
       }
-      await updateUser(editingUser.value.id, updateData);
+      if (userForm.value.password.trim()) {
+        updateData.password = userForm.value.password
+      }
+      await updateUser(editingUser.value.id, updateData)
       toast.add({
-        severity: "success",
-        summary: "成功",
-        detail: "使用者更新成功",
+        severity: 'success',
+        summary: '成功',
+        detail: '使用者更新成功',
         life: 3000,
-      });
+      })
     } else {
-      await createUser(userForm.value);
+      await createUser(userForm.value)
       toast.add({
-        severity: "success",
-        summary: "成功",
-        detail: "使用者新增成功",
+        severity: 'success',
+        summary: '成功',
+        detail: '使用者新增成功',
         life: 3000,
-      });
+      })
     }
-    closeUserDialog();
-    await loadUsers();
+    closeUserDialog()
+    await loadUsers()
   } catch (error) {
-    console.error("儲存使用者失敗:", error);
+    console.error('儲存使用者失敗:', error)
     toast.add({
-      severity: "error",
-      summary: "錯誤",
-      detail: editingUser.value ? "使用者更新失敗" : "使用者新增失敗",
+      severity: 'error',
+      summary: '錯誤',
+      detail: editingUser.value ? '使用者更新失敗' : '使用者新增失敗',
       life: 3000,
-    });
+    })
   } finally {
-    userSaveLoading.value = false;
+    userSaveLoading.value = false
   }
-};
+}
 
 const confirmDeleteUser = (user) => {
   confirm.require({
     message: `確定要刪除使用者「${user.name}」嗎？`,
-    header: "刪除確認",
-    icon: "pi pi-exclamation-triangle",
-    rejectClass: "p-button-secondary p-button-outlined",
-    acceptClass: "p-button-danger",
-    rejectLabel: "取消",
-    acceptLabel: "刪除",
+    header: '刪除確認',
+    icon: 'pi pi-exclamation-triangle',
+    rejectClass: 'p-button-secondary p-button-outlined',
+    acceptClass: 'p-button-danger',
+    rejectLabel: '取消',
+    acceptLabel: '刪除',
     accept: () => deleteUserAction(user),
-  });
-};
+  })
+}
 
 const deleteUserAction = async (user) => {
   try {
-    await deleteUser(user.id);
+    await deleteUser(user.id)
     toast.add({
-      severity: "success",
-      summary: "成功",
-      detail: "使用者刪除成功",
+      severity: 'success',
+      summary: '成功',
+      detail: '使用者刪除成功',
       life: 3000,
-    });
-    await loadUsers();
+    })
+    await loadUsers()
   } catch (error) {
-    console.error("刪除使用者失敗:", error);
+    console.error('刪除使用者失敗:', error)
     toast.add({
-      severity: "error",
-      summary: "錯誤",
-      detail: "使用者刪除失敗",
+      severity: 'error',
+      summary: '錯誤',
+      detail: '使用者刪除失敗',
       life: 3000,
-    });
+    })
   }
-};
+}
 
 const formatDateTime = (dateString) => {
-  if (!dateString) return "從未登入";
+  if (!dateString) return '從未登入'
 
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInMs = now - date;
-  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-  const diffInDays = Math.floor(diffInHours / 24);
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInMs = now - date
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
+  const diffInDays = Math.floor(diffInHours / 24)
 
   if (diffInDays === 0) {
     if (diffInHours === 0) {
-      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
       if (diffInMinutes < 1) {
-        return "剛剛";
+        return '剛剛'
       } else if (diffInMinutes < 60) {
-        return `${diffInMinutes} 分鐘前`;
+        return `${diffInMinutes} 分鐘前`
       }
     }
-    return `${diffInHours} 小時前`;
+    return `${diffInHours} 小時前`
   } else if (diffInDays === 1) {
-    return "昨天";
+    return '昨天'
   } else if (diffInDays < 7) {
-    return `${diffInDays} 天前`;
+    return `${diffInDays} 天前`
   } else {
-    return date.toLocaleDateString("zh-TW", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return date.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
-};
+}
 
 onMounted(() => {
-  loadCourses();
-  loadUsers();
-});
+  loadCourses()
+  loadUsers()
+})
 </script>
 
 <style scoped>

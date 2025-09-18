@@ -8,9 +8,7 @@
       style="margin-top: -10vh"
     >
       <div class="w-full">
-        <div
-          class="title-container mb-4 w-full overflow-x-auto overflow-y-hidden text-center"
-        >
+        <div class="title-container mb-4 w-full overflow-x-auto overflow-y-hidden text-center">
           <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-wide">
             <span class="code-comment text-gray-500">/*</span>
             <span class="title-text px-2">交大資工考古題系統</span>
@@ -42,12 +40,8 @@
             v-if="!isLoading"
             class="language-badge absolute top-0 right-0 py-1 px-2 text-xs uppercase tracking-wider"
             :style="{
-              backgroundColor: isDarkTheme
-                ? 'rgba(255, 255, 255, 0.1)'
-                : 'rgba(0, 0, 0, 0.1)',
-              color: isDarkTheme
-                ? 'rgba(255, 255, 255, 0.95)'
-                : 'rgba(0, 0, 0, 0.9)',
+              backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+              color: isDarkTheme ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.9)',
               borderTopRightRadius: '0.5rem',
               borderBottomLeftRadius: '0.5rem',
               backdropFilter: 'blur(4px)',
@@ -69,9 +63,7 @@
           :key="stat.key"
           class="stat-card p-3 border-round shadow-3 backdrop-blur"
           :style="{
-            backgroundColor: isDarkTheme
-              ? 'rgba(255, 255, 255, 0.03)'
-              : 'rgba(255, 255, 255, 0.4)',
+            backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.4)',
             border: isDarkTheme
               ? '1px solid rgba(255, 255, 255, 0.2)'
               : '1px solid rgba(0, 0, 0, 0.1)',
@@ -80,18 +72,12 @@
           :class="{ 'animate-fade-in': statsLoaded }"
         >
           <div class="flex align-items-center gap-2">
-            <i
-              :class="stat.icon"
-              class="text-lg"
-              :style="{ color: stat.color }"
-            ></i>
+            <i :class="stat.icon" class="text-lg" :style="{ color: stat.color }"></i>
             <div>
               <div
                 class="font-bold text-sm"
                 :style="{
-                  color: isDarkTheme
-                    ? 'rgba(255, 255, 255, 0.9)'
-                    : 'rgba(0, 0, 0, 0.8)',
+                  color: isDarkTheme ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
                 }"
               >
                 {{ stat.label }}
@@ -99,9 +85,7 @@
               <div
                 class="text-xs opacity-70"
                 :style="{
-                  color: isDarkTheme
-                    ? 'rgba(255, 255, 255, 0.7)'
-                    : 'rgba(0, 0, 0, 0.6)',
+                  color: isDarkTheme ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
                 }"
               >
                 {{ animatedValues[stat.key] }}
@@ -116,23 +100,23 @@
 
 <script setup>
 defineOptions({
-  name: "HomeView",
-});
+  name: 'HomeView',
+})
 
-import { ref, onMounted, computed, watch, onUnmounted } from "vue";
-import hljs from "highlight.js";
-import "highlight.js/styles/atom-one-dark.css";
-import { useTheme } from "../utils/useTheme";
-import { getCodeBgSvg } from "../utils/svgBg";
-import { memeService, statisticsService } from "../api";
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/atom-one-dark.css'
+import { useTheme } from '../utils/useTheme'
+import { getCodeBgSvg } from '../utils/svgBg'
+import { memeService, statisticsService } from '../api'
 
-const { isDarkTheme } = useTheme();
-const displayedText = ref("");
-const highlightedCode = ref("");
-const selectedMeme = ref({ code: "", language: "" });
-const fullText = computed(() => selectedMeme.value.code);
-const language = computed(() => selectedMeme.value.language);
-const isLoading = ref(true);
+const { isDarkTheme } = useTheme()
+const displayedText = ref('')
+const highlightedCode = ref('')
+const selectedMeme = ref({ code: '', language: '' })
+const fullText = computed(() => selectedMeme.value.code)
+const language = computed(() => selectedMeme.value.language)
+const isLoading = ref(true)
 
 const statisticsData = ref({
   totalUsers: 0,
@@ -141,7 +125,7 @@ const statisticsData = ref({
   totalArchives: 0,
   totalCourses: 0,
   activeToday: 0,
-});
+})
 
 const animatedValues = ref({
   totalUsers: 0,
@@ -150,138 +134,138 @@ const animatedValues = ref({
   totalArchives: 0,
   totalCourses: 0,
   activeToday: 0,
-});
+})
 
-const statsLoaded = ref(false);
+const statsLoaded = ref(false)
 
 const statistics = computed(() => [
   {
-    key: "totalUsers",
-    label: "總用戶數",
-    icon: "pi pi-users",
-    color: "#4FC3F7",
+    key: 'totalUsers',
+    label: '總用戶數',
+    icon: 'pi pi-users',
+    color: '#4FC3F7',
   },
   {
-    key: "totalDownloads",
-    label: "總下載次數",
-    icon: "pi pi-download",
-    color: "#66BB6A",
+    key: 'totalDownloads',
+    label: '總下載次數',
+    icon: 'pi pi-download',
+    color: '#66BB6A',
   },
   {
-    key: "onlineUsers",
-    label: "在線用戶",
-    icon: "pi pi-circle-fill",
-    color: "#FFA726",
+    key: 'onlineUsers',
+    label: '在線用戶',
+    icon: 'pi pi-circle-fill',
+    color: '#FFA726',
   },
   {
-    key: "totalArchives",
-    label: "考古題總數",
-    icon: "pi pi-file-pdf",
-    color: "#EF5350",
+    key: 'totalArchives',
+    label: '考古題總數',
+    icon: 'pi pi-file-pdf',
+    color: '#EF5350',
   },
   {
-    key: "totalCourses",
-    label: "課程總數",
-    icon: "pi pi-book",
-    color: "#AB47BC",
+    key: 'totalCourses',
+    label: '課程總數',
+    icon: 'pi pi-book',
+    color: '#AB47BC',
   },
   {
-    key: "activeToday",
-    label: "今日活躍",
-    icon: "pi pi-chart-line",
-    color: "#26A69A",
+    key: 'activeToday',
+    label: '今日活躍',
+    icon: 'pi pi-chart-line',
+    color: '#26A69A',
   },
-]);
+])
 
-let charIndex = 0;
-let typingInterval;
-let statsInterval;
-let animationIntervals = {};
+let charIndex = 0
+let typingInterval
+let statsInterval
+let animationIntervals = {}
 
 onMounted(async () => {
-  await fetchRandomMeme();
-  await fetchStatistics();
-  setBg();
-  startStatsUpdates();
-});
+  await fetchRandomMeme()
+  await fetchStatistics()
+  setBg()
+  startStatsUpdates()
+})
 
 onUnmounted(() => {
-  clearInterval(typingInterval);
-  clearInterval(statsInterval);
-  Object.values(animationIntervals).forEach(clearInterval);
-});
+  clearInterval(typingInterval)
+  clearInterval(statsInterval)
+  Object.values(animationIntervals).forEach(clearInterval)
+})
 
 watch(isDarkTheme, () => {
-  setBg();
-});
+  setBg()
+})
 
 async function fetchRandomMeme() {
-  isLoading.value = true;
+  isLoading.value = true
   try {
-    const response = await memeService.getRandomMeme();
+    const response = await memeService.getRandomMeme()
 
     if (response.data && response.data.content && response.data.language) {
       selectedMeme.value = {
         code: response.data.content,
         language: response.data.language,
-      };
+      }
     } else {
-      console.error("Invalid API response format:", response.data);
-      throw new Error("Invalid API response format");
+      console.error('Invalid API response format:', response.data)
+      throw new Error('Invalid API response format')
     }
 
-    startTypewriter();
+    startTypewriter()
   } catch (error) {
-    console.error("Error fetching meme:", error);
+    console.error('Error fetching meme:', error)
     selectedMeme.value = {
       code: "console.log('API connection failed');",
-      language: "javascript",
-    };
-    startTypewriter();
+      language: 'javascript',
+    }
+    startTypewriter()
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
 }
 
 function startTypewriter() {
-  clearInterval(typingInterval);
-  charIndex = 0;
-  displayedText.value = "";
-  highlightedCode.value = "";
+  clearInterval(typingInterval)
+  charIndex = 0
+  displayedText.value = ''
+  highlightedCode.value = ''
 
   if (!fullText.value) {
-    console.error("fullText.value is undefined or empty");
-    return;
+    console.error('fullText.value is undefined or empty')
+    return
   }
 
   typingInterval = setInterval(() => {
     if (charIndex < fullText.value.length) {
-      displayedText.value += fullText.value.charAt(charIndex);
-      charIndex++;
+      displayedText.value += fullText.value.charAt(charIndex)
+      charIndex++
 
       highlightedCode.value = hljs.highlight(displayedText.value, {
-        language: language.value || "plaintext",
-      }).value;
+        language: language.value || 'plaintext',
+      }).value
     } else {
-      clearInterval(typingInterval);
+      clearInterval(typingInterval)
     }
-  }, 30);
+  }, 30)
 }
 
 async function fetchStatistics() {
   try {
-    const response = await statisticsService.getSystemStatistics();
+    const response = await statisticsService.getSystemStatistics()
 
     if (response.data && response.data.data) {
-      statisticsData.value = response.data.data;
-      animateCounters();
-      statsLoaded.value = true;
+      statisticsData.value = response.data.data
+      animateCounters()
+      statsLoaded.value = true
     } else {
-      console.error("Invalid API response format:", response.data);
-      throw new Error("Invalid API response format");
+      console.error('Invalid API response format:', response.data)
+      throw new Error('Invalid API response format')
     }
   } catch (error) {
-    console.error("Error fetching statistics:", error);
+    console.error('Error fetching statistics:', error)
     const nanData = {
       totalUsers: NaN,
       totalDownloads: NaN,
@@ -289,55 +273,55 @@ async function fetchStatistics() {
       totalArchives: NaN,
       totalCourses: NaN,
       activeToday: NaN,
-    };
+    }
 
-    statisticsData.value = nanData;
+    statisticsData.value = nanData
     animatedValues.value = {
-      totalUsers: "NaN",
-      totalDownloads: "NaN",
-      onlineUsers: "NaN",
-      totalArchives: "NaN",
-      totalCourses: "NaN",
-      activeToday: "NaN",
-    };
-    statsLoaded.value = true;
+      totalUsers: 'NaN',
+      totalDownloads: 'NaN',
+      onlineUsers: 'NaN',
+      totalArchives: 'NaN',
+      totalCourses: 'NaN',
+      activeToday: 'NaN',
+    }
+    statsLoaded.value = true
   }
 }
 
 function animateCounters() {
   Object.keys(statisticsData.value).forEach((key) => {
-    const targetValue = statisticsData.value[key];
+    const targetValue = statisticsData.value[key]
 
     if (animationIntervals[key]) {
-      clearInterval(animationIntervals[key]);
+      clearInterval(animationIntervals[key])
     }
 
-    animatedValues.value[key] = formatNumber(targetValue);
-  });
+    animatedValues.value[key] = formatNumber(targetValue)
+  })
 }
 
 function formatNumber(num) {
   if (isNaN(num) || num === null || num === undefined) {
-    return "NaN";
+    return 'NaN'
   }
   if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + "M";
+    return (num / 1000000).toFixed(1) + 'M'
   } else if (num >= 1000) {
-    return (num / 1000).toFixed(1) + "K";
+    return (num / 1000).toFixed(1) + 'K'
   }
-  return num.toString();
+  return num.toString()
 }
 
 function startStatsUpdates() {
   statsInterval = setInterval(async () => {
-    await fetchStatistics();
-  }, 30000);
+    await fetchStatistics()
+  }, 30000)
 }
 
 function setBg() {
-  const el = document.querySelector(".code-background");
+  const el = document.querySelector('.code-background')
   if (el) {
-    el.style.setProperty("background-image", getCodeBgSvg());
+    el.style.setProperty('background-image', getCodeBgSvg())
   }
 }
 </script>
@@ -348,7 +332,7 @@ function setBg() {
 }
 
 .code-background::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
@@ -374,7 +358,7 @@ function setBg() {
 }
 
 .typewriter::after {
-  content: "";
+  content: '';
   border-right: 3px solid rgba(248, 248, 242, 0.7);
   animation: blink 0.75s step-end infinite;
 }
@@ -481,11 +465,7 @@ function setBg() {
 }
 
 .title-text {
-  background: linear-gradient(
-    to right,
-    var(--title-gradient-start),
-    var(--title-gradient-end)
-  );
+  background: linear-gradient(to right, var(--title-gradient-start), var(--title-gradient-end));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -532,18 +512,13 @@ function setBg() {
 }
 
 .stat-card::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.4),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   transition: left 0.5s;
 }
 
@@ -567,7 +542,7 @@ function setBg() {
   }
 }
 
-.stat-card:has([class*="pi-circle-fill"]) .pi-circle-fill {
+.stat-card:has([class*='pi-circle-fill']) .pi-circle-fill {
   animation: pulse 2s infinite;
 }
 

@@ -2,40 +2,24 @@
   <div class="h-full" ref="archiveView" @toggle-sidebar="toggleSidebar">
     <div class="flex h-full relative">
       <!-- Desktop/Tablet Sidebar -->
-      <div
-        class="sidebar hidden md:block"
-        :class="{ collapsed: !sidebarVisible }"
-      >
+      <div class="sidebar hidden md:block" :class="{ collapsed: !sidebarVisible }">
         <div class="flex flex-column h-full">
           <!-- Fixed search section -->
           <div class="search-section p-3">
             <div class="relative w-full">
-              <i
-                class="pi pi-search absolute left-4 top-1/2 -mt-2 text-500"
-              ></i>
-              <InputText
-                v-model="searchQuery"
-                placeholder="搜尋課程"
-                class="w-full pl-6"
-              />
+              <i class="pi pi-search absolute left-4 top-1/2 -mt-2 text-500"></i>
+              <InputText v-model="searchQuery" placeholder="搜尋課程" class="w-full pl-6" />
             </div>
           </div>
 
           <!-- Scrollable content section -->
           <div class="flex-1 overflow-auto p-3 pt-0">
             <div v-if="searchQuery" class="search-results">
-              <div
-                v-if="filteredCategories.length === 0"
-                class="p-3 text-center text-500"
-              >
+              <div v-if="filteredCategories.length === 0" class="p-3 text-center text-500">
                 <i class="pi pi-search text-2xl mb-2"></i>
                 <div>查無搜尋結果</div>
               </div>
-              <div
-                v-for="category in filteredCategories"
-                :key="category.label"
-                class="mb-2"
-              >
+              <div v-for="category in filteredCategories" :key="category.label" class="mb-2">
                 <div class="text-sm mb-1" style="color: var(--text-secondary)">
                   {{ category.label }}
                 </div>
@@ -44,9 +28,7 @@
                     v-for="course in category.items"
                     :key="course.label"
                     class="p-button-text search-result-btn text-color"
-                    @click="
-                      filterBySubject({ label: course.label, id: course.id })
-                    "
+                    @click="filterBySubject({ label: course.label, id: course.id })"
                   >
                     <span class="ellipsis">{{ course.label }}</span>
                   </Button>
@@ -95,32 +77,19 @@
           <!-- Fixed search section -->
           <div class="search-section pb-3">
             <div class="relative w-full">
-              <i
-                class="pi pi-search absolute left-4 top-1/2 -mt-2 text-500"
-              ></i>
-              <InputText
-                v-model="searchQuery"
-                placeholder="搜尋課程"
-                class="w-full pl-6"
-              />
+              <i class="pi pi-search absolute left-4 top-1/2 -mt-2 text-500"></i>
+              <InputText v-model="searchQuery" placeholder="搜尋課程" class="w-full pl-6" />
             </div>
           </div>
 
           <!-- Scrollable course selection section -->
           <div class="flex-1 overflow-auto">
             <div v-if="searchQuery" class="search-results">
-              <div
-                v-if="filteredCategories.length === 0"
-                class="p-3 text-center text-500"
-              >
+              <div v-if="filteredCategories.length === 0" class="p-3 text-center text-500">
                 <i class="pi pi-search text-2xl mb-2"></i>
                 <div>查無搜尋結果</div>
               </div>
-              <div
-                v-for="category in filteredCategories"
-                :key="category.label"
-                class="mb-2"
-              >
+              <div v-for="category in filteredCategories" :key="category.label" class="mb-2">
                 <div class="text-sm mb-1" style="color: var(--text-secondary)">
                   {{ category.label }}
                 </div>
@@ -130,8 +99,8 @@
                     :key="course.label"
                     class="p-button-text search-result-btn text-color"
                     @click="
-                      filterBySubject({ label: course.label, id: course.id });
-                      sidebarVisible = false;
+                      filterBySubject({ label: course.label, id: course.id })
+                      sidebarVisible = false
                     "
                   >
                     <span class="ellipsis">{{ course.label }}</span>
@@ -139,12 +108,7 @@
                 </div>
               </div>
             </div>
-            <PanelMenu
-              v-else
-              :model="mobileMenuItems"
-              multiple
-              class="w-full"
-            />
+            <PanelMenu v-else :model="mobileMenuItems" multiple class="w-full" />
           </div>
 
           <!-- Fixed admin actions section -->
@@ -154,8 +118,8 @@
                 icon="pi pi-cog"
                 label="系統管理"
                 @click="
-                  router.push('/admin');
-                  sidebarVisible = false;
+                  router.push('/admin')
+                  sidebarVisible = false
                 "
                 severity="secondary"
                 size="small"
@@ -169,10 +133,7 @@
 
       <div class="main-content flex-1 h-full overflow-auto">
         <div class="card h-full flex flex-col">
-          <div
-            v-if="selectedSubject"
-            class="p-3 border-bottom-1 surface-border"
-          >
+          <div v-if="selectedSubject" class="p-3 border-bottom-1 surface-border">
             <div class="flex align-items-center gap-2">
               <Tag severity="secondary" class="text-sm">
                 {{ getCategoryTag(getCategoryName(getCurrentCategory)) }}
@@ -228,11 +189,7 @@
 
           <div v-else>
             <div v-if="selectedSubject">
-              <Accordion
-                :value="expandedPanels"
-                multiple
-                class="max-w-[calc(100%-2rem)] mx-auto"
-              >
+              <Accordion :value="expandedPanels" multiple class="max-w-[calc(100%-2rem)] mx-auto">
                 <AccordionPanel
                   v-for="group in groupedArchives"
                   :key="group.year"
@@ -241,38 +198,22 @@
                   <AccordionHeader>{{ group.year }} 年</AccordionHeader>
                   <AccordionContent>
                     <DataTable :value="group.list">
-                      <Column
-                        header="教授"
-                        field="professor"
-                        style="width: 10%"
-                      ></Column>
+                      <Column header="教授" field="professor" style="width: 10%"></Column>
                       <Column header="類型" style="width: 10%">
                         <template #body="{ data }">
                           <Tag
-                            :severity="
-                              archiveTypeConfig[data.type]?.severity ||
-                              'secondary'
-                            "
+                            :severity="archiveTypeConfig[data.type]?.severity || 'secondary'"
                             class="text-sm"
                           >
-                            {{
-                              archiveTypeConfig[data.type]?.name || data.type
-                            }}
+                            {{ archiveTypeConfig[data.type]?.name || data.type }}
                           </Tag>
                         </template>
                       </Column>
-                      <Column
-                        header="考試名稱"
-                        field="name"
-                        style="width: 15%"
-                      ></Column>
+                      <Column header="考試名稱" field="name" style="width: 15%"></Column>
                       <Column header="解答" style="width: 10%">
                         <template #body="{ data }">
-                          <Tag
-                            :severity="data.hasAnswers ? 'info' : 'secondary'"
-                            class="text-sm"
-                          >
-                            {{ data.hasAnswers ? "附解答" : "僅題目" }}
+                          <Tag :severity="data.hasAnswers ? 'info' : 'secondary'" class="text-sm">
+                            {{ data.hasAnswers ? '附解答' : '僅題目' }}
                           </Tag>
                         </template>
                       </Column>
@@ -330,14 +271,8 @@
               class="flex flex-column align-items-center justify-content-center h-full"
               style="min-height: calc(100vh - 200px)"
             >
-              <i
-                class="pi pi-book text-6xl"
-                style="color: var(--text-secondary)"
-              ></i>
-              <div
-                class="text-xl font-medium mt-4"
-                style="color: var(--text-secondary)"
-              >
+              <i class="pi pi-book text-6xl" style="color: var(--text-secondary)"></i>
+              <div class="text-xl font-medium mt-4" style="color: var(--text-secondary)">
                 請從左側選單選擇科目
               </div>
               <div class="text-sm mt-2" style="color: var(--text-secondary)">
@@ -377,11 +312,7 @@
             <div class="flex flex-column">
               <div class="flex flex-column gap-2">
                 <label>考古題名稱</label>
-                <InputText
-                  v-model="editForm.name"
-                  placeholder="輸入考古題名稱"
-                  class="w-full"
-                />
+                <InputText v-model="editForm.name" placeholder="輸入考古題名稱" class="w-full" />
               </div>
 
               <div class="flex flex-column gap-2 mt-3">
@@ -452,10 +383,7 @@
                 <label class="font-semibold">轉移到其他課程</label>
               </div>
 
-              <div
-                v-if="editForm.shouldTransfer"
-                class="flex flex-column pl-4 mt-3"
-              >
+              <div v-if="editForm.shouldTransfer" class="flex flex-column pl-4 mt-3">
                 <div class="flex flex-column gap-2">
                   <label>目標課程分類</label>
                   <Select
@@ -502,11 +430,7 @@
               />
               <Button
                 :label="editForm.shouldTransfer ? '儲存並轉移' : '儲存'"
-                :icon="
-                  editForm.shouldTransfer
-                    ? 'pi pi-arrow-right-arrow-left'
-                    : 'pi pi-check'
-                "
+                :icon="editForm.shouldTransfer ? 'pi pi-arrow-right-arrow-left' : 'pi pi-check'"
                 severity="success"
                 @click="handleEdit"
                 :loading="editLoading"
@@ -521,79 +445,79 @@
 
 <script setup>
 defineOptions({
-  name: "ArchiveView",
-});
+  name: 'ArchiveView',
+})
 
-import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from "vue";
-import { courseService, archiveService } from "../api";
-import PdfPreviewModal from "../components/PdfPreviewModal.vue";
-import UploadArchiveDialog from "../components/UploadArchiveDialog.vue";
-import { getCurrentUser, isAuthenticated } from "../utils/auth";
-import { useTheme } from "../utils/useTheme";
-import { useRouter } from "vue-router";
+import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
+import { courseService, archiveService } from '../api'
+import PdfPreviewModal from '../components/PdfPreviewModal.vue'
+import UploadArchiveDialog from '../components/UploadArchiveDialog.vue'
+import { getCurrentUser, isAuthenticated } from '../utils/auth'
+import { useTheme } from '../utils/useTheme'
+import { useRouter } from 'vue-router'
 
-const toast = inject("toast");
-const confirm = inject("confirm");
-const router = useRouter();
+const toast = inject('toast')
+const confirm = inject('confirm')
+const router = useRouter()
 
-const { isDarkTheme } = useTheme();
-const sidebarVisible = inject("sidebarVisible");
+const { isDarkTheme } = useTheme()
+const sidebarVisible = inject('sidebarVisible')
 
 // Check if we're on mobile
-const isMobile = ref(false);
+const isMobile = ref(false)
 
 const checkDevice = () => {
-  isMobile.value = window.innerWidth < 768;
-};
+  isMobile.value = window.innerWidth < 768
+}
 
 onMounted(() => {
-  checkDevice();
-  window.addEventListener("resize", checkDevice);
-});
+  checkDevice()
+  window.addEventListener('resize', checkDevice)
+})
 
 onBeforeUnmount(() => {
-  window.removeEventListener("resize", checkDevice);
-});
+  window.removeEventListener('resize', checkDevice)
+})
 
 // Auth related data
-const isAuthenticatedRef = ref(false);
-const userData = ref(null);
+const isAuthenticatedRef = ref(false)
+const userData = ref(null)
 
-const archives = ref([]);
-const loading = ref(true);
+const archives = ref([])
+const loading = ref(true)
 const filters = ref({
-  year: "",
-  professor: "",
-  type: "",
+  year: '',
+  professor: '',
+  type: '',
   hasAnswers: false,
-});
+})
 
-const showPreview = ref(false);
-const selectedArchive = ref(null);
-const selectedSubject = ref(null);
-const selectedCourse = ref(null);
-const showUploadDialog = ref(false);
-const uploadFormProfessors = ref([]);
-const expandedPanels = ref([]);
-const expandedMenuItems = ref({});
+const showPreview = ref(false)
+const selectedArchive = ref(null)
+const selectedSubject = ref(null)
+const selectedCourse = ref(null)
+const showUploadDialog = ref(false)
+const uploadFormProfessors = ref([])
+const expandedPanels = ref([])
+const expandedMenuItems = ref({})
 
 const CATEGORIES = {
-  freshman: { name: "大一課程", icon: "pi pi-fw pi-book", tag: "大一" },
-  sophomore: { name: "大二課程", icon: "pi pi-fw pi-book", tag: "大二" },
-  junior: { name: "大三課程", icon: "pi pi-fw pi-book", tag: "大三" },
-  senior: { name: "大四課程", icon: "pi pi-fw pi-book", tag: "大四" },
+  freshman: { name: '大一課程', icon: 'pi pi-fw pi-book', tag: '大一' },
+  sophomore: { name: '大二課程', icon: 'pi pi-fw pi-book', tag: '大二' },
+  junior: { name: '大三課程', icon: 'pi pi-fw pi-book', tag: '大三' },
+  senior: { name: '大四課程', icon: 'pi pi-fw pi-book', tag: '大四' },
   graduate: {
-    name: "研究所課程",
-    icon: "pi pi-fw pi-graduation-cap",
-    tag: "研究所",
+    name: '研究所課程',
+    icon: 'pi pi-fw pi-graduation-cap',
+    tag: '研究所',
   },
   interdisciplinary: {
-    name: "跨領域課程",
-    icon: "pi pi-fw pi-globe",
-    tag: "跨領域",
+    name: '跨領域課程',
+    icon: 'pi pi-fw pi-globe',
+    tag: '跨領域',
   },
-  general: { name: "通識課程", icon: "pi pi-fw pi-lightbulb", tag: "通識" },
-};
+  general: { name: '通識課程', icon: 'pi pi-fw pi-lightbulb', tag: '通識' },
+}
 
 const coursesList = ref({
   freshman: [],
@@ -603,35 +527,35 @@ const coursesList = ref({
   graduate: [],
   interdisciplinary: [],
   general: [],
-});
+})
 
 const archiveTypeConfig = {
   midterm: {
-    name: "期中考",
-    severity: "secondary",
+    name: '期中考',
+    severity: 'secondary',
   },
   final: {
-    name: "期末考",
-    severity: "secondary",
+    name: '期末考',
+    severity: 'secondary',
   },
   quiz: {
-    name: "小考",
-    severity: "secondary",
+    name: '小考',
+    severity: 'secondary',
   },
   other: {
-    name: "其他",
-    severity: "secondary",
+    name: '其他',
+    severity: 'secondary',
   },
-};
+}
 
-const years = ref([]);
-const professors = ref([]);
-const archiveTypes = ref([]);
+const years = ref([])
+const professors = ref([])
+const archiveTypes = ref([])
 
-const searchQuery = ref("");
+const searchQuery = ref('')
 
 const menuItems = computed(() => {
-  if (!coursesList.value) return [];
+  if (!coursesList.value) return []
 
   return Object.entries(CATEGORIES).map(([key, category]) => ({
     key: key,
@@ -643,88 +567,79 @@ const menuItems = computed(() => {
         command: () => filterBySubject({ label: course.name, id: course.id }),
       }))
       .sort((a, b) => a.label.localeCompare(b.label)),
-  }));
-});
+  }))
+})
 
 const filteredCategories = computed(() => {
   if (!searchQuery.value) {
-    return [];
+    return []
   }
 
-  const query = searchQuery.value.trim().toLowerCase().normalize("NFKC");
-  const filtered = [];
+  const query = searchQuery.value.trim().toLowerCase().normalize('NFKC')
+  const filtered = []
 
   menuItems.value.forEach((category) => {
     const filteredItems = category.items.filter((item) => {
-      const itemLabelLower = item.label.toLowerCase().normalize("NFKC");
-      const isIncluded = itemLabelLower.includes(query);
-      return isIncluded;
-    });
+      const itemLabelLower = item.label.toLowerCase().normalize('NFKC')
+      const isIncluded = itemLabelLower.includes(query)
+      return isIncluded
+    })
 
     if (filteredItems.length > 0) {
       filtered.push({
         ...category,
         items: filteredItems
           .map((item) => {
-            const course = coursesList.value[
-              getCategoryKey(category.label)
-            ].find((c) => c.name === item.label);
+            const course = coursesList.value[getCategoryKey(category.label)].find(
+              (c) => c.name === item.label
+            )
             return {
               label: item.label,
               id: course?.id,
-            };
+            }
           })
           .sort((a, b) => a.label.localeCompare(b.label)),
-      });
+      })
     }
-  });
+  })
 
-  return filtered;
-});
+  return filtered
+})
 
 function getCategoryKey(categoryLabel) {
-  return (
-    Object.keys(CATEGORIES).find(
-      (key) => CATEGORIES[key].name === categoryLabel
-    ) || ""
-  );
+  return Object.keys(CATEGORIES).find((key) => CATEGORIES[key].name === categoryLabel) || ''
 }
 
 function getCategoryKeyForCourse(courseId) {
   for (const [categoryKey, courses] of Object.entries(coursesList.value)) {
     if (courses.some((course) => course.id === courseId)) {
-      return categoryKey;
+      return categoryKey
     }
   }
-  return null;
+  return null
 }
 
 const groupedArchives = computed(() => {
-  if (!archives.value) return [];
+  if (!archives.value) return []
 
   const filteredArchives = archives.value.filter((archive) => {
-    if (filters.value.year && archive.year.toString() !== filters.value.year)
-      return false;
-    if (
-      filters.value.professor &&
-      archive.professor !== filters.value.professor
-    )
-      return false;
-    if (filters.value.type && archive.type !== filters.value.type) return false;
-    if (filters.value.hasAnswers && !archive.hasAnswers) return false;
-    return true;
-  });
+    if (filters.value.year && archive.year.toString() !== filters.value.year) return false
+    if (filters.value.professor && archive.professor !== filters.value.professor) return false
+    if (filters.value.type && archive.type !== filters.value.type) return false
+    if (filters.value.hasAnswers && !archive.hasAnswers) return false
+    return true
+  })
 
-  const groups = {};
+  const groups = {}
   filteredArchives.forEach((archive) => {
     if (!groups[archive.year]) {
       groups[archive.year] = {
         year: archive.year,
         list: [],
-      };
+      }
     }
-    groups[archive.year].list.push(archive);
-  });
+    groups[archive.year].list.push(archive)
+  })
 
   Object.values(groups).forEach((group) => {
     group.list.sort((a, b) => {
@@ -734,103 +649,98 @@ const groupedArchives = computed(() => {
         final: 2,
         quiz: 3,
         other: 4,
-      };
-
-      const aPriority = typePriority[a.type] || 4;
-      const bPriority = typePriority[b.type] || 4;
-
-      if (aPriority !== bPriority) {
-        return aPriority - bPriority;
       }
 
-      return a.name.localeCompare(b.name, "en");
-    });
-  });
+      const aPriority = typePriority[a.type] || 4
+      const bPriority = typePriority[b.type] || 4
 
-  return Object.values(groups).sort((a, b) => b.year - a.year);
-});
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority
+      }
+
+      return a.name.localeCompare(b.name, 'en')
+    })
+  })
+
+  return Object.values(groups).sort((a, b) => b.year - a.year)
+})
 
 async function fetchCourses() {
   try {
-    loading.value = true;
-    const response = await courseService.listCourses();
+    loading.value = true
+    const response = await courseService.listCourses()
 
     // Only update coursesList if the data has actually changed to prevent unnecessary re-renders
-    const newData = response.data;
-    const currentData = coursesList.value;
+    const newData = response.data
+    const currentData = coursesList.value
 
     // Simple comparison - if structure looks the same, don't update
-    let hasChanged = false;
+    let hasChanged = false
     if (!currentData || Object.keys(currentData).length === 0) {
-      hasChanged = true;
+      hasChanged = true
     } else {
       for (const category of Object.keys(newData)) {
-        if (
-          !currentData[category] ||
-          currentData[category].length !== newData[category].length
-        ) {
-          hasChanged = true;
-          break;
+        if (!currentData[category] || currentData[category].length !== newData[category].length) {
+          hasChanged = true
+          break
         }
       }
     }
 
     if (hasChanged) {
-      coursesList.value = newData;
+      coursesList.value = newData
     }
   } catch (error) {
-    console.error("Error fetching courses:", error);
+    console.error('Error fetching courses:', error)
     toast.add({
-      severity: "error",
-      summary: "載入失敗",
-      detail: "無法載入課程資料",
+      severity: 'error',
+      summary: '載入失敗',
+      detail: '無法載入課程資料',
       life: 3000,
-    });
+    })
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
 function filterBySubject(course) {
   if (!course || !course.id) {
-    selectedSubject.value = null;
-    selectedCourse.value = null;
-    archives.value = [];
-    expandedMenuItems.value = {};
-    localStorage.removeItem("selectedSubject");
-    return;
+    selectedSubject.value = null
+    selectedCourse.value = null
+    archives.value = []
+    expandedMenuItems.value = {}
+    localStorage.removeItem('selectedSubject')
+    return
   }
 
-  selectedSubject.value = course.label;
-  selectedCourse.value = course.id;
-  filters.value.professor = "";
-  filters.value.year = "";
-  filters.value.type = "";
-  expandedPanels.value = [];
+  selectedSubject.value = course.label
+  selectedCourse.value = course.id
+  filters.value.professor = ''
+  filters.value.year = ''
+  filters.value.type = ''
+  expandedPanels.value = []
 
-  const categoryKey = getCategoryKeyForCourse(course.id);
+  const categoryKey = getCategoryKeyForCourse(course.id)
   if (categoryKey) {
-    expandedMenuItems.value = { [categoryKey]: true };
+    expandedMenuItems.value = { [categoryKey]: true }
     // console.log("Expanding category:", categoryKey, expandedMenuItems.value);
   }
 
   localStorage.setItem(
-    "selectedSubject",
+    'selectedSubject',
     JSON.stringify({
       label: course.label,
       id: course.id,
     })
-  );
+  )
 
-  fetchArchives();
+  fetchArchives()
 }
 
 async function fetchArchives() {
   try {
-    loading.value = true;
-    const response = await courseService.getCourseArchives(
-      selectedCourse.value
-    );
+    loading.value = true
+    const response = await courseService.getCourseArchives(selectedCourse.value)
     archives.value = response.data.map((archive) => ({
       id: archive.id,
       year: archive.academic_year,
@@ -841,150 +751,143 @@ async function fetchArchives() {
       subject: selectedSubject.value,
       uploader_id: archive.uploader_id,
       downloadCount: archive.download_count,
-    }));
+    }))
 
-    const uniqueYears = new Set();
-    const uniqueProfessors = new Set();
-    const uniqueTypes = new Set();
+    const uniqueYears = new Set()
+    const uniqueProfessors = new Set()
+    const uniqueTypes = new Set()
 
     archives.value.forEach((archive) => {
-      if (archive.year) uniqueYears.add(archive.year.toString());
-      if (archive.professor) uniqueProfessors.add(archive.professor);
-      if (archive.type) uniqueTypes.add(archive.type);
-    });
+      if (archive.year) uniqueYears.add(archive.year.toString())
+      if (archive.professor) uniqueProfessors.add(archive.professor)
+      if (archive.type) uniqueTypes.add(archive.type)
+    })
 
     years.value = Array.from(uniqueYears)
       .sort((a, b) => b - a)
       .map((year) => ({
         name: year,
         code: year,
-      }));
+      }))
 
     professors.value = Array.from(uniqueProfessors)
       .sort()
       .map((professor) => ({
         name: professor,
         code: professor,
-      }));
+      }))
 
     archiveTypes.value = Array.from(uniqueTypes)
       .sort()
       .map((type) => ({
         name: archiveTypeConfig[type]?.name || type,
         code: type,
-      }));
+      }))
   } catch (error) {
-    console.error("Error fetching archives:", error);
+    console.error('Error fetching archives:', error)
     toast.add({
-      severity: "error",
-      summary: "載入失敗",
-      detail: "無法載入考古題資料",
+      severity: 'error',
+      summary: '載入失敗',
+      detail: '無法載入考古題資料',
       life: 3000,
-    });
+    })
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
-const downloadingId = ref(null);
+const downloadingId = ref(null)
 
 async function downloadArchive(archive) {
   try {
-    downloadingId.value = archive.id;
-    const { data } = await archiveService.getArchiveUrl(
-      selectedCourse.value,
-      archive.id,
-      true
-    );
+    downloadingId.value = archive.id
+    const { data } = await archiveService.getArchiveUrl(selectedCourse.value, archive.id, true)
 
-    const response = await fetch(data.download_url);
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
+    const response = await fetch(data.download_url)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
 
-    const fileName = `${archive.year}_${selectedSubject.value}_${archive.professor}_${archive.name}.pdf`;
-    link.download = fileName;
-    link.style.display = "none";
+    const fileName = `${archive.year}_${selectedSubject.value}_${archive.professor}_${archive.name}.pdf`
+    link.download = fileName
+    link.style.display = 'none'
 
-    document.body.appendChild(link);
-    link.click();
-    window.URL.revokeObjectURL(url);
-    link.remove();
+    document.body.appendChild(link)
+    link.click()
+    window.URL.revokeObjectURL(url)
+    link.remove()
 
     toast.add({
-      severity: "success",
-      summary: "下載成功",
+      severity: 'success',
+      summary: '下載成功',
       detail: `已下載 ${fileName}`,
       life: 3000,
-    });
+    })
 
-    await fetchArchives();
+    await fetchArchives()
   } catch (error) {
-    console.error("Download error:", error);
+    console.error('Download error:', error)
     toast.add({
-      severity: "error",
-      summary: "下載失敗",
-      detail: "無法取得下載連結",
+      severity: 'error',
+      summary: '下載失敗',
+      detail: '無法取得下載連結',
       life: 3000,
-    });
+    })
   } finally {
-    downloadingId.value = null;
+    downloadingId.value = null
   }
 }
 
-const previewLoading = ref(false);
-const previewError = ref(false);
+const previewLoading = ref(false)
+const previewError = ref(false)
 
 async function previewArchive(archive) {
   try {
-    previewLoading.value = true;
-    previewError.value = false;
-    showPreview.value = true;
+    previewLoading.value = true
+    previewError.value = false
+    showPreview.value = true
 
-    const { data } = await archiveService.getArchiveUrl(
-      selectedCourse.value,
-      archive.id
-    );
+    const { data } = await archiveService.getArchiveUrl(selectedCourse.value, archive.id)
 
     selectedArchive.value = {
       ...archive,
       previewUrl: data.preview_url,
-    };
+    }
   } catch (error) {
-    console.error("Preview error:", error);
-    previewError.value = true;
+    console.error('Preview error:', error)
+    previewError.value = true
     toast.add({
-      severity: "error",
-      summary: "預覽失敗",
-      detail: "無法取得預覽連結",
+      severity: 'error',
+      summary: '預覽失敗',
+      detail: '無法取得預覽連結',
       life: 3000,
-    });
+    })
   } finally {
-    previewLoading.value = false;
+    previewLoading.value = false
   }
 }
 
 function handlePreviewError() {
-  previewError.value = true;
+  previewError.value = true
 }
 
 function closePreview() {
-  showPreview.value = false;
-  selectedArchive.value = null;
-  previewError.value = false;
+  showPreview.value = false
+  selectedArchive.value = null
+  previewError.value = false
 }
 
 function getCategoryName(code) {
-  return CATEGORIES[code]?.name || code;
+  return CATEGORIES[code]?.name || code
 }
 
-const availableEditProfessors = ref([]);
+const availableEditProfessors = ref([])
 
 const categoryOptions = Object.entries(CATEGORIES).map(([value, category]) => ({
   name: category.name,
   value: value,
-}));
+}))
 
 watch(
   () => groupedArchives.value,
@@ -992,42 +895,40 @@ watch(
     if (newGroups.length) {
       // Always set default expanded panels to first 3 years when switching subjects
       // This ensures consistent behavior regardless of previous state
-      expandedPanels.value = newGroups
-        .slice(0, 3)
-        .map((group) => group.year.toString());
+      expandedPanels.value = newGroups.slice(0, 3).map((group) => group.year.toString())
     } else {
       // Clear expanded panels if no groups available
-      expandedPanels.value = [];
+      expandedPanels.value = []
     }
   },
   { immediate: true }
-);
+)
 
-const isAdmin = ref(false);
-const showEditDialog = ref(false);
+const isAdmin = ref(false)
+const showEditDialog = ref(false)
 const editForm = ref({
   id: null,
-  name: "",
-  professor: "",
-  type: "",
+  name: '',
+  professor: '',
+  type: '',
   hasAnswers: false,
   academicYear: null,
   shouldTransfer: false,
   targetCategory: null,
   targetCourse: null,
   targetCourseId: null,
-});
+})
 
-const editLoading = ref(false);
+const editLoading = ref(false)
 
 const allAvailableCoursesForTransfer = computed(() => {
   if (!editForm.value.targetCategory || !coursesList.value) {
-    return [];
+    return []
   }
 
-  const categoryData = coursesList.value[editForm.value.targetCategory];
+  const categoryData = coursesList.value[editForm.value.targetCategory]
   if (!categoryData) {
-    return [];
+    return []
   }
 
   return categoryData
@@ -1036,75 +937,70 @@ const allAvailableCoursesForTransfer = computed(() => {
       id: course.id,
       label: course.name,
     }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-});
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
 
-const availableCoursesForTransfer = ref([]);
+const availableCoursesForTransfer = ref([])
 
 const canDeleteArchive = (archive) => {
-  const currentUser = getCurrentUser();
-  if (!currentUser) return false;
+  const currentUser = getCurrentUser()
+  if (!currentUser) return false
 
-  return (
-    isAdmin.value ||
-    (archive.uploader_id && archive.uploader_id === currentUser.id)
-  );
-};
+  return isAdmin.value || (archive.uploader_id && archive.uploader_id === currentUser.id)
+}
 
 const canEditArchive = () => {
-  return isAdmin.value;
-};
+  return isAdmin.value
+}
 
 const confirmDelete = (archive) => {
   confirm.require({
-    message: "確定要刪除此考古題嗎？",
-    header: "確認刪除",
-    icon: "pi pi-exclamation-triangle",
+    message: '確定要刪除此考古題嗎？',
+    header: '確認刪除',
+    icon: 'pi pi-exclamation-triangle',
     accept: () => {
-      deleteArchive(archive);
+      deleteArchive(archive)
     },
-  });
-};
+  })
+}
 
 const deleteArchive = async (archive) => {
   try {
-    await archiveService.deleteArchive(selectedCourse.value, archive.id);
-    await fetchArchives();
+    await archiveService.deleteArchive(selectedCourse.value, archive.id)
+    await fetchArchives()
     toast.add({
-      severity: "success",
-      summary: "刪除成功",
-      detail: "考古題已成功刪除",
+      severity: 'success',
+      summary: '刪除成功',
+      detail: '考古題已成功刪除',
       life: 3000,
-    });
+    })
   } catch (error) {
-    console.error("Delete error:", error);
+    console.error('Delete error:', error)
     toast.add({
-      severity: "error",
-      summary: "刪除失敗",
-      detail: "發生錯誤，請稍後再試",
+      severity: 'error',
+      summary: '刪除失敗',
+      detail: '發生錯誤，請稍後再試',
       life: 3000,
-    });
+    })
   }
-};
+}
 
 const openEditDialog = async (archive) => {
   try {
-    const response = await courseService.getCourseArchives(
-      selectedCourse.value
-    );
-    const archiveData = response.data;
+    const response = await courseService.getCourseArchives(selectedCourse.value)
+    const archiveData = response.data
 
-    const uniqueProfessors = new Set();
+    const uniqueProfessors = new Set()
     archiveData.forEach((item) => {
-      if (item.professor) uniqueProfessors.add(item.professor);
-    });
+      if (item.professor) uniqueProfessors.add(item.professor)
+    })
 
     uploadFormProfessors.value = Array.from(uniqueProfessors)
       .sort()
       .map((professor) => ({
         name: professor,
         code: professor,
-      }));
+      }))
 
     editForm.value = {
       id: archive.id,
@@ -1112,46 +1008,38 @@ const openEditDialog = async (archive) => {
       professor: archive.professor,
       type: archive.type,
       hasAnswers: archive.hasAnswers,
-      academicYear: archive.year
-        ? new Date(parseInt(archive.year), 0, 1)
-        : null,
+      academicYear: archive.year ? new Date(parseInt(archive.year), 0, 1) : null,
       shouldTransfer: false,
       targetCategory: null,
       targetCourse: null,
       targetCourseId: null,
-    };
+    }
 
-    availableEditProfessors.value = uploadFormProfessors.value;
+    availableEditProfessors.value = uploadFormProfessors.value
 
-    showEditDialog.value = true;
+    showEditDialog.value = true
   } catch (error) {
-    console.error("Error fetching professors:", error);
+    console.error('Error fetching professors:', error)
     toast.add({
-      severity: "error",
-      summary: "載入失敗",
-      detail: "無法載入教授清單",
+      severity: 'error',
+      summary: '載入失敗',
+      detail: '無法載入教授清單',
       life: 3000,
-    });
+    })
   }
-};
+}
 
 const handleEdit = async () => {
   try {
-    editLoading.value = true;
+    editLoading.value = true
 
-    await archiveService.updateArchive(
-      selectedCourse.value,
-      editForm.value.id,
-      {
-        name: editForm.value.name,
-        professor: editForm.value.professor,
-        archive_type: editForm.value.type,
-        has_answers: editForm.value.hasAnswers,
-        academic_year: editForm.value.academicYear
-          ? editForm.value.academicYear.getFullYear()
-          : null,
-      }
-    );
+    await archiveService.updateArchive(selectedCourse.value, editForm.value.id, {
+      name: editForm.value.name,
+      professor: editForm.value.professor,
+      archive_type: editForm.value.type,
+      has_answers: editForm.value.hasAnswers,
+      academic_year: editForm.value.academicYear ? editForm.value.academicYear.getFullYear() : null,
+    })
 
     if (editForm.value.shouldTransfer && editForm.value.targetCategory) {
       if (editForm.value.targetCourseId) {
@@ -1160,7 +1048,7 @@ const handleEdit = async () => {
           selectedCourse.value,
           editForm.value.id,
           editForm.value.targetCourseId
-        );
+        )
       } else if (editForm.value.targetCourse) {
         // Transfer to new course (create if not exists)
         await archiveService.updateArchiveCourseByCategoryAndName(
@@ -1168,261 +1056,256 @@ const handleEdit = async () => {
           editForm.value.id,
           editForm.value.targetCourse,
           editForm.value.targetCategory
-        );
+        )
       }
     }
 
-    await fetchArchives();
+    await fetchArchives()
 
     // If transfer was performed, refresh the course list to show the new course
     if (editForm.value.shouldTransfer) {
-      await fetchCourses();
+      await fetchCourses()
     }
 
-    closeEditDialog();
+    closeEditDialog()
 
     const successMessage = editForm.value.shouldTransfer
-      ? "考古題已更新並轉移到新課程"
-      : "考古題資訊已更新";
+      ? '考古題已更新並轉移到新課程'
+      : '考古題資訊已更新'
 
     toast.add({
-      severity: "success",
-      summary: "更新成功",
+      severity: 'success',
+      summary: '更新成功',
       detail: successMessage,
       life: 3000,
-    });
+    })
   } catch (error) {
-    console.error("Update error:", error);
+    console.error('Update error:', error)
     toast.add({
-      severity: "error",
-      summary: "更新失敗",
-      detail: "發生錯誤，請稍後再試",
+      severity: 'error',
+      summary: '更新失敗',
+      detail: '發生錯誤，請稍後再試',
       life: 3000,
-    });
+    })
   } finally {
-    editLoading.value = false;
+    editLoading.value = false
   }
-};
+}
 
 onMounted(async () => {
-  const user = getCurrentUser();
-  isAdmin.value = user?.is_admin || false;
-  checkAuthentication();
-  await fetchCourses();
+  const user = getCurrentUser()
+  isAdmin.value = user?.is_admin || false
+  checkAuthentication()
+  await fetchCourses()
 
-  const savedSubject = localStorage.getItem("selectedSubject");
+  const savedSubject = localStorage.getItem('selectedSubject')
   if (savedSubject) {
     try {
-      const subjectData = JSON.parse(savedSubject);
+      const subjectData = JSON.parse(savedSubject)
       // Verify the course still exists in the current course list
       const courseExists = Object.values(coursesList.value).some((category) =>
-        category.some(
-          (course) =>
-            course.id === subjectData.id && course.name === subjectData.label
-        )
-      );
+        category.some((course) => course.id === subjectData.id && course.name === subjectData.label)
+      )
 
       if (courseExists) {
-        selectedSubject.value = subjectData.label;
-        selectedCourse.value = subjectData.id;
+        selectedSubject.value = subjectData.label
+        selectedCourse.value = subjectData.id
 
-        const categoryKey = getCategoryKeyForCourse(subjectData.id);
+        const categoryKey = getCategoryKeyForCourse(subjectData.id)
         if (categoryKey) {
-          expandedMenuItems.value = { [categoryKey]: true };
+          expandedMenuItems.value = { [categoryKey]: true }
         }
 
-        await fetchArchives();
+        await fetchArchives()
       } else {
-        localStorage.removeItem("selectedSubject");
+        localStorage.removeItem('selectedSubject')
       }
     } catch (error) {
-      console.error("Error parsing saved subject:", error);
-      localStorage.removeItem("selectedSubject");
+      console.error('Error parsing saved subject:', error)
+      localStorage.removeItem('selectedSubject')
     }
   }
-});
+})
 
-watch(isDarkTheme, () => {});
+watch(isDarkTheme, () => {})
 
 async function handleUploadSuccess() {
-  await fetchCourses();
+  await fetchCourses()
   if (selectedCourse.value) {
-    await fetchArchives();
+    await fetchArchives()
   }
 }
 
 function getCategoryTag(categoryLabel) {
-  const category = Object.values(CATEGORIES).find(
-    (cat) => cat.name === categoryLabel
-  );
-  return category?.tag || categoryLabel;
+  const category = Object.values(CATEGORIES).find((cat) => cat.name === categoryLabel)
+  return category?.tag || categoryLabel
 }
 
 function formatDownloadCount(count) {
   if (count === 0 || count === null || count === undefined) {
-    return "0";
+    return '0'
   }
   if (count >= 1000000) {
-    return (count / 1000000).toFixed(1) + "M";
+    return (count / 1000000).toFixed(1) + 'M'
   } else if (count >= 1000) {
-    return (count / 1000).toFixed(1) + "K";
+    return (count / 1000).toFixed(1) + 'K'
   }
-  return count.toString();
+  return count.toString()
 }
 
 function toggleSidebar() {
-  sidebarVisible.value = !sidebarVisible.value;
+  sidebarVisible.value = !sidebarVisible.value
 }
 
 async function handlePreviewDownload(onComplete) {
-  if (!selectedArchive.value) return;
+  if (!selectedArchive.value) return
 
   try {
     const { data } = await archiveService.getArchiveUrl(
       selectedCourse.value,
       selectedArchive.value.id,
       true
-    );
+    )
 
-    const response = await fetch(data.download_url);
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
+    const response = await fetch(data.download_url)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
 
-    const fileName = `${selectedArchive.value.year}_${selectedSubject.value}_${selectedArchive.value.professor}_${selectedArchive.value.name}.pdf`;
-    link.download = fileName;
-    link.style.display = "none";
+    const fileName = `${selectedArchive.value.year}_${selectedSubject.value}_${selectedArchive.value.professor}_${selectedArchive.value.name}.pdf`
+    link.download = fileName
+    link.style.display = 'none'
 
-    document.body.appendChild(link);
-    link.click();
-    window.URL.revokeObjectURL(url);
-    link.remove();
+    document.body.appendChild(link)
+    link.click()
+    window.URL.revokeObjectURL(url)
+    link.remove()
 
     toast.add({
-      severity: "success",
-      summary: "下載成功",
+      severity: 'success',
+      summary: '下載成功',
       detail: `已下載 ${fileName}`,
       life: 3000,
-    });
+    })
 
-    await fetchArchives();
+    await fetchArchives()
   } catch (error) {
-    console.error("Download error:", error);
+    console.error('Download error:', error)
     toast.add({
-      severity: "error",
-      summary: "下載失敗",
-      detail: "無法取得下載連結",
+      severity: 'error',
+      summary: '下載失敗',
+      detail: '無法取得下載連結',
       life: 3000,
-    });
+    })
   } finally {
-    onComplete();
+    onComplete()
   }
 }
 
 const getCurrentCategory = computed(() => {
-  if (!selectedCourse.value) return "";
+  if (!selectedCourse.value) return ''
 
   for (const [category, courses] of Object.entries(coursesList.value)) {
-    const course = courses.find((c) => c.id === selectedCourse.value);
-    if (course) return category;
+    const course = courses.find((c) => c.id === selectedCourse.value)
+    if (course) return category
   }
-  return "";
-});
+  return ''
+})
 
 const searchEditProfessor = (event) => {
-  const query = event?.query?.toLowerCase() || "";
+  const query = event?.query?.toLowerCase() || ''
   const filteredProfessors = uploadFormProfessors.value
     .filter((professor) => professor.name.toLowerCase().includes(query))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name))
 
-  availableEditProfessors.value = filteredProfessors;
-};
+  availableEditProfessors.value = filteredProfessors
+}
 
 const onEditProfessorSelect = (event) => {
-  if (event.value && typeof event.value === "object") {
-    editForm.value.professor = event.value.name;
+  if (event.value && typeof event.value === 'object') {
+    editForm.value.professor = event.value.name
   }
-};
+}
 
 const closeEditDialog = () => {
-  showEditDialog.value = false;
+  showEditDialog.value = false
   editForm.value = {
     id: null,
-    name: "",
-    professor: "",
-    type: "",
+    name: '',
+    professor: '',
+    type: '',
     hasAnswers: false,
     academicYear: null,
     shouldTransfer: false,
     targetCategory: null,
     targetCourse: null,
     targetCourseId: null,
-  };
-};
+  }
+}
 
 const searchTargetCourse = (event) => {
-  const query = event?.query?.toLowerCase() || "";
+  const query = event?.query?.toLowerCase() || ''
   const filteredCourses = allAvailableCoursesForTransfer.value
     .filter((course) => course.label.toLowerCase().includes(query))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .sort((a, b) => a.label.localeCompare(b.label))
 
-  availableCoursesForTransfer.value = filteredCourses;
-};
+  availableCoursesForTransfer.value = filteredCourses
+}
 
 const onTargetCourseSelect = (event) => {
-  if (event.value && typeof event.value === "object") {
-    editForm.value.targetCourse = event.value.label;
-    editForm.value.targetCourseId = event.value.id;
-  } else if (typeof event.value === "string") {
+  if (event.value && typeof event.value === 'object') {
+    editForm.value.targetCourse = event.value.label
+    editForm.value.targetCourseId = event.value.id
+  } else if (typeof event.value === 'string') {
     // User typed a new course name
-    editForm.value.targetCourse = event.value;
-    editForm.value.targetCourseId = null;
+    editForm.value.targetCourse = event.value
+    editForm.value.targetCourseId = null
   }
-};
+}
 
 // Handle direct input of course name
 watch(
   () => editForm.value.targetCourse,
   (newValue) => {
-    if (typeof newValue === "string" && newValue) {
+    if (typeof newValue === 'string' && newValue) {
       // Check if it's an existing course
       const existingCourse = allAvailableCoursesForTransfer.value.find(
         (course) => course.label === newValue
-      );
+      )
       if (existingCourse) {
-        editForm.value.targetCourseId = existingCourse.id;
+        editForm.value.targetCourseId = existingCourse.id
       } else {
-        editForm.value.targetCourseId = null;
+        editForm.value.targetCourseId = null
       }
     }
   }
-);
+)
 
 watch(
   () => editForm.value.targetCategory,
   () => {
-    editForm.value.targetCourseId = null;
-    editForm.value.targetCourse = null;
-    availableCoursesForTransfer.value = allAvailableCoursesForTransfer.value;
+    editForm.value.targetCourseId = null
+    editForm.value.targetCourse = null
+    availableCoursesForTransfer.value = allAvailableCoursesForTransfer.value
   }
-);
+)
 
 const checkAuthentication = () => {
-  isAuthenticatedRef.value = isAuthenticated();
+  isAuthenticatedRef.value = isAuthenticated()
   if (isAuthenticatedRef.value) {
-    const user = getCurrentUser();
+    const user = getCurrentUser()
     if (user) {
-      userData.value = user;
+      userData.value = user
     } else {
-      isAuthenticatedRef.value = false;
-      userData.value = null;
+      isAuthenticatedRef.value = false
+      userData.value = null
     }
   } else {
-    isAuthenticatedRef.value = false;
-    userData.value = null;
+    isAuthenticatedRef.value = false
+    userData.value = null
   }
-};
+}
 
 const mobileMenuItems = computed(() => {
   return menuItems.value.map((item) => ({
@@ -1430,12 +1313,12 @@ const mobileMenuItems = computed(() => {
     items: item.items?.map((subItem) => ({
       ...subItem,
       command: () => {
-        subItem.command();
-        sidebarVisible.value = false;
+        subItem.command()
+        sidebarVisible.value = false
       },
     })),
-  }));
-});
+  }))
+})
 </script>
 
 <style scoped>

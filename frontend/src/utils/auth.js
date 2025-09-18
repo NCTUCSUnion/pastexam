@@ -1,31 +1,31 @@
-const TOKEN_KEY = "authToken";
+const TOKEN_KEY = 'authToken'
 
 export function decodeToken(token) {
-  if (!token) return null;
+  if (!token) return null
 
   try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
     const jsonPayload = decodeURIComponent(
       atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
 
-    return JSON.parse(jsonPayload);
+    return JSON.parse(jsonPayload)
   } catch (error) {
-    console.error("Error decoding token:", error);
-    return null;
+    console.error('Error decoding token:', error)
+    return null
   }
 }
 
 export function getCurrentUser() {
-  const token = sessionStorage.getItem("authToken");
-  if (!token) return null;
+  const token = sessionStorage.getItem('authToken')
+  if (!token) return null
 
-  const decoded = decodeToken(token);
-  if (!decoded) return null;
+  const decoded = decodeToken(token)
+  if (!decoded) return null
 
   return {
     id: decoded.uid,
@@ -34,30 +34,30 @@ export function getCurrentUser() {
     is_admin: decoded.is_admin || false,
     avatar: decoded.avatar_url,
     roles: decoded.realm_roles || {},
-  };
+  }
 }
 
 export function isAuthenticated() {
-  const token = sessionStorage.getItem("authToken");
-  if (!token) return false;
+  const token = sessionStorage.getItem('authToken')
+  if (!token) return false
 
-  const decoded = decodeToken(token);
-  if (!decoded) return false;
+  const decoded = decodeToken(token)
+  if (!decoded) return false
 
-  const currentTime = Math.floor(Date.now() / 1000);
-  const bufferTime = 60;
+  const currentTime = Math.floor(Date.now() / 1000)
+  const bufferTime = 60
 
-  return decoded.exp > currentTime - bufferTime;
+  return decoded.exp > currentTime - bufferTime
 }
 
 export function setToken(token) {
-  sessionStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.setItem(TOKEN_KEY, token)
 }
 
 export function getToken() {
-  return sessionStorage.getItem(TOKEN_KEY);
+  return sessionStorage.getItem(TOKEN_KEY)
 }
 
 export function removeToken() {
-  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY)
 }

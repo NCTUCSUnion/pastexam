@@ -2,84 +2,60 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link
-      rel="apple-touch-icon"
-      sizes="180x180"
-      href="/favicon-bright/apple-touch-icon.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="32x32"
-      href="/favicon-bright/favicon-32x32.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="16x16"
-      href="/favicon-bright/favicon-16x16.png"
-    />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon-bright/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-bright/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-bright/favicon-16x16.png" />
     <link rel="manifest" href="/favicon-bright/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>交大資工考古題系統</title>
     <script>
       function updateFavicon(isDark) {
-        const theme = isDark ? "dark" : "bright";
-        const appleTouchIcon = document.querySelector(
-          'link[rel="apple-touch-icon"]'
-        );
-        const favicon32 = document.querySelector(
-          'link[rel="icon"][sizes="32x32"]'
-        );
-        const favicon16 = document.querySelector(
-          'link[rel="icon"][sizes="16x16"]'
-        );
-        const manifest = document.querySelector('link[rel="manifest"]');
+        const theme = isDark ? 'dark' : 'bright'
+        const appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]')
+        const favicon32 = document.querySelector('link[rel="icon"][sizes="32x32"]')
+        const favicon16 = document.querySelector('link[rel="icon"][sizes="16x16"]')
+        const manifest = document.querySelector('link[rel="manifest"]')
 
-        appleTouchIcon.href = `/favicon-${theme}/apple-touch-icon.png`;
-        favicon32.href = `/favicon-${theme}/favicon-32x32.png`;
-        favicon16.href = `/favicon-${theme}/favicon-16x16.png`;
-        manifest.href = `/favicon-${theme}/site.webmanifest`;
+        appleTouchIcon.href = `/favicon-${theme}/apple-touch-icon.png`
+        favicon32.href = `/favicon-${theme}/favicon-32x32.png`
+        favicon16.href = `/favicon-${theme}/favicon-16x16.png`
+        manifest.href = `/favicon-${theme}/site.webmanifest`
       }
 
       function initTheme() {
-        const THEME_KEY = "theme-preference";
-        const savedTheme = localStorage.getItem(THEME_KEY);
-        const isDark = savedTheme ? savedTheme === "dark" : true;
+        const THEME_KEY = 'theme-preference'
+        const savedTheme = localStorage.getItem(THEME_KEY)
+        const isDark = savedTheme ? savedTheme === 'dark' : true
 
-        updateFavicon(isDark);
+        updateFavicon(isDark)
 
         if (isDark) {
-          document.documentElement.classList.add("dark");
+          document.documentElement.classList.add('dark')
         } else {
-          document.documentElement.classList.remove("dark");
+          document.documentElement.classList.remove('dark')
         }
       }
 
       function setupThemeListener() {
         const observer = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
-            if (
-              mutation.type === "attributes" &&
-              mutation.attributeName === "class"
-            ) {
-              const isDark =
-                document.documentElement.classList.contains("dark");
-              updateFavicon(isDark);
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+              const isDark = document.documentElement.classList.contains('dark')
+              updateFavicon(isDark)
             }
-          });
-        });
+          })
+        })
 
         observer.observe(document.documentElement, {
           attributes: true,
-          attributeFilter: ["class"],
-        });
+          attributeFilter: ['class'],
+        })
       }
 
-      document.addEventListener("DOMContentLoaded", () => {
-        initTheme();
-        setupThemeListener();
-      });
+      document.addEventListener('DOMContentLoaded', () => {
+        initTheme()
+        setupThemeListener()
+      })
     </script>
   </head>
   <body>

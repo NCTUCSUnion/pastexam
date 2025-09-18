@@ -222,9 +222,7 @@
                       <div class="flex align-items-center gap-3">
                         <i class="pi pi-file-pdf text-2xl"></i>
                         <div class="flex-1">
-                          <div
-                            class="font-semibold text-overflow-ellipsis overflow-hidden"
-                          >
+                          <div class="font-semibold text-overflow-ellipsis overflow-hidden">
                             {{ form.file.name }}
                           </div>
                           <div class="text-sm text-500">
@@ -253,9 +251,7 @@
                       class="pi pi-cloud-upload border-2 border-round p-5 text-4xl text-500 mb-3"
                     ></i>
                     <p class="m-0 text-600">將 PDF 檔案拖放至此處以上傳</p>
-                    <p class="m-0 text-sm text-500 mt-2">
-                      僅接受 PDF 檔案，檔案大小最大 10MB
-                    </p>
+                    <p class="m-0 text-sm text-500 mt-2">僅接受 PDF 檔案，檔案大小最大 10MB</p>
                   </div>
                 </template>
               </FileUpload>
@@ -279,16 +275,14 @@
 
           <StepPanel v-slot="{ activateCallback }" value="4">
             <div class="flex flex-column gap-4">
-              <div
-                class="flex flex-column gap-2 p-3 surface-ground border-round"
-              >
+              <div class="flex flex-column gap-2 p-3 surface-ground border-round">
                 <div>
                   <strong>課程類別：</strong>
                   {{ getCategoryName(form.category) }}
                 </div>
                 <div>
                   <strong>科目名稱：</strong>
-                  {{ form.subject || "" }}
+                  {{ form.subject || '' }}
                 </div>
                 <div><strong>授課教授：</strong> {{ form.professor }}</div>
                 <div>
@@ -302,7 +296,7 @@
                 <div><strong>考試名稱：</strong> {{ form.filename }}</div>
                 <div>
                   <strong>是否附解答：</strong>
-                  {{ form.hasAnswers ? "是" : "否" }}
+                  {{ form.hasAnswers ? '是' : '否' }}
                 </div>
               </div>
             </div>
@@ -350,11 +344,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from "vue";
-import { useToast } from "primevue/usetoast";
-import { courseService, archiveService } from "../api";
-import PdfPreviewModal from "./PdfPreviewModal.vue";
-import { PDFDocument } from "pdf-lib";
+import { ref, computed, watch, nextTick } from 'vue'
+import { useToast } from 'primevue/usetoast'
+import { courseService, archiveService } from '../api'
+import PdfPreviewModal from './PdfPreviewModal.vue'
+import { PDFDocument } from 'pdf-lib'
 
 const props = defineProps({
   modelValue: {
@@ -365,50 +359,45 @@ const props = defineProps({
     type: Object,
     required: true,
   },
-});
+})
 
-const emit = defineEmits(["update:modelValue", "upload-success"]);
+const emit = defineEmits(['update:modelValue', 'upload-success'])
 
-const toast = useToast();
+const toast = useToast()
 
 const form = ref({
   category: null,
   subject: null,
   subjectId: null,
   professor: null,
-  filename: "",
+  filename: '',
   type: null,
   hasAnswers: false,
   academicYear: null,
   file: null,
-});
+})
 
-const uploadStep = ref("1");
-const uploading = ref(false);
-const fileUpload = ref(null);
-const uploadFormProfessors = ref([]);
-const isFilenameValid = ref(false);
+const uploadStep = ref('1')
+const uploading = ref(false)
+const fileUpload = ref(null)
+const uploadFormProfessors = ref([])
+const isFilenameValid = ref(false)
 
-const showUploadPreview = ref(false);
-const uploadPreviewUrl = ref("");
-const uploadPreviewLoading = ref(false);
-const uploadPreviewError = ref(false);
+const showUploadPreview = ref(false)
+const uploadPreviewUrl = ref('')
+const uploadPreviewLoading = ref(false)
+const uploadPreviewError = ref(false)
 
-const availableSubjects = ref([]);
-const availableProfessors = ref([]);
+const availableSubjects = ref([])
+const availableProfessors = ref([])
 
 const canGoToStep2 = computed(() => {
-  return form.value.category && form.value.subject && form.value.professor;
-});
+  return form.value.category && form.value.subject && form.value.professor
+})
 
 const canGoToStep3 = computed(() => {
-  return (
-    form.value.academicYear &&
-    form.value.type &&
-    form.value.filename &&
-    isFilenameValid.value
-  );
-});
+  return form.value.academicYear && form.value.type && form.value.filename && isFilenameValid.value
+})
 
 const canUpload = computed(() => {
   return (
@@ -419,251 +408,249 @@ const canUpload = computed(() => {
     form.value.academicYear &&
     form.value.type &&
     form.value.filename
-  );
-});
+  )
+})
 
 function validateFilename() {
-  const regex = /^[a-z]+[0-9]*$/;
-  isFilenameValid.value = regex.test(form.value.filename);
+  const regex = /^[a-z]+[0-9]*$/
+  isFilenameValid.value = regex.test(form.value.filename)
 }
 
 function getCategoryName(code) {
   const categories = {
-    freshman: "大一課程",
-    sophomore: "大二課程",
-    junior: "大三課程",
-    senior: "大四課程",
-    graduate: "研究所課程",
-    interdisciplinary: "跨領域課程",
-    general: "通識課程",
-  };
-  return categories[code] || code;
+    freshman: '大一課程',
+    sophomore: '大二課程',
+    junior: '大三課程',
+    senior: '大四課程',
+    graduate: '研究所課程',
+    interdisciplinary: '跨領域課程',
+    general: '通識課程',
+  }
+  return categories[code] || code
 }
 
 function getTypeName(code) {
   const types = {
-    midterm: "期中考",
-    final: "期末考",
-    quiz: "小考",
-    other: "其他",
-  };
-  return types[code] || code;
+    midterm: '期中考',
+    final: '期末考',
+    quiz: '小考',
+    other: '其他',
+  }
+  return types[code] || code
 }
 
 function formatFileSize(bytes) {
-  if (bytes === 0) return "0 Bytes";
+  if (bytes === 0) return '0 Bytes'
 
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 async function fetchProfessorsForSubject(subjectId) {
-  if (!subjectId) return;
+  if (!subjectId) return
 
   try {
-    const response = await courseService.getCourseArchives(subjectId);
-    const archiveData = response.data;
+    const response = await courseService.getCourseArchives(subjectId)
+    const archiveData = response.data
 
-    const uniqueProfessors = new Set();
+    const uniqueProfessors = new Set()
     archiveData.forEach((archive) => {
-      if (archive.professor) uniqueProfessors.add(archive.professor);
-    });
+      if (archive.professor) uniqueProfessors.add(archive.professor)
+    })
 
     uploadFormProfessors.value = Array.from(uniqueProfessors)
       .sort()
       .map((professor) => ({
         name: professor,
         code: professor,
-      }));
+      }))
   } catch (error) {
-    console.error("Error fetching professors for subject:", error);
-    uploadFormProfessors.value = [];
+    console.error('Error fetching professors for subject:', error)
+    uploadFormProfessors.value = []
   }
 }
 
 const handleUpload = async () => {
   try {
-    uploading.value = true;
+    uploading.value = true
 
-    const fileArrayBuffer = await form.value.file.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(fileArrayBuffer);
+    const fileArrayBuffer = await form.value.file.arrayBuffer()
+    const pdfDoc = await PDFDocument.load(fileArrayBuffer)
 
-    pdfDoc.setTitle("");
-    pdfDoc.setAuthor("");
-    pdfDoc.setSubject("");
-    pdfDoc.setKeywords([]);
-    pdfDoc.setProducer("");
-    pdfDoc.setCreator("");
-    pdfDoc.setCreationDate(new Date());
-    pdfDoc.setModificationDate(new Date());
-    const pdfBytes = await pdfDoc.save();
-    const cleanFile = new Blob([pdfBytes], { type: "application/pdf" });
+    pdfDoc.setTitle('')
+    pdfDoc.setAuthor('')
+    pdfDoc.setSubject('')
+    pdfDoc.setKeywords([])
+    pdfDoc.setProducer('')
+    pdfDoc.setCreator('')
+    pdfDoc.setCreationDate(new Date())
+    pdfDoc.setModificationDate(new Date())
+    const pdfBytes = await pdfDoc.save()
+    const cleanFile = new Blob([pdfBytes], { type: 'application/pdf' })
     const cleanFileWithName = new File([cleanFile], form.value.file.name, {
-      type: "application/pdf",
-    });
+      type: 'application/pdf',
+    })
 
-    const formData = new FormData();
-    formData.append("file", cleanFileWithName);
-    formData.append("subject", form.value.subject);
-    formData.append("category", form.value.category);
-    formData.append("professor", form.value.professor);
-    formData.append("archive_type", form.value.type);
-    formData.append("has_answers", form.value.hasAnswers);
-    formData.append("filename", form.value.filename);
-    const year = new Date(form.value.academicYear).getFullYear();
-    formData.append("academic_year", year);
+    const formData = new FormData()
+    formData.append('file', cleanFileWithName)
+    formData.append('subject', form.value.subject)
+    formData.append('category', form.value.category)
+    formData.append('professor', form.value.professor)
+    formData.append('archive_type', form.value.type)
+    formData.append('has_answers', form.value.hasAnswers)
+    formData.append('filename', form.value.filename)
+    const year = new Date(form.value.academicYear).getFullYear()
+    formData.append('academic_year', year)
 
-    await archiveService.uploadArchive(formData);
+    await archiveService.uploadArchive(formData)
 
-    emit("update:modelValue", false);
-    emit("upload-success");
+    emit('update:modelValue', false)
+    emit('upload-success')
 
     toast.add({
-      severity: "success",
-      summary: "上傳成功",
-      detail: "考古題已成功上傳",
+      severity: 'success',
+      summary: '上傳成功',
+      detail: '考古題已成功上傳',
       life: 3000,
-    });
+    })
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error('Upload error:', error)
 
     toast.add({
-      severity: "error",
-      summary: "上傳失敗",
-      detail: "發生錯誤，請稍後再試",
+      severity: 'error',
+      summary: '上傳失敗',
+      detail: '發生錯誤，請稍後再試',
       life: 3000,
-    });
+    })
   } finally {
-    uploading.value = false;
+    uploading.value = false
   }
-};
+}
 
 const onFileSelect = (event) => {
-  const newFile = event.files[0];
+  const newFile = event.files[0]
 
   if (fileUpload.value) {
-    fileUpload.value.clear();
+    fileUpload.value.clear()
   }
-  form.value.file = null;
+  form.value.file = null
 
   nextTick(() => {
-    form.value.file = newFile;
-  });
-};
+    form.value.file = newFile
+  })
+}
 
 function clearSelectedFile(removeFileCallback) {
-  if (removeFileCallback) removeFileCallback(0);
-  form.value.file = null;
+  if (removeFileCallback) removeFileCallback(0)
+  form.value.file = null
   if (fileUpload.value) {
-    fileUpload.value.clear();
+    fileUpload.value.clear()
   }
 }
 
 function previewUploadFile() {
-  if (!form.value.file) return;
+  if (!form.value.file) return
 
-  uploadPreviewLoading.value = true;
-  uploadPreviewError.value = false;
+  uploadPreviewLoading.value = true
+  uploadPreviewError.value = false
 
   try {
-    const fileUrl = URL.createObjectURL(
-      new Blob([form.value.file], { type: "application/pdf" })
-    );
-    uploadPreviewUrl.value = fileUrl;
-    showUploadPreview.value = true;
+    const fileUrl = URL.createObjectURL(new Blob([form.value.file], { type: 'application/pdf' }))
+    uploadPreviewUrl.value = fileUrl
+    showUploadPreview.value = true
   } catch (error) {
-    console.error("Preview error:", error);
-    uploadPreviewError.value = true;
+    console.error('Preview error:', error)
+    uploadPreviewError.value = true
     toast.add({
-      severity: "error",
-      summary: "預覽失敗",
-      detail: "無法預覽檔案",
+      severity: 'error',
+      summary: '預覽失敗',
+      detail: '無法預覽檔案',
       life: 3000,
-    });
+    })
   } finally {
-    uploadPreviewLoading.value = false;
+    uploadPreviewLoading.value = false
   }
 }
 
 function handleUploadPreviewError() {
-  uploadPreviewError.value = true;
+  uploadPreviewError.value = true
 }
 
 function closeUploadPreview() {
-  showUploadPreview.value = false;
+  showUploadPreview.value = false
   if (uploadPreviewUrl.value) {
-    URL.revokeObjectURL(uploadPreviewUrl.value);
-    uploadPreviewUrl.value = "";
+    URL.revokeObjectURL(uploadPreviewUrl.value)
+    uploadPreviewUrl.value = ''
   }
-  uploadPreviewError.value = false;
+  uploadPreviewError.value = false
 }
 
 const searchSubject = (event) => {
-  const query = event?.query?.toLowerCase() || "";
-  const subjects = props.coursesList[form.value.category] || [];
+  const query = event?.query?.toLowerCase() || ''
+  const subjects = props.coursesList[form.value.category] || []
   const filteredSubjects = subjects
     .map((course) => ({
       name: course.name,
       code: course.id,
     }))
     .filter((subject) => subject.name.toLowerCase().includes(query))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name))
 
-  availableSubjects.value = filteredSubjects;
-};
+  availableSubjects.value = filteredSubjects
+}
 
 const searchProfessor = (event) => {
-  const query = event?.query?.toLowerCase() || "";
+  const query = event?.query?.toLowerCase() || ''
   const filteredProfessors = uploadFormProfessors.value
     .filter((professor) => professor.name.toLowerCase().includes(query))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name))
 
-  availableProfessors.value = filteredProfessors;
-};
+  availableProfessors.value = filteredProfessors
+}
 
 const onSubjectSelect = (event) => {
-  form.value.subject = event.value.name;
-  form.value.subjectId = event.value.code;
-};
+  form.value.subject = event.value.name
+  form.value.subjectId = event.value.code
+}
 
 const onProfessorSelect = (event) => {
-  if (event.value && typeof event.value === "object") {
-    form.value.professor = event.value.name;
+  if (event.value && typeof event.value === 'object') {
+    form.value.professor = event.value.name
   }
-};
+}
 
 watch(
   () => form.value.category,
   () => {
-    form.value.subject = null;
-    form.value.subjectId = null;
-    form.value.professor = null;
+    form.value.subject = null
+    form.value.subjectId = null
+    form.value.professor = null
   }
-);
+)
 
 watch(
   () => form.value.subject,
   (newSubject) => {
-    form.value.professor = null;
+    form.value.professor = null
     if (newSubject) {
-      fetchProfessorsForSubject(form.value.subjectId);
+      fetchProfessorsForSubject(form.value.subjectId)
     } else {
-      uploadFormProfessors.value = [];
+      uploadFormProfessors.value = []
     }
   }
-);
+)
 
 watch(
   () => props.modelValue,
   (newValue, oldValue) => {
     if (oldValue === true && newValue === false) {
-      resetForm();
+      resetForm()
     }
   }
-);
+)
 
 function resetForm() {
   form.value = {
@@ -671,23 +658,23 @@ function resetForm() {
     subject: null,
     subjectId: null,
     professor: null,
-    filename: "",
+    filename: '',
     type: null,
     hasAnswers: false,
     academicYear: null,
     file: null,
-  };
-  uploadStep.value = "1";
-  isFilenameValid.value = false;
-  availableSubjects.value = [];
-  availableProfessors.value = [];
-  uploadFormProfessors.value = [];
+  }
+  uploadStep.value = '1'
+  isFilenameValid.value = false
+  availableSubjects.value = []
+  availableProfessors.value = []
+  uploadFormProfessors.value = []
 
   if (fileUpload.value) {
-    fileUpload.value.clear();
+    fileUpload.value.clear()
   }
 
-  closeUploadPreview();
+  closeUploadPreview()
 }
 </script>
 

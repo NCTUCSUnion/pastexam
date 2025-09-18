@@ -20,10 +20,7 @@
     </template>
 
     <div class="w-full h-full flex flex-column">
-      <div
-        v-if="loading"
-        class="flex-1 flex align-items-center justify-content-center"
-      >
+      <div v-if="loading" class="flex-1 flex align-items-center justify-content-center">
         <ProgressSpinner strokeWidth="4" />
       </div>
 
@@ -64,7 +61,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   visible: {
@@ -73,11 +70,11 @@ const props = defineProps({
   },
   previewUrl: {
     type: String,
-    default: "",
+    default: '',
   },
   title: {
     type: String,
-    default: "預覽文件",
+    default: '預覽文件',
   },
   loading: {
     type: Boolean,
@@ -91,40 +88,34 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
-});
+})
 
-const emit = defineEmits([
-  "update:visible",
-  "hide",
-  "load",
-  "error",
-  "download",
-]);
+const emit = defineEmits(['update:visible', 'hide', 'load', 'error', 'download'])
 
 const localVisible = computed({
   get: () => props.visible,
-  set: (value) => emit("update:visible", value),
-});
+  set: (value) => emit('update:visible', value),
+})
 
-const downloading = ref(false);
+const downloading = ref(false)
 
 function onHide() {
-  emit("hide");
+  emit('hide')
 }
 
 function handleLoad() {
-  emit("load");
+  emit('load')
 }
 
 function handleError() {
-  emit("error");
+  emit('error')
 }
 
 function handleDownload() {
-  downloading.value = true;
-  emit("download", () => {
-    downloading.value = false;
-  });
+  downloading.value = true
+  emit('download', () => {
+    downloading.value = false
+  })
 }
 </script>
 

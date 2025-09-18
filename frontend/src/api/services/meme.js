@@ -1,7 +1,7 @@
-import { api } from "./client";
+import { api } from './client'
 
 export const memeService = {
   getRandomMeme() {
-    return api.get("/meme");
+    return api.get('/meme')
   },
-};
+}
