@@ -27,7 +27,7 @@ services:
   #     - app_network
 
   db:
-    image: postgres:15-alpine
+    image: postgres:15.14-alpine3.22
     container_name: pastexam-postgres-dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -67,7 +67,7 @@ services:
       - app_network
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4.5-alpine3.21
     container_name: pastexam-redis-dev
     ports:
       - "6379:6379"
