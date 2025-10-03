@@ -20,12 +20,15 @@
     </template>
 
     <div class="w-full h-full flex flex-column">
-      <div v-if="loading" class="flex-1 flex align-items-center justify-content-center">
+      <div
+        v-if="loading || pdfLoading"
+        class="flex-1 flex align-items-center justify-content-center"
+      >
         <ProgressSpinner strokeWidth="4" />
       </div>
 
       <div
-        v-else-if="error"
+        v-else-if="error || pdfError"
         class="flex-1 flex flex-column align-items-center justify-content-center gap-4"
       >
         <i class="pi pi-exclamation-circle text-6xl text-red-500" />
@@ -33,16 +36,12 @@
         <div class="text-sm text-gray-600">請嘗試下載檔案查看</div>
       </div>
 
-      <div v-else-if="previewUrl" class="flex-1 relative">
-        <iframe
-          :src="previewUrl"
-          class="absolute top-0 left-0 w-full h-full"
-          type="application/pdf"
-          frameborder="0"
-          @load="handleLoad"
-          @error="handleError"
-          allow="fullscreen"
-          referrerpolicy="no-referrer"
+      <div v-else-if="previewUrl" class="flex-1 pdf-container">
+        <VuePdfEmbed
+          :source="previewUrl"
+          class="pdf-viewer"
+          @loaded="handlePdfLoaded"
+          @loading-failed="handlePdfError"
         />
       </div>
     </div>
@@ -62,6 +61,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import VuePdfEmbed from 'vue-pdf-embed'
 
 const props = defineProps({
   visible: {
@@ -98,16 +98,26 @@ const localVisible = computed({
 })
 
 const downloading = ref(false)
+const pdfLoading = ref(false)
+const pdfError = ref(false)
 
 function onHide() {
+  // Reset PDF states when modal is hidden
+  pdfLoading.value = false
+  pdfError.value = false
   emit('hide')
 }
 
-function handleLoad() {
+function handlePdfLoaded() {
+  pdfLoading.value = false
+  pdfError.value = false
   emit('load')
 }
 
-function handleError() {
+function handlePdfError(error) {
+  console.error('PDF loading failed:', error)
+  pdfLoading.value = false
+  pdfError.value = true
   emit('error')
 }
 
@@ -120,12 +130,30 @@ function handleDownload() {
 </script>
 
 <style scoped>
-.pdf-viewer {
+.pdf-container {
   width: 100%;
-  height: 80vh;
+  height: 100%;
+  overflow: auto;
   display: flex;
   justify-content: center;
+  background-color: #525659;
+}
+
+.pdf-viewer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+}
+
+:deep(.vue-pdf-embed) {
+  width: 100%;
+}
+
+:deep(.vue-pdf-embed > div) {
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Mobile responsive adjustments */
@@ -137,10 +165,6 @@ function handleDownload() {
   :deep(.p-dialog .p-button) {
     font-size: 0.875rem;
     padding: 0.5rem 0.75rem;
-  }
-
-  .pdf-viewer {
-    height: 70vh;
   }
 }
 </style>

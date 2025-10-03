@@ -203,27 +203,35 @@
                   <AccordionContent>
                     <DataTable :value="group.list">
                       <Column header="教授" field="professor" style="width: 10%"></Column>
-                      <Column header="類型" style="width: 10%">
+                      <Column header="類型" style="width: 10%" class="md:text-sm text-xs">
                         <template #body="{ data }">
                           <Tag
                             :severity="archiveTypeConfig[data.type]?.severity || 'secondary'"
-                            class="text-sm"
+                            class="md:text-sm text-xs"
                           >
                             {{ archiveTypeConfig[data.type]?.name || data.type }}
                           </Tag>
                         </template>
                       </Column>
-                      <Column header="考試名稱" field="name" style="width: 15%"></Column>
+                      <Column
+                        header="考試名稱"
+                        field="name"
+                        style="width: 15%"
+                        class="md:text-sm text-xs"
+                      ></Column>
                       <Column header="解答" style="width: 10%">
                         <template #body="{ data }">
-                          <Tag :severity="data.hasAnswers ? 'info' : 'secondary'" class="text-sm">
+                          <Tag
+                            :severity="data.hasAnswers ? 'info' : 'secondary'"
+                            class="md:text-sm text-xs"
+                          >
                             {{ data.hasAnswers ? '附解答' : '僅題目' }}
                           </Tag>
                         </template>
                       </Column>
                       <Column header="下載次數" style="width: 10%">
                         <template #body="{ data }">
-                          <span class="text-sm">
+                          <span class="md:text-sm text-xs">
                             {{ formatDownloadCount(data.downloadCount) }}
                           </span>
                         </template>
