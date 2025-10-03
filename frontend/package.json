@@ -8,8 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "prepare": "cd .. && husky frontend/.husky",
-    "lint": "npx eslint --ext .js,.vue src",
-    "format": "npx prettier --write ."
+    "lint": "pnpm exec eslint --ext .js,.vue src",
+    "format": "pnpm exec prettier --write ."
   },
   "dependencies": {
     "@primeuix/themes": "^1.1.1",
@@ -43,8 +43,9 @@
   },
   "lint-staged": {
     "*.{js,jsx,vue}": [
-      "npx eslint --ext .js,.ts,.vue src",
-      "npx prettier --write ."
+      "pnpm exec eslint --ext .js,.ts,.vue src",
+      "pnpm exec prettier --write ."
     ]
-  }
+  },
+  "packageManager": "pnpm@9.0.0"
 }
