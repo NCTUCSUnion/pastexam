@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from typing import Optional, List
 import logging
 import json
 from datetime import datetime
 
-from app.models.models import User
+from app.models.models import (
+    User,
+    GenerateExamRequest,
+    TaskSubmitResponse,
+    TaskStatusResponse,
+    GenerateExamResponse
+)
 from app.utils.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -19,32 +23,6 @@ if not logger.handlers:
     logger.addHandler(console_handler)
 
 router = APIRouter()
-
-class GenerateExamRequest(BaseModel):
-    archive_ids: List[int]
-    prompt: Optional[str] = None
-    temperature: Optional[float] = 0.7
-
-
-class TaskSubmitResponse(BaseModel):
-    task_id: str
-    status: str
-    message: str
-
-
-class TaskStatusResponse(BaseModel):
-    task_id: str
-    status: str  # pending, in_progress, complete, failed, not_found
-    result: Optional[dict] = None
-    error: Optional[str] = None
-    created_at: Optional[str] = None
-    completed_at: Optional[str] = None
-
-
-class GenerateExamResponse(BaseModel):
-    success: bool
-    generated_content: str
-    archives_used: List[dict]
 
 
 @router.post("/generate", response_model=TaskSubmitResponse)
