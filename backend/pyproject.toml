@@ -9,6 +9,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "bcrypt>=4.3.0",
     "fastapi[standard]>=0.115.12",
+    "google-generativeai>=0.8.5",
     "greenlet>=3.2.3",
     "httpx>=0.28.1",
     "itsdangerous>=2.2.0",
