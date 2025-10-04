@@ -41,7 +41,7 @@
               v-if="isAuthenticated && userData?.is_admin"
               icon="pi pi-cog"
               label="系統管理"
-              @click="$router.push('/admin')"
+              @click="handleNavigateAdmin"
               severity="secondary"
               size="small"
               outlined
@@ -106,7 +106,7 @@
             severity="secondary"
             size="small"
             outlined
-            @click="toggleTheme"
+            @click="handleToggleTheme"
           />
         </div>
       </template>
@@ -268,6 +268,7 @@ import { useTheme } from '../utils/useTheme'
 import { authService } from '../api'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { trackEvent, EVENTS } from '../utils/analytics'
 
 export default {
   name: 'AppNavbar',
@@ -343,8 +344,17 @@ export default {
     },
   },
   methods: {
+    handleToggleTheme() {
+      trackEvent(EVENTS.TOGGLE_THEME, {
+        from: this.isDarkTheme ? 'dark' : 'light',
+        to: this.isDarkTheme ? 'light' : 'dark',
+      })
+      this.toggleTheme()
+    },
+
     openLoginDialog() {
       this.loginVisible = true
+      trackEvent(EVENTS.LOGIN, { type: 'dialog-open' })
     },
 
     async handleLocalLogin() {
@@ -366,9 +376,13 @@ export default {
         this.checkAuthentication()
         this.username = ''
         this.password = ''
+
+        trackEvent(EVENTS.LOGIN_LOCAL, { success: true })
+
         await this.router.push('/archive')
       } catch (error) {
         console.error('Login failed:', error)
+        trackEvent(EVENTS.LOGIN_LOCAL, { success: false })
         this.toast.add({
           severity: 'error',
           summary: '登入失敗',
@@ -382,6 +396,7 @@ export default {
 
     handleOAuthLogin() {
       this.loginVisible = false
+      trackEvent(EVENTS.LOGIN_OAUTH, { provider: 'NYCU' })
       authService.login()
     },
 
@@ -411,8 +426,10 @@ export default {
     async handleLogout() {
       try {
         await authService.logout()
+        trackEvent(EVENTS.LOGOUT, { success: true })
       } catch (error) {
         console.error('Logout API failed:', error)
+        trackEvent(EVENTS.LOGOUT, { success: false })
       }
 
       sessionStorage.removeItem('authToken')
@@ -425,12 +442,19 @@ export default {
 
     handleTitleClick() {
       if (this.isAuthenticated) {
+        trackEvent(EVENTS.NAVIGATE_ARCHIVE, { from: 'title-click' })
         this.$router.push('/archive')
       }
     },
 
+    handleNavigateAdmin() {
+      trackEvent(EVENTS.NAVIGATE_ADMIN, { from: 'navbar' })
+      this.$router.push('/admin')
+    },
+
     openIssueReportDialog() {
       this.issueReportVisible = true
+      trackEvent(EVENTS.OPEN_ISSUE_REPORT)
     },
 
     closeIssueReportDialog() {
@@ -457,6 +481,13 @@ export default {
 
     submitIssueReport() {
       const { type, title, description, contact } = this.issueForm
+
+      trackEvent(EVENTS.SUBMIT_ISSUE_REPORT, {
+        type,
+        hasContact: !!contact,
+        titleLength: title.length,
+        descriptionLength: description.length,
+      })
 
       const systemInfo = this.getSystemInfo()
       const issueBody = this.formatIssueBody(description, contact, systemInfo, type)
