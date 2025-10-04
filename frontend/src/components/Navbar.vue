@@ -58,6 +58,16 @@
             />
             <Button
               v-if="isAuthenticated"
+              icon="pi pi-sparkles"
+              label="AI 生成試題"
+              @click="openAIExamDialog"
+              severity="info"
+              size="small"
+              outlined
+              aria-label="Generate AI Exam"
+            />
+            <Button
+              v-if="isAuthenticated"
               icon="pi pi-sign-out"
               label="登出"
               @click="handleLogout"
@@ -259,6 +269,13 @@
         </div>
       </div>
     </Dialog>
+
+    <!-- AI 生成模擬試題 Modal -->
+    <GenerateAIExamModal
+      :visible="aiExamDialogVisible"
+      @update:visible="aiExamDialogVisible = $event"
+      :coursesList="coursesList"
+    />
   </div>
 </template>
 
@@ -269,9 +286,13 @@ import { authService } from '../api'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { trackEvent, EVENTS } from '../utils/analytics'
+import GenerateAIExamModal from './GenerateAIExamModal.vue'
 
 export default {
   name: 'AppNavbar',
+  components: {
+    GenerateAIExamModal,
+  },
   emits: ['toggle-sidebar'],
   data() {
     return {
@@ -296,6 +317,8 @@ export default {
         { label: 'UI/UX 問題', value: 'ui-ux' },
         { label: '其他問題', value: 'question' },
       ],
+      aiExamDialogVisible: false,
+      coursesList: null,
     }
   },
   setup() {
@@ -464,6 +487,25 @@ export default {
         title: '',
         description: '',
         contact: '',
+      }
+    },
+
+    async openAIExamDialog() {
+      this.aiExamDialogVisible = true
+      if (!this.coursesList) {
+        try {
+          const { courseService } = await import('../api')
+          const { data } = await courseService.listCourses()
+          this.coursesList = data
+        } catch (error) {
+          console.error('Failed to load courses:', error)
+          this.toast.add({
+            severity: 'error',
+            summary: '載入失敗',
+            detail: '無法載入課程列表',
+            life: 3000,
+          })
+        }
       }
     },
 
