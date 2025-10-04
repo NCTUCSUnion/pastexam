@@ -1,7 +1,7 @@
 <template>
   <div class="h-full px-2 md:px-4 admin-container">
     <div class="card h-full flex flex-col">
-      <Tabs value="0" class="flex-1" @update:value="handleTabChange">
+      <Tabs :value="currentTab" class="flex-1" @update:value="handleTabChange">
         <TabList>
           <Tab value="0">課程管理</Tab>
           <Tab value="1">使用者管理</Tab>
@@ -434,6 +434,22 @@ const currentUserId = computed(() => getCurrentUser()?.id)
 
 const umamiShareUrl = ref(import.meta.env.VITE_UMAMI_SHARE_URL || '')
 const umamiLoading = ref(false)
+
+const TAB_STORAGE_KEY = 'adminCurrentTab'
+
+const getInitialTab = () => {
+  try {
+    const savedTab = localStorage.getItem(TAB_STORAGE_KEY)
+    if (savedTab && ['0', '1', '2'].includes(savedTab)) {
+      return savedTab
+    }
+  } catch (e) {
+    console.error('Failed to load tab from storage:', e)
+  }
+  return '0' // 默認值
+}
+
+const currentTab = ref(getInitialTab())
 
 const openUmamiInNewTab = () => {
   if (umamiShareUrl.value) {
@@ -882,7 +898,19 @@ const formatDateTime = (dateString) => {
   }
 }
 
+// 保存分頁狀態到 localStorage
+const saveTabToStorage = (tabValue) => {
+  try {
+    localStorage.setItem(TAB_STORAGE_KEY, tabValue)
+  } catch (e) {
+    console.error('Failed to save tab to storage:', e)
+  }
+}
+
 const handleTabChange = (value) => {
+  currentTab.value = value
+  saveTabToStorage(value)
+
   const tabNames = {
     0: 'courses',
     1: 'users',
