@@ -9,7 +9,15 @@
       :style="{ width: '900px', maxWidth: '95vw' }"
       :autoFocus="false"
     >
-      <div v-if="currentStep === 'selectProfessor'" class="flex flex-column gap-4">
+      <div
+        v-if="currentStep === 'loading'"
+        class="flex flex-column align-items-center justify-content-center p-6"
+      >
+        <ProgressSpinner strokeWidth="4" />
+        <p class="mt-4 text-lg font-semibold">載入中...</p>
+      </div>
+
+      <div v-else-if="currentStep === 'selectProfessor'" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
           <label class="font-semibold">課程分類</label>
           <Select
@@ -115,7 +123,7 @@
           </div>
         </div>
 
-        <div class="flex flex-column">
+        <div class="flex flex-column gap-2">
           <div class="text-sm text-500">
             建議選擇 2-3 份考古題以獲得最佳生成效果
             <span v-if="selectedArchiveIds.length > 0" class="font-semibold text-green-600">
@@ -131,7 +139,7 @@
       >
         <ProgressSpinner strokeWidth="4" />
         <p class="mt-4 text-lg font-semibold">AI 正在分析考古題並生成模擬試題...</p>
-        <p class="text-sm text-500 mt-2">這可能需要 2-5 分鐘，請稍候</p>
+        <p class="text-sm text-500 mt-2">這可能需要 2-5 分鐘，您可以關閉視窗稍後再回來查看結果</p>
         <div class="mt-4 text-center">
           <p class="text-sm text-500">正在分析：</p>
           <p class="font-semibold">{{ form.course_name }} - {{ form.professor }}</p>
@@ -178,51 +186,133 @@
       </div>
 
       <!-- 底部按鈕 -->
+
+      <template #footer>
+        <div class="flex items-center gap-2 w-full">
+          <Button
+            icon="pi pi-cog"
+            label="API Key 設定"
+            severity="secondary"
+            @click="openApiKeyModal"
+          />
+
+          <div class="flex gap-2 ml-auto">
+            <Button
+              v-if="currentStep === 'selectArchives'"
+              label="上一步"
+              icon="pi pi-arrow-left"
+              severity="secondary"
+              @click="goBackToProfessorSelection"
+            />
+            <Button
+              v-if="currentStep === 'selectProfessor'"
+              label="下一步"
+              icon="pi pi-arrow-right"
+              severity="success"
+              @click="goToArchiveSelection"
+              :disabled="!canGoToNextStep"
+            />
+            <Button
+              v-else-if="currentStep === 'selectArchives'"
+              label="開始生成"
+              icon="pi pi-sparkles"
+              severity="info"
+              @click="generateExam"
+              :disabled="selectedArchiveIds.length === 0"
+            />
+            <Button
+              v-else-if="currentStep === 'result'"
+              label="重新生成"
+              icon="pi pi-refresh"
+              severity="secondary"
+              @click="confirmRegenerate"
+            />
+            <Button
+              v-if="currentStep === 'result'"
+              label="下載 TXT"
+              icon="pi pi-download"
+              severity="success"
+              @click="downloadResult"
+            />
+            <Button
+              v-else-if="currentStep === 'error'"
+              label="重試"
+              icon="pi pi-refresh"
+              severity="warning"
+              @click="resetToSelect"
+            />
+          </div>
+        </div>
+      </template>
+    </Dialog>
+
+    <!-- API Key 設定 Modal -->
+    <Dialog
+      :visible="showApiKeyModal"
+      @update:visible="handleApiKeyModalClose"
+      :modal="true"
+      header="API Key 設定"
+      :style="{ width: '500px' }"
+      :draggable="false"
+      :closable="true"
+    >
+      <div class="flex flex-column gap-4">
+        <div class="text-sm text-500">請設定您的 Google Gemini API Key 以使用 AI 生成功能</div>
+
+        <div class="flex flex-column gap-2">
+          <label class="font-semibold">API Key 狀態</label>
+          <div v-if="apiKeyStatus.has_api_key" class="p-3 bg-green-50 border-round">
+            <div class="flex align-items-center gap-2">
+              <i class="pi pi-check-circle text-green-600"></i>
+              <span class="text-green-700">已設定：{{ apiKeyStatus.api_key_masked }}</span>
+            </div>
+          </div>
+          <div v-else class="p-3 bg-orange-50 border-round">
+            <div class="flex align-items-center gap-2">
+              <i class="pi pi-exclamation-triangle text-orange-600"></i>
+              <span class="text-orange-700">尚未設定 API Key</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!apiKeyStatus.has_api_key" class="flex flex-column gap-2">
+          <label class="font-semibold">Google Gemini API Key</label>
+          <Password
+            v-model="apiKeyForm.key"
+            placeholder="輸入 Gemini API Key"
+            class="w-full"
+            inputClass="w-full"
+            toggleMask
+            :feedback="false"
+          />
+          <small class="text-500">
+            您可以在
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-300"
+              >Google AI Studio</a
+            >
+            獲取免費的 API Key
+          </small>
+        </div>
+      </div>
+
       <template #footer>
         <div class="flex justify-content-end gap-2">
           <Button
-            v-if="currentStep === 'selectArchives'"
-            label="上一步"
-            icon="pi pi-arrow-left"
-            severity="secondary"
-            @click="goBackToProfessorSelection"
+            v-if="apiKeyStatus.has_api_key"
+            label="清除"
+            icon="pi pi-trash"
+            severity="danger"
+            @click="clearApiKey"
+            :loading="apiKeyLoading"
           />
           <Button
-            v-if="currentStep === 'selectProfessor'"
-            label="下一步"
-            icon="pi pi-arrow-right"
+            v-if="!apiKeyStatus.has_api_key"
+            label="儲存"
+            icon="pi pi-check"
             severity="success"
-            @click="goToArchiveSelection"
-            :disabled="!canGoToNextStep"
-          />
-          <Button
-            v-else-if="currentStep === 'selectArchives'"
-            label="開始生成"
-            icon="pi pi-sparkles"
-            severity="info"
-            @click="generateExam"
-            :disabled="selectedArchiveIds.length === 0"
-          />
-          <Button
-            v-else-if="currentStep === 'result'"
-            label="重新生成"
-            icon="pi pi-refresh"
-            severity="secondary"
-            @click="confirmRegenerate"
-          />
-          <Button
-            v-if="currentStep === 'result'"
-            label="下載 TXT"
-            icon="pi pi-download"
-            severity="success"
-            @click="downloadResult"
-          />
-          <Button
-            v-else-if="currentStep === 'error'"
-            label="重試"
-            icon="pi pi-refresh"
-            severity="warning"
-            @click="resetToSelect"
+            @click="saveApiKey"
+            :loading="apiKeyLoading"
+            :disabled="!apiKeyForm.key.trim()"
           />
         </div>
       </template>
@@ -240,18 +330,23 @@ const props = defineProps({
   coursesList: Object,
 })
 
-// eslint-disable-next-line no-unused-vars
 const emit = defineEmits(['update:visible'])
 
 const toast = inject('toast')
 const confirm = inject('confirm')
 
-const currentStep = ref('selectProfessor')
+const currentStep = ref('loading')
 const errorMessage = ref('')
 const result = ref(null)
 const availableArchives = ref([])
 const selectedArchiveIds = ref([])
 const currentTaskId = ref(null)
+
+// API Key 相關
+const showApiKeyModal = ref(false)
+const apiKeyStatus = ref({ has_api_key: false, api_key_masked: null })
+const apiKeyForm = ref({ key: '' })
+const apiKeyLoading = ref(false)
 
 const TASK_STORAGE_KEY = 'ai_exam_current_task'
 
@@ -409,7 +504,7 @@ const goToArchiveSelection = async () => {
 
     if (!hasValidArchives) {
       toast.add({
-        severity: 'warning',
+        severity: 'error',
         summary: '找不到考古題',
         detail: '該教授沒有期中考或期末考',
         life: 3000,
@@ -512,7 +607,7 @@ const resumeTask = async (taskId) => {
           severity: 'error',
           summary: '生成失敗',
           detail: errorMessage.value,
-          life: 5000,
+          life: 3000,
         })
       }
     } catch (error) {
@@ -528,10 +623,10 @@ const resumeTask = async (taskId) => {
         severity: 'error',
         summary: '查詢失敗',
         detail: errorMessage.value,
-        life: 5000,
+        life: 3000,
       })
     }
-  }, 3000)
+  }, 5000)
 }
 
 const generateExam = async () => {
@@ -551,13 +646,6 @@ const generateExam = async () => {
     saveTaskToStorage(taskId, {
       course_name: form.value.course_name,
       professor: form.value.professor,
-    })
-
-    toast.add({
-      severity: 'info',
-      summary: '任務已提交',
-      detail: '您可以關閉視窗，稍後回來查看結果',
-      life: 5000,
     })
 
     pollInterval = setInterval(async () => {
@@ -596,7 +684,7 @@ const generateExam = async () => {
             severity: 'error',
             summary: '生成失敗',
             detail: errorMessage.value,
-            life: 5000,
+            life: 3000,
           })
         }
       } catch (error) {
@@ -612,22 +700,34 @@ const generateExam = async () => {
           severity: 'error',
           summary: '查詢失敗',
           detail: errorMessage.value,
-          life: 5000,
+          life: 3000,
         })
       }
-    }, 3000)
+    }, 5000)
   } catch (error) {
     console.error('AI generation error:', error)
     clearTaskFromStorage()
-    errorMessage.value = '提交失敗，請稍後再試'
-    currentStep.value = 'error'
 
-    toast.add({
-      severity: 'error',
-      summary: '提交失敗',
-      detail: errorMessage.value,
-      life: 5000,
-    })
+    // Handle specific error cases
+    if (error.response?.status === 409) {
+      errorMessage.value = '您已有一個進行中的任務，請等待完成後再提交新任務'
+      toast.add({
+        severity: 'warn',
+        summary: '任務衝突',
+        detail: errorMessage.value,
+        life: 3000,
+      })
+    } else {
+      errorMessage.value = '提交失敗，請稍後再試'
+      toast.add({
+        severity: 'error',
+        summary: '提交失敗',
+        detail: errorMessage.value,
+        life: 3000,
+      })
+    }
+
+    currentStep.value = 'error'
   }
 }
 
@@ -640,7 +740,7 @@ const copyContent = async () => {
       severity: 'success',
       summary: '複製成功',
       detail: '內容已複製到剪貼簿',
-      life: 2000,
+      life: 3000,
     })
   } catch (error) {
     console.error('Copy error:', error)
@@ -671,7 +771,7 @@ const downloadResult = () => {
     severity: 'success',
     summary: '下載成功',
     detail: '模擬試題已下載',
-    life: 2000,
+    life: 3000,
   })
 }
 
@@ -702,6 +802,9 @@ watch(
   () => props.visible,
   async (newVal) => {
     if (newVal) {
+      // Load API key status
+      loadApiKeyStatus()
+
       // Check for unfinished task when modal opens
       const savedTask = loadTaskFromStorage()
       if (savedTask && savedTask.taskId) {
@@ -731,11 +834,16 @@ watch(
             await resumeTask(savedTask.taskId)
           } else {
             clearTaskFromStorage()
+            currentStep.value = 'selectProfessor'
           }
         } catch (error) {
           console.error('Failed to check saved task:', error)
           clearTaskFromStorage()
+          currentStep.value = 'selectProfessor'
         }
+      } else {
+        // No saved task, go to professor selection
+        currentStep.value = 'selectProfessor'
       }
     } else {
       if (pollInterval) {
@@ -763,6 +871,94 @@ watch(
     }
   }
 )
+
+// API Key 相關方法
+const loadApiKeyStatus = async () => {
+  try {
+    const response = await aiExamService.getApiKeyStatus()
+    apiKeyStatus.value = response.data
+
+    // 如果沒有設定 API key，自動打開設定 modal
+    if (!apiKeyStatus.value.has_api_key) {
+      showApiKeyModal.value = true
+    }
+  } catch (error) {
+    console.error('Failed to load API key status:', error)
+  }
+}
+
+const openApiKeyModal = async () => {
+  try {
+    const response = await aiExamService.getApiKeyStatus()
+    apiKeyStatus.value = response.data
+    showApiKeyModal.value = true
+  } catch (error) {
+    console.error('Failed to load API key status:', error)
+    showApiKeyModal.value = true
+  }
+}
+
+const saveApiKey = async () => {
+  if (!apiKeyForm.value.key.trim()) return
+
+  apiKeyLoading.value = true
+  try {
+    const response = await aiExamService.updateApiKey(apiKeyForm.value.key)
+    apiKeyStatus.value = response.data
+    apiKeyForm.value.key = ''
+
+    toast.add({
+      severity: 'success',
+      summary: '設定成功',
+      detail: 'API Key 測試通過並已成功設定',
+      life: 3000,
+    })
+  } catch (error) {
+    console.error('Failed to save API key:', error)
+    toast.add({
+      severity: 'error',
+      summary: '設定失敗',
+      detail: '請確認 API Key 是否正確',
+      life: 3000,
+    })
+  } finally {
+    apiKeyLoading.value = false
+  }
+}
+
+const clearApiKey = async () => {
+  apiKeyLoading.value = true
+  try {
+    const response = await aiExamService.updateApiKey('')
+    apiKeyStatus.value = response.data
+    apiKeyForm.value.key = ''
+
+    toast.add({
+      severity: 'success',
+      summary: '清除成功',
+      detail: 'API Key 已清除',
+      life: 3000,
+    })
+  } catch (error) {
+    console.error('Failed to clear API key:', error)
+    toast.add({
+      severity: 'error',
+      summary: '清除失敗',
+      detail: 'API Key 清除失敗，請稍後再試',
+      life: 3000,
+    })
+  } finally {
+    apiKeyLoading.value = false
+  }
+}
+
+const handleApiKeyModalClose = (visible) => {
+  showApiKeyModal.value = visible
+
+  if (!visible && !apiKeyStatus.value.has_api_key) {
+    emit('update:visible', false)
+  }
+}
 </script>
 
 <style scoped>

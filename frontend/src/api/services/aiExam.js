@@ -42,4 +42,23 @@ export const aiExamService = {
   deleteTask(taskId) {
     return api.delete(`/ai-exam/task/${taskId}`)
   },
+
+  /**
+   * 獲取 API Key 狀態
+   * @returns {Promise<{has_api_key: boolean, api_key_masked: string|null}>}
+   */
+  getApiKeyStatus() {
+    return api.get('/ai-exam/api-key')
+  },
+
+  /**
+   * 更新 API Key（會自動測試有效性）
+   * @param {string} apiKey - API Key
+   * @returns {Promise<{has_api_key: boolean, api_key_masked: string|null}>}
+   */
+  updateApiKey(apiKey) {
+    return api.put('/ai-exam/api-key', {
+      gemini_api_key: apiKey,
+    })
+  },
 }

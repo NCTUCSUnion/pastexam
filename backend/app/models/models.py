@@ -32,6 +32,7 @@ class User(SQLModel, table=True):
     is_admin: bool = Field(default=False)
     password_hash: Optional[str] = Field(default=None)
     is_local: bool = Field(default=False)
+    gemini_api_key: Optional[str] = Field(default=None)
     last_login: Optional[datetime] = Field(
         sa_column=Column(
             DateTime(timezone=True),
@@ -228,5 +229,15 @@ class GenerateExamResponse(BaseModel):
     success: bool
     generated_content: str
     archives_used: List[dict]
+
+
+# API Key related models
+class ApiKeyUpdate(BaseModel):
+    gemini_api_key: Optional[str] = None
+
+
+class ApiKeyResponse(BaseModel):
+    has_api_key: bool
+    api_key_masked: Optional[str] = None
 
  

@@ -1,26 +1,30 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-import logging
 import json
 from datetime import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
+from arq.jobs import Job, JobStatus
 
 from app.models.models import (
     User,
     GenerateExamRequest,
     TaskSubmitResponse,
     TaskStatusResponse,
-    GenerateExamResponse
+    GenerateExamResponse,
+    ApiKeyUpdate,
+    ApiKeyResponse
 )
 from app.utils.auth import get_current_user
+from app.db.session import get_session
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.INFO)
 
-if not logger.handlers:
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+# if not logger.handlers:
+#     console_handler = logging.StreamHandler()
+#     console_handler.setLevel(logging.INFO)
+#     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+#     console_handler.setFormatter(formatter)
+#     logger.addHandler(console_handler)
 
 router = APIRouter()
 
@@ -33,16 +37,38 @@ async def submit_generate_task(
     """Submit AI exam generation task"""
     from app.worker import get_redis_pool
     
-    logger.info(f"[API] Task submitted by user {current_user.user_id} with {len(request.archive_ids)} archives")
+    # logger.info(f"[API] Task submitted by user {current_user.user_id} with {len(request.archive_ids)} archives")
     
     if not request.archive_ids or len(request.archive_ids) == 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="至少需要選擇 1 份考古題"
+            detail="At least 1 archive is required"
         )
     
     try:
         redis = await get_redis_pool()
+        
+        # Check if user already has an active job
+        active_jobs = []
+        async for key in redis.scan_iter(match="task_metadata:*"):
+            metadata_str = await redis.get(key)
+            if not metadata_str:
+                continue
+                
+            metadata = json.loads(metadata_str.decode("utf-8"))
+            if metadata.get("user_id") == current_user.user_id:
+                task_id = key.decode().replace("task_metadata:", "")
+                job = Job(task_id, redis)
+                job_status_enum = await job.status()
+                
+                if job_status_enum in [JobStatus.queued, JobStatus.deferred, JobStatus.in_progress]:
+                    active_jobs.append(task_id)
+        
+        if active_jobs:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="You already have an active task. Please wait for it to complete before submitting a new one."
+            )
         
         task_data = {
             "archive_ids": request.archive_ids,
@@ -68,19 +94,19 @@ async def submit_generate_task(
             ex=86400  # 24 hours TTL
         )
         
-        logger.info(f"[API] Task enqueued: {job.job_id}")
+        # logger.info(f"[API] Task enqueued: {job.job_id}")
         
         return TaskSubmitResponse(
             task_id=job.job_id,
             status="pending",
-            message="任務已提交，請稍後查詢結果"
+            message="Task submitted, please check results later"
         )
         
     except Exception as e:
-        logger.error(f"[API] Failed to submit task: {str(e)}")
+        # logger.error(f"[API] Failed to submit task: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"提交任務失敗: {str(e)}"
+            detail=f"Failed to submit task: {str(e)}"
         )
 
 
@@ -102,7 +128,7 @@ async def get_task_status(
         if not metadata_str:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="找不到該任務"
+                detail="Task not found"
             )
         
         metadata = json.loads(metadata_str.decode("utf-8"))
@@ -110,7 +136,7 @@ async def get_task_status(
         if metadata["user_id"] != current_user.user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="無權訪問此任務"
+                detail="Access denied to this task"
             )
         
         job = Job(task_id, redis)
@@ -139,7 +165,7 @@ async def get_task_status(
                 result = await job.result()
             except Exception as e:
                 result = None
-                logger.warning(f"[API] Job complete but result fetch failed: {e}")
+                # logger.warning(f"[API] Job complete but result fetch failed: {e}")
             response.result = result
             response.completed_at = metadata.get("completed_at") or datetime.utcnow().isoformat()
         
@@ -148,10 +174,10 @@ async def get_task_status(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[API] Failed to get task status: {str(e)}")
+        # logger.error(f"[API] Failed to get task status: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"查詢任務狀態失敗: {str(e)}"
+            detail=f"Failed to get task status: {str(e)}"
         )
 
 
@@ -204,10 +230,10 @@ async def list_user_tasks(
         return {"tasks": tasks}
         
     except Exception as e:
-        logger.error(f"[API] Failed to list tasks: {str(e)}")
+        # logger.error(f"[API] Failed to list tasks: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"列出任務失敗: {str(e)}"
+            detail=f"Failed to list tasks: {str(e)}"
         )
 
 
@@ -228,7 +254,7 @@ async def delete_task(
         if not metadata_str:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="找不到該任務"
+                detail="Task not found"
             )
         
         metadata = json.loads(metadata_str)
@@ -236,21 +262,111 @@ async def delete_task(
         if metadata["user_id"] != current_user.user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="無權刪除此任務"
+                detail="Access denied to delete this task"
             )
         
         await redis.delete(metadata_key)
         await redis.delete(f"arq:result:{task_id}")
         
-        return {"success": True, "message": "任務已刪除"}
+        return {"success": True, "message": "Task deleted successfully"}
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[API] Failed to delete task: {str(e)}")
+        # logger.error(f"[API] Failed to delete task: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"刪除任務失敗: {str(e)}"
+            detail=f"Failed to delete task: {str(e)}"
         )
+
+
+@router.get("/api-key", response_model=ApiKeyResponse)
+async def get_api_key_status(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    """Get user's API key status"""
+    from sqlmodel import select
+    
+    try:
+        # Get full user data from database
+        user_query = select(User).where(User.id == current_user.user_id)
+        user_result = await db.execute(user_query)
+        user = user_result.scalar_one_or_none()
+        
+        if not user:
+            return ApiKeyResponse(has_api_key=False, api_key_masked=None)
+        
+        has_api_key = bool(user.gemini_api_key)
+        api_key_masked = None
+        
+        if has_api_key:
+            # Show only last 4 characters
+            api_key_masked = f"****{user.gemini_api_key[-4:]}"
+        
+        return ApiKeyResponse(
+            has_api_key=has_api_key,
+            api_key_masked=api_key_masked
+        )
+    except Exception as e:
+        # logger.error(f"[API] Failed to get API key status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get API key status: {str(e)}"
+        )
+
+
+@router.put("/api-key", response_model=ApiKeyResponse)
+async def update_api_key(
+    request: ApiKeyUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    """Update user's API key"""
+    from sqlmodel import update, select
+    
+    try:
+        if request.gemini_api_key:
+            import google.generativeai as genai
+            
+            genai.configure(api_key=request.gemini_api_key)
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            response = model.generate_content("Hello")
+        
+        stmt = update(User).where(User.id == current_user.user_id).values(
+            gemini_api_key=request.gemini_api_key
+        )
+        await db.execute(stmt)
+        await db.commit()
+        
+        # Get updated user data
+        user_query = select(User).where(User.id == current_user.user_id)
+        user_result = await db.execute(user_query)
+        user = user_result.scalar_one_or_none()
+        
+        has_api_key = bool(user.gemini_api_key) if user else False
+        api_key_masked = None
+        
+        if has_api_key and user:
+            api_key_masked = f"****{user.gemini_api_key[-4:]}"
+        
+        return ApiKeyResponse(
+            has_api_key=has_api_key,
+            api_key_masked=api_key_masked
+        )
+    except Exception as e:
+        # logger.error(f"[API] Failed to update API key: {str(e)}")
+        
+        # Check if it's an API key validation error
+        if "API key" in str(e) or "authentication" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid API Key: {str(e)}"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update API key: {str(e)}"
+            )
 
 

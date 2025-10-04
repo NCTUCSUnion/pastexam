@@ -1,4 +1,3 @@
-import logging
 import io
 from typing import List, Optional
 import google.generativeai as genai
@@ -12,14 +11,10 @@ from app.db.init_db import engine
 from app.models.models import Archive, Course
 from app.utils.storage import get_minio_client
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
 
-# TODO: Allow users to configure their own API key
-GEMINI_API_KEY = "AIzaSyAG5psoGvUnfQVrwSCl-Q6oyGro7u1Bknk"
-
-
-async def generate_exam_content(archive_ids: List[int], prompt: Optional[str] = None, temperature: float = 0.7) -> dict:
+async def generate_exam_content(archive_ids: List[int], user_id: int, prompt: Optional[str] = None, temperature: float = 0.7) -> dict:
     """
     Core AI exam generation logic
     
@@ -31,9 +26,19 @@ async def generate_exam_content(archive_ids: List[int], prompt: Optional[str] = 
     Returns:
         dict: Generation result with success status, content, and archives used
     """
-    logger.info(f"[AI Exam] Starting generation for archive_ids: {archive_ids}")
+    # logger.info(f"[AI Exam] Starting generation for archive_ids: {archive_ids}, user_id: {user_id}")
     
     async with AsyncSession(engine) as db:
+        # Get user's API key
+        from app.models.models import User
+        user_query = select(User).where(User.id == user_id)
+        user_result = await db.execute(user_query)
+        user = user_result.scalar_one_or_none()
+        
+        if not user or not user.gemini_api_key:
+            raise ValueError("User API key not found. Please configure your Gemini API key first.")
+        
+        api_key = user.gemini_api_key
         query = select(Archive, Course).join(Course).where(
             Archive.id.in_(archive_ids),
             Archive.deleted_at.is_(None),
@@ -46,14 +51,14 @@ async def generate_exam_content(archive_ids: List[int], prompt: Optional[str] = 
         if not archives_with_courses:
             raise ValueError("Archives not found")
         
-        genai.configure(api_key=GEMINI_API_KEY)
+        genai.configure(api_key=api_key)
         minio_client = get_minio_client()
         
         uploaded_files = []
         archives_info = []
         
         try:
-            logger.info(f"[AI Exam] Uploading {len(archives_with_courses)} PDFs to Gemini")
+            # logger.info(f"[AI Exam] Uploading {len(archives_with_courses)} PDFs to Gemini")
             for idx, (archive, course) in enumerate(archives_with_courses, 1):
                 response = minio_client.get_object(
                     bucket_name=settings.MINIO_BUCKET_NAME,
@@ -111,16 +116,21 @@ CRITICAL REQUIREMENTS:
    - Questions should test the same concepts but with different scenarios/numbers/examples
    - Maintain academic rigor and proper grammar
 
-FORMAT:
-Start with exam questions, then add a clear separator (e.g., "===== 參考解答 =====" or "===== ANSWER KEY ====="), followed by the complete answer key.
+6. STRICT OUTPUT FORMAT:
+   - Start with exam questions immediately
+   - Add a clear separator (e.g., "===== 參考解答 =====" or "===== ANSWER KEY =====")
+   - End with the complete answer key
+   - DO NOT add any concluding statements like "預期的結果", "expected results", "總結", "summary", or similar phrases
+   - DO NOT add any meta-commentary about the exam generation process
+   - END IMMEDIATELY after the answer key
 
-START YOUR RESPONSE IMMEDIATELY WITH THE EXAM CONTENT. DO NOT include phrases like "Here is the exam" or "Based on my analysis". Just output the exam.
+START YOUR RESPONSE IMMEDIATELY WITH THE EXAM CONTENT. DO NOT include phrases like "Here is the exam" or "Based on my analysis". Just output the exam and stop after the answer key.
 """
             
             final_prompt = prompt if prompt else default_prompt
             content = uploaded_files + [final_prompt]
             
-            logger.info(f"[AI Exam] Calling Gemini API (temperature={temperature})")
+            # logger.info(f"[AI Exam] Calling Gemini API (temperature={temperature})")
             response = model.generate_content(
                 content,
                 generation_config=genai.types.GenerationConfig(
@@ -128,7 +138,7 @@ START YOUR RESPONSE IMMEDIATELY WITH THE EXAM CONTENT. DO NOT include phrases li
                 )
             )
             
-            logger.info(f"[AI Exam] Generation completed successfully")
+            # logger.info(f"[AI Exam] Generation completed successfully")
             
             for uploaded_file in uploaded_files:
                 genai.delete_file(uploaded_file.name)
@@ -150,7 +160,7 @@ Answers may contain errors. Please verify the correctness yourself.
             }
             
         except Exception as e:
-            logger.error(f"[AI Exam] Error: {type(e).__name__}: {str(e)}")
+            # logger.error(f"[AI Exam] Error: {type(e).__name__}: {str(e)}")
             for uploaded_file in uploaded_files:
                 try:
                     genai.delete_file(uploaded_file.name)
@@ -167,20 +177,21 @@ async def generate_ai_exam_task(ctx, task_data: dict):
         ctx: ARQ context
         task_data: Task data containing archive_ids, user_id, prompt, temperature
     """
-    logger.info(f"[Worker] Processing task for user {task_data.get('user_id')}")
+    # logger.info(f"[Worker] Processing task for user {task_data.get('user_id')}")
     
     try:
         result = await generate_exam_content(
             archive_ids=task_data['archive_ids'],
+            user_id=task_data['user_id'],
             prompt=task_data.get('prompt'),
             temperature=task_data.get('temperature', 0.7)
         )
         
-        logger.info(f"[Worker] Task completed successfully")
+        # logger.info(f"[Worker] Task completed successfully")
         return result
         
     except Exception as e:
-        logger.error(f"[Worker] Task failed: {str(e)}")
+        # logger.error(f"[Worker] Task failed: {str(e)}")
         raise
 
 
