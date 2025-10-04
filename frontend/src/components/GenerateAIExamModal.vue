@@ -349,7 +349,7 @@ const apiKeyStatus = ref({ has_api_key: false, api_key_masked: null })
 const apiKeyForm = ref({ key: '' })
 const apiKeyLoading = ref(false)
 
-const TASK_STORAGE_KEY = 'ai_exam_current_task'
+const TASK_STORAGE_KEY = 'aiExamCurrentTask'
 
 const form = ref({
   category: null,

@@ -458,6 +458,7 @@ export default {
       sessionStorage.removeItem('authToken')
       localStorage.removeItem('selectedSubject')
       localStorage.removeItem('adminCurrentTab')
+      localStorage.removeItem('aiExamCurrentTask')
       this.isAuthenticated = false
       this.userData = null
 
