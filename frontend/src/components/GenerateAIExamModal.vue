@@ -156,8 +156,9 @@
       </div>
 
       <!-- 結果階段 -->
-      <div v-else-if="currentStep === 'result'" class="flex flex-column">
-        <div class="mb-4 p-3 surface-100 border-round">
+      <div v-else-if="currentStep === 'result'" class="flex flex-column gap-3">
+        <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
+        <div class="p-3 surface-100 border-round">
           <div class="text-sm text-500 mb-2">使用的考古題</div>
           <div v-for="(archive, index) in result.archives_used" :key="index" class="text-sm mb-1">
             <i class="pi pi-file-pdf text-red-500 mr-2"></i>
@@ -299,7 +300,7 @@
         <div class="flex justify-content-end gap-2">
           <Button
             v-if="apiKeyStatus.has_api_key"
-            label="清除"
+            label="移除"
             icon="pi pi-trash"
             severity="danger"
             @click="clearApiKey"
@@ -935,16 +936,16 @@ const clearApiKey = async () => {
 
     toast.add({
       severity: 'success',
-      summary: '清除成功',
-      detail: 'API Key 已清除',
+      summary: '移除成功',
+      detail: 'API Key 已移除',
       life: 3000,
     })
   } catch (error) {
     console.error('Failed to clear API key:', error)
     toast.add({
       severity: 'error',
-      summary: '清除失敗',
-      detail: 'API Key 清除失敗，請稍後再試',
+      summary: '移除失敗',
+      detail: 'API Key 移除失敗，請稍後再試',
       life: 3000,
     })
   } finally {
