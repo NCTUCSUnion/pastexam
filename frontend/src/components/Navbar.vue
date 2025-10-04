@@ -59,7 +59,7 @@
             <Button
               v-if="isAuthenticated"
               icon="pi pi-sparkles"
-              label="AI 生成試題"
+              label="AI 模擬試題"
               @click="openAIExamDialog"
               severity="info"
               size="small"
@@ -270,7 +270,7 @@
       </div>
     </Dialog>
 
-    <!-- AI 生成模擬試題 Modal -->
+    <!-- AI 模擬試題 Modal -->
     <GenerateAIExamModal
       :visible="aiExamDialogVisible"
       @update:visible="aiExamDialogVisible = $event"
