@@ -32,6 +32,7 @@ class User(SQLModel, table=True):
     is_admin: bool = Field(default=False)
     password_hash: Optional[str] = Field(default=None)
     is_local: bool = Field(default=False)
+    gemini_api_key: Optional[str] = Field(default=None)
     last_login: Optional[datetime] = Field(
         sa_column=Column(
             DateTime(timezone=True),
@@ -200,5 +201,43 @@ class ArchiveUpdateCourse(BaseModel):
     course_id: Optional[int] = None
     course_name: Optional[str] = None
     course_category: Optional[CourseCategory] = None
+
+
+# AI Exam related models
+class GenerateExamRequest(BaseModel):
+    archive_ids: List[int]
+    prompt: Optional[str] = None
+    temperature: Optional[float] = 0.7
+
+
+class TaskSubmitResponse(BaseModel):
+    task_id: str
+    status: str
+    message: str
+
+
+class TaskStatusResponse(BaseModel):
+    task_id: str
+    status: str  # pending, in_progress, complete, failed, not_found
+    result: Optional[dict] = None
+    error: Optional[str] = None
+    created_at: Optional[str] = None
+    completed_at: Optional[str] = None
+
+
+class GenerateExamResponse(BaseModel):
+    success: bool
+    generated_content: str
+    archives_used: List[dict]
+
+
+# API Key related models
+class ApiKeyUpdate(BaseModel):
+    gemini_api_key: Optional[str] = None
+
+
+class ApiKeyResponse(BaseModel):
+    has_api_key: bool
+    api_key_masked: Optional[str] = None
 
  
