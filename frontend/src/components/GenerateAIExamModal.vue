@@ -1,195 +1,185 @@
 <template>
-  <Dialog
-    :visible="visible"
-    @update:visible="$emit('update:visible', $event)"
-    :modal="true"
-    :draggable="false"
-    header="AI 生成模擬試題"
-    :style="{ width: '900px', maxWidth: '95vw' }"
-    :autoFocus="false"
-  >
-    <div v-if="currentStep === 'selectProfessor'" class="flex flex-column gap-4">
-      <div class="flex flex-column gap-2">
-        <label class="font-semibold">課程分類</label>
-        <Select
-          v-model="form.category"
-          :options="categoryOptions"
-          optionLabel="name"
-          optionValue="value"
-          placeholder="選擇課程分類"
-          class="w-full"
-          @change="onCategoryChange"
-        />
+  <div>
+    <Dialog
+      :visible="visible"
+      @update:visible="$emit('update:visible', $event)"
+      :modal="true"
+      :draggable="false"
+      header="AI 生成模擬試題"
+      :style="{ width: '900px', maxWidth: '95vw' }"
+      :autoFocus="false"
+    >
+      <div v-if="currentStep === 'selectProfessor'" class="flex flex-column gap-4">
+        <div class="flex flex-column gap-2">
+          <label class="font-semibold">課程分類</label>
+          <Select
+            v-model="form.category"
+            :options="categoryOptions"
+            optionLabel="name"
+            optionValue="value"
+            placeholder="選擇課程分類"
+            class="w-full"
+            @change="onCategoryChange"
+          />
+        </div>
+
+        <div class="flex flex-column gap-2">
+          <label class="font-semibold">課程名稱</label>
+          <Select
+            v-model="form.course_name"
+            :options="availableCourses"
+            optionLabel="name"
+            optionValue="name"
+            placeholder="選擇課程"
+            class="w-full"
+            :disabled="!form.category"
+            filter
+            @change="onCourseChange"
+          />
+        </div>
+
+        <div class="flex flex-column gap-2">
+          <label class="font-semibold">教授</label>
+          <Select
+            v-model="form.professor"
+            :options="availableProfessors"
+            placeholder="選擇教授"
+            class="w-full"
+            :disabled="!form.course_name"
+            filter
+            @change="onProfessorChange"
+          />
+        </div>
       </div>
 
-      <div class="flex flex-column gap-2">
-        <label class="font-semibold">課程名稱</label>
-        <Select
-          v-model="form.course_name"
-          :options="availableCourses"
-          optionLabel="name"
-          optionValue="name"
-          placeholder="選擇課程"
-          class="w-full"
-          :disabled="!form.category"
-          filter
-          @change="onCourseChange"
-        />
-      </div>
+      <!-- 步驟 2：選擇考古題 -->
+      <div v-else-if="currentStep === 'selectArchives'" class="flex flex-column gap-3">
+        <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
 
-      <div class="flex flex-column gap-2">
-        <label class="font-semibold">教授</label>
-        <Select
-          v-model="form.professor"
-          :options="availableProfessors"
-          placeholder="選擇教授"
-          class="w-full"
-          :disabled="!form.course_name"
-          filter
-          @change="onProfessorChange"
-        />
-      </div>
-    </div>
+        <!-- 類型篩選 -->
+        <div class="field">
+          <label for="archiveTypeFilter" class="block mb-2 font-semibold">考古題類型</label>
+          <Select
+            id="archiveTypeFilter"
+            v-model="archiveTypeFilter"
+            :options="archiveTypeOptions"
+            optionLabel="name"
+            optionValue="value"
+            placeholder="選擇類型"
+            class="w-full"
+            showClear
+          />
+        </div>
 
-    <!-- 步驟 2：選擇考古題 -->
-    <div v-else-if="currentStep === 'selectArchives'" class="flex flex-column gap-3">
-      <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
+        <div class="text-sm text-500">找到 {{ filteredArchives.length }} 份考古題</div>
 
-      <!-- 類型篩選 -->
-      <div class="field">
-        <label for="archiveTypeFilter" class="block mb-2 font-semibold">考古題類型</label>
-        <Select
-          id="archiveTypeFilter"
-          v-model="archiveTypeFilter"
-          :options="archiveTypeOptions"
-          optionLabel="name"
-          optionValue="value"
-          placeholder="選擇類型"
-          class="w-full"
-          showClear
-        />
-      </div>
+        <div v-if="filteredArchives.length === 0" class="p-4 text-center text-500">
+          <i class="pi pi-inbox text-4xl mb-3"></i>
+          <div>找不到該教授的期中考或期末考</div>
+        </div>
 
-      <div class="text-sm text-500">找到 {{ filteredArchives.length }} 份考古題</div>
-
-      <div v-if="filteredArchives.length === 0" class="p-4 text-center text-500">
-        <i class="pi pi-inbox text-4xl mb-3"></i>
-        <div>找不到該教授的期中考或期末考</div>
-      </div>
-
-      <div v-else class="flex flex-column gap-2" style="max-height: 30vh; overflow-y: auto">
-        <div
-          v-for="archive in filteredArchives"
-          :key="archive.id"
-          class="p-3 border-round surface-50"
-          :class="{
-            'surface-200': selectedArchiveIds.includes(archive.id),
-            'opacity-50': isArchiveDisabled(archive.id),
-          }"
-        >
-          <div class="flex align-items-center gap-3">
-            <Checkbox
-              :modelValue="selectedArchiveIds.includes(archive.id)"
-              :binary="true"
-              :disabled="isArchiveDisabled(archive.id)"
-              @change="toggleArchiveSelection(archive.id)"
-            />
-            <div
-              class="flex-1 cursor-pointer"
-              @click="!isArchiveDisabled(archive.id) && toggleArchiveSelection(archive.id)"
-            >
-              <div class="font-semibold">{{ archive.name }}</div>
-              <div class="text-sm text-500 mt-1">
-                <span class="mr-3">
-                  <i class="pi pi-calendar mr-1"></i>
-                  {{ archive.academic_year }}
-                </span>
-                <span>
-                  <i class="pi pi-bookmark mr-1"></i>
-                  {{ getArchiveTypeName(archive.archive_type) }}
-                </span>
+        <div v-else class="flex flex-column gap-2" style="max-height: 30vh; overflow-y: auto">
+          <div
+            v-for="archive in filteredArchives"
+            :key="archive.id"
+            class="p-3 border-round surface-50"
+            :class="{
+              'surface-200': selectedArchiveIds.includes(archive.id),
+              'opacity-50': isArchiveDisabled(archive.id),
+            }"
+          >
+            <div class="flex align-items-center gap-3">
+              <Checkbox
+                :modelValue="selectedArchiveIds.includes(archive.id)"
+                :binary="true"
+                :disabled="isArchiveDisabled(archive.id)"
+                @change="toggleArchiveSelection(archive.id)"
+              />
+              <div
+                class="flex-1 cursor-pointer"
+                @click="!isArchiveDisabled(archive.id) && toggleArchiveSelection(archive.id)"
+              >
+                <div class="font-semibold">{{ archive.name }}</div>
+                <div class="text-sm text-500 mt-1">
+                  <span class="mr-3">
+                    <i class="pi pi-calendar mr-1"></i>
+                    {{ archive.academic_year }}
+                  </span>
+                  <span>
+                    <i class="pi pi-bookmark mr-1"></i>
+                    {{ getArchiveTypeName(archive.archive_type) }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="flex flex-column gap-2">
-        <div v-if="selectedArchiveIds.length > 0" class="p-3 bg-blue-50 border-round">
-          <div class="flex align-items-center gap-2">
-            <i class="pi pi-check-circle text-blue-600"></i>
-            <span class="text-blue-700">已選擇 {{ selectedArchiveIds.length }} / 3 份考古題</span>
+        <div class="flex flex-column">
+          <div class="text-sm text-500">
+            建議選擇 2-3 份考古題以獲得最佳生成效果
+            <span v-if="selectedArchiveIds.length > 0" class="font-semibold text-green-600">
+              （已選擇 {{ selectedArchiveIds.length }}/3）
+            </span>
           </div>
         </div>
-        <div class="text-sm text-500">建議選擇 2-3 份考古題以獲得最佳生成效果</div>
       </div>
-    </div>
 
-    <div
-      v-else-if="currentStep === 'generating'"
-      class="flex flex-column align-items-center justify-content-center p-6"
-    >
-      <ProgressSpinner strokeWidth="4" />
-      <p class="mt-4 text-lg font-semibold">AI 正在分析考古題並生成模擬試題...</p>
-      <p class="text-sm text-500 mt-2">這可能需要 30-60 秒，請稍候</p>
-      <div class="mt-4 text-center">
-        <p class="text-sm text-500">正在分析：</p>
-        <p class="font-semibold">{{ form.course_name }} - {{ form.professor }}</p>
-      </div>
-    </div>
-
-    <div
-      v-else-if="currentStep === 'error'"
-      class="flex flex-column align-items-center justify-content-center p-6"
-    >
-      <i class="pi pi-exclamation-triangle text-6xl text-red-500 mb-4"></i>
-      <p class="text-lg font-semibold text-red-600 mb-2">生成失敗</p>
-      <p class="text-500">{{ errorMessage }}</p>
-    </div>
-
-    <!-- 結果階段 -->
-    <div v-else-if="currentStep === 'result'" class="flex flex-column">
-      <div class="mb-4 p-3 surface-100 border-round">
-        <div class="text-sm text-500 mb-2">使用的考古題</div>
-        <div v-for="(archive, index) in result.archives_used" :key="index" class="text-sm mb-1">
-          <i class="pi pi-file-pdf text-red-500 mr-2"></i>
-          <span class="font-semibold">{{ archive.academic_year }}</span> -
-          {{ archive.name }}
+      <div
+        v-else-if="currentStep === 'generating'"
+        class="flex flex-column align-items-center justify-content-center p-6"
+      >
+        <ProgressSpinner strokeWidth="4" />
+        <p class="mt-4 text-lg font-semibold">AI 正在分析考古題並生成模擬試題...</p>
+        <p class="text-sm text-500 mt-2">這可能需要 2-5 分鐘，請稍候</p>
+        <div class="mt-4 text-center">
+          <p class="text-sm text-500">正在分析：</p>
+          <p class="font-semibold">{{ form.course_name }} - {{ form.professor }}</p>
         </div>
       </div>
 
-      <Divider />
+      <div
+        v-else-if="currentStep === 'error'"
+        class="flex flex-column align-items-center justify-content-center p-6"
+      >
+        <i class="pi pi-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+        <p class="text-lg font-semibold text-red-600 mb-2">生成失敗</p>
+        <p class="text-500">{{ errorMessage }}</p>
+      </div>
 
-      <div class="generated-content" style="max-height: 50vh; overflow-y: auto">
-        <div class="flex justify-content-between align-items-center mb-3">
-          <div class="text-lg font-semibold">生成的模擬試題</div>
-          <Button
-            icon="pi pi-copy"
-            label="複製"
-            size="small"
-            severity="secondary"
-            @click="copyContent"
-          />
+      <!-- 結果階段 -->
+      <div v-else-if="currentStep === 'result'" class="flex flex-column">
+        <div class="mb-4 p-3 surface-100 border-round">
+          <div class="text-sm text-500 mb-2">使用的考古題</div>
+          <div v-for="(archive, index) in result.archives_used" :key="index" class="text-sm mb-1">
+            <i class="pi pi-file-pdf text-red-500 mr-2"></i>
+            <span class="font-semibold">{{ archive.academic_year }}</span> -
+            {{ archive.name }}
+          </div>
         </div>
-        <div class="whitespace-pre-wrap p-3 surface-50 border-round" style="line-height: 1.8">
-          {{ result.generated_content }}
+
+        <Divider />
+
+        <div class="generated-content" style="max-height: 50vh; overflow-y: auto">
+          <div class="flex justify-content-between align-items-center mb-3">
+            <div class="text-lg font-semibold">生成的模擬試題</div>
+            <Button
+              icon="pi pi-copy"
+              label="複製"
+              size="small"
+              severity="secondary"
+              @click="copyContent"
+            />
+          </div>
+          <div class="whitespace-pre-wrap p-3 surface-50 border-round" style="line-height: 1.8">
+            {{ result.generated_content }}
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 底部按鈕 -->
-    <template #footer>
-      <div class="flex justify-content-between w-full">
-        <div>
-          <Button
-            v-if="currentStep === 'result'"
-            label="重新生成"
-            icon="pi pi-refresh"
-            severity="secondary"
-            @click="resetToSelect"
-          />
-        </div>
-        <div class="flex gap-2">
+      <!-- 底部按鈕 -->
+      <template #footer>
+        <div class="flex justify-content-end gap-2">
           <Button
             v-if="currentStep === 'selectArchives'"
             label="上一步"
@@ -197,7 +187,6 @@
             severity="secondary"
             @click="goBackToProfessorSelection"
           />
-          <Button v-else label="關閉" icon="pi pi-times" severity="secondary" @click="closeModal" />
           <Button
             v-if="currentStep === 'selectProfessor'"
             label="下一步"
@@ -216,6 +205,13 @@
           />
           <Button
             v-else-if="currentStep === 'result'"
+            label="重新生成"
+            icon="pi pi-refresh"
+            severity="secondary"
+            @click="confirmRegenerate"
+          />
+          <Button
+            v-if="currentStep === 'result'"
             label="下載 TXT"
             icon="pi pi-download"
             severity="success"
@@ -229,9 +225,9 @@
             @click="resetToSelect"
           />
         </div>
-      </div>
-    </template>
-  </Dialog>
+      </template>
+    </Dialog>
+  </div>
 </template>
 
 <script setup>
@@ -244,15 +240,20 @@ const props = defineProps({
   coursesList: Object,
 })
 
+// eslint-disable-next-line no-unused-vars
 const emit = defineEmits(['update:visible'])
 
 const toast = inject('toast')
+const confirm = inject('confirm')
 
-const currentStep = ref('selectProfessor') // 'selectProfessor', 'selectArchives', 'generating', 'result', 'error'
+const currentStep = ref('selectProfessor')
 const errorMessage = ref('')
 const result = ref(null)
 const availableArchives = ref([])
 const selectedArchiveIds = ref([])
+const currentTaskId = ref(null)
+
+const TASK_STORAGE_KEY = 'ai_exam_current_task'
 
 const form = ref({
   category: null,
@@ -294,7 +295,6 @@ const archiveTypeOptions = [
   { name: '期末考', value: 'final' },
 ]
 
-// 只顯示期中考和期末考，並根據選擇的類型篩選
 const filteredArchives = computed(() => {
   let archives = availableArchives.value.filter(
     (archive) => archive.archive_type === 'midterm' || archive.archive_type === 'final'
@@ -423,7 +423,7 @@ const goToArchiveSelection = async () => {
     toast.add({
       severity: 'error',
       summary: '載入失敗',
-      detail: '無法載入考古題清單',
+      detail: '服務暫時無法使用，請稍後再試',
       life: 3000,
     })
   }
@@ -435,40 +435,196 @@ const goBackToProfessorSelection = () => {
   archiveTypeFilter.value = null
 }
 
+let pollInterval = null
+
+const saveTaskToStorage = (taskId, displayInfo = {}) => {
+  try {
+    localStorage.setItem(
+      TASK_STORAGE_KEY,
+      JSON.stringify({
+        taskId,
+        displayInfo, // 只保存顯示用的信息
+        timestamp: Date.now(),
+      })
+    )
+  } catch (e) {
+    console.error('Failed to save task to storage:', e)
+  }
+}
+
+const clearTaskFromStorage = () => {
+  try {
+    localStorage.removeItem(TASK_STORAGE_KEY)
+  } catch (e) {
+    console.error('Failed to clear task from storage:', e)
+  }
+}
+
+const loadTaskFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(TASK_STORAGE_KEY)
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (e) {
+    console.error('Failed to load task from storage:', e)
+  }
+  return null
+}
+
+const resumeTask = async (taskId) => {
+  currentTaskId.value = taskId
+  currentStep.value = 'generating'
+
+  pollInterval = setInterval(async () => {
+    try {
+      const { data: statusData } = await aiExamService.getTaskStatus(taskId)
+
+      if (statusData.status === 'complete') {
+        clearInterval(pollInterval)
+        pollInterval = null
+
+        result.value = statusData.result
+        currentStep.value = 'result'
+
+        toast.add({
+          severity: 'success',
+          summary: '生成成功',
+          detail: '模擬試題已成功生成',
+          life: 3000,
+        })
+
+        trackEvent(EVENTS.GENERATE_AI_EXAM, {
+          category: form.value.category || 'resumed',
+          courseName: form.value.course_name || 'resumed',
+          professor: form.value.professor || 'resumed',
+          archivesUsed: statusData.result.archives_used.length,
+        })
+      } else if (statusData.status === 'failed' || statusData.status === 'not_found') {
+        clearInterval(pollInterval)
+        pollInterval = null
+        clearTaskFromStorage()
+
+        errorMessage.value = '生成失敗，請稍後再試'
+        currentStep.value = 'error'
+
+        toast.add({
+          severity: 'error',
+          summary: '生成失敗',
+          detail: errorMessage.value,
+          life: 5000,
+        })
+      }
+    } catch (error) {
+      console.error('Error polling task status:', error)
+      clearInterval(pollInterval)
+      pollInterval = null
+      clearTaskFromStorage()
+
+      errorMessage.value = '服務暫時無法使用，請稍後再試'
+      currentStep.value = 'error'
+
+      toast.add({
+        severity: 'error',
+        summary: '查詢失敗',
+        detail: errorMessage.value,
+        life: 5000,
+      })
+    }
+  }, 3000)
+}
+
 const generateExam = async () => {
   if (selectedArchiveIds.value.length === 0) return
 
+  clearTaskFromStorage()
   currentStep.value = 'generating'
 
   try {
-    const { data } = await aiExamService.generateMockExam({
+    const { data: taskData } = await aiExamService.generateMockExam({
       archive_ids: selectedArchiveIds.value,
     })
 
-    result.value = data
-    currentStep.value = 'result'
+    const taskId = taskData.task_id
+    currentTaskId.value = taskId
+
+    saveTaskToStorage(taskId, {
+      course_name: form.value.course_name,
+      professor: form.value.professor,
+    })
 
     toast.add({
-      severity: 'success',
-      summary: '生成成功',
-      detail: '模擬試題已成功生成',
-      life: 3000,
+      severity: 'info',
+      summary: '任務已提交',
+      detail: '您可以關閉視窗，稍後回來查看結果',
+      life: 5000,
     })
 
-    trackEvent(EVENTS.GENERATE_AI_EXAM, {
-      category: form.value.category,
-      courseName: form.value.course_name,
-      professor: form.value.professor,
-      archivesUsed: data.archives_used.length,
-    })
+    pollInterval = setInterval(async () => {
+      try {
+        const { data: statusData } = await aiExamService.getTaskStatus(taskId)
+
+        if (statusData.status === 'complete') {
+          clearInterval(pollInterval)
+          pollInterval = null
+
+          result.value = statusData.result
+          currentStep.value = 'result'
+
+          toast.add({
+            severity: 'success',
+            summary: '生成成功',
+            detail: '模擬試題已成功生成',
+            life: 3000,
+          })
+
+          trackEvent(EVENTS.GENERATE_AI_EXAM, {
+            category: form.value.category,
+            courseName: form.value.course_name,
+            professor: form.value.professor,
+            archivesUsed: statusData.result.archives_used.length,
+          })
+        } else if (statusData.status === 'failed' || statusData.status === 'not_found') {
+          clearInterval(pollInterval)
+          pollInterval = null
+          clearTaskFromStorage()
+
+          errorMessage.value = '生成失敗，請稍後再試'
+          currentStep.value = 'error'
+
+          toast.add({
+            severity: 'error',
+            summary: '生成失敗',
+            detail: errorMessage.value,
+            life: 5000,
+          })
+        }
+      } catch (error) {
+        console.error('Error polling task status:', error)
+        clearInterval(pollInterval)
+        pollInterval = null
+        clearTaskFromStorage()
+
+        errorMessage.value = '服務暫時無法使用，請稍後再試'
+        currentStep.value = 'error'
+
+        toast.add({
+          severity: 'error',
+          summary: '查詢失敗',
+          detail: errorMessage.value,
+          life: 5000,
+        })
+      }
+    }, 3000)
   } catch (error) {
     console.error('AI generation error:', error)
-    errorMessage.value = error.response?.data?.detail || '生成失敗，請稍後再試'
+    clearTaskFromStorage()
+    errorMessage.value = '提交失敗，請稍後再試'
     currentStep.value = 'error'
 
     toast.add({
       severity: 'error',
-      summary: '生成失敗',
+      summary: '提交失敗',
       detail: errorMessage.value,
       life: 5000,
     })
@@ -520,40 +676,89 @@ const downloadResult = () => {
 }
 
 const resetToSelect = () => {
+  clearTaskFromStorage()
   currentStep.value = 'selectProfessor'
   errorMessage.value = ''
   result.value = null
   selectedArchiveIds.value = []
   availableArchives.value = []
   archiveTypeFilter.value = null
+  currentTaskId.value = null
 }
 
-const closeModal = () => {
-  emit('update:visible', false)
-  setTimeout(() => {
-    resetToSelect()
-    form.value = {
-      category: null,
-      course_name: null,
-      professor: null,
-    }
-    availableProfessors.value = []
-  }, 300)
+const confirmRegenerate = () => {
+  confirm.require({
+    message:
+      '你將回到一開始選擇的介面，並且現在的內容將無法再取得。如需保留請先下載。確定要繼續嗎？',
+    header: '確認重新生成',
+    icon: 'pi pi-exclamation-triangle',
+    accept: () => {
+      resetToSelect()
+    },
+  })
 }
 
 watch(
   () => props.visible,
-  (newVal) => {
-    if (!newVal) {
-      // Modal 關閉時重置
-      setTimeout(() => {
-        resetToSelect()
-        form.value = {
-          category: null,
-          course_name: null,
-          professor: null,
+  async (newVal) => {
+    if (newVal) {
+      // Check for unfinished task when modal opens
+      const savedTask = loadTaskFromStorage()
+      if (savedTask && savedTask.taskId) {
+        try {
+          const { data: statusData } = await aiExamService.getTaskStatus(savedTask.taskId)
+
+          if (statusData.status === 'complete') {
+            result.value = statusData.result
+            currentStep.value = 'result'
+            currentTaskId.value = savedTask.taskId
+
+            // 恢復顯示信息
+            if (savedTask.displayInfo) {
+              if (savedTask.displayInfo.course_name)
+                form.value.course_name = savedTask.displayInfo.course_name
+              if (savedTask.displayInfo.professor)
+                form.value.professor = savedTask.displayInfo.professor
+            }
+          } else if (statusData.status === 'pending' || statusData.status === 'in_progress') {
+            // 恢復顯示信息
+            if (savedTask.displayInfo) {
+              if (savedTask.displayInfo.course_name)
+                form.value.course_name = savedTask.displayInfo.course_name
+              if (savedTask.displayInfo.professor)
+                form.value.professor = savedTask.displayInfo.professor
+            }
+            await resumeTask(savedTask.taskId)
+          } else {
+            clearTaskFromStorage()
+          }
+        } catch (error) {
+          console.error('Failed to check saved task:', error)
+          clearTaskFromStorage()
         }
-        availableProfessors.value = []
+      }
+    } else {
+      if (pollInterval) {
+        clearInterval(pollInterval)
+        pollInterval = null
+      }
+
+      // Reset form only if no task has started
+      setTimeout(() => {
+        if (currentStep.value === 'selectProfessor' || currentStep.value === 'selectArchives') {
+          // Only reset form if still in selection phase (no task started)
+          form.value = {
+            category: null,
+            course_name: null,
+            professor: null,
+          }
+          availableProfessors.value = []
+          selectedArchiveIds.value = []
+          availableArchives.value = []
+          archiveTypeFilter.value = null
+          errorMessage.value = ''
+        }
+        // Don't reset currentTaskId and result if task has been started
       }, 300)
     }
   }

@@ -26,6 +26,23 @@ services:
     networks:
       - app_network
 
+  worker:
+    image: ghcr.io/nctucsunion/pastexam:backend
+    container_name: pastexam-worker
+    restart: always
+    command: arq app.worker.WorkerSettings
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    env_file:
+      - ../backend/.env
+    networks:
+      - app_network
+
   db:
     image: postgres:15.14-alpine3.22
     container_name: pastexam-postgres
