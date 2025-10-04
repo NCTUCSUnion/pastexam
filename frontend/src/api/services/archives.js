@@ -9,10 +9,12 @@ export const archiveService = {
     })
   },
 
-  getArchiveUrl(courseId, archiveId, isDownload = false) {
-    return api.get(`/courses/${courseId}/archives/${archiveId}/url`, {
-      params: { is_download: isDownload },
-    })
+  getArchivePreviewUrl(courseId, archiveId) {
+    return api.get(`/courses/${courseId}/archives/${archiveId}/preview`)
+  },
+
+  getArchiveDownloadUrl(courseId, archiveId) {
+    return api.get(`/courses/${courseId}/archives/${archiveId}/download`)
   },
 
   deleteArchive(courseId, archiveId) {

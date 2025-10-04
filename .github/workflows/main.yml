@@ -81,6 +81,9 @@ jobs:
             ghcr.io/nctucsunion/pastexam:frontend-${{ github.sha }}
           build-args: |
             VITE_API_BASE_URL=${{ secrets.FRONTEND_API_BASE_URL }}
+            VITE_UMAMI_SHARE_URL=${{ secrets.FRONTEND_UMAMI_SHARE_URL }}
+          cache-from: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache
+          cache-to: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache,mode=max
 
       - name: Build and push Backend Docker image
         uses: docker/build-push-action@v4
@@ -92,3 +95,5 @@ jobs:
           tags: |
             ghcr.io/nctucsunion/pastexam:backend
             ghcr.io/nctucsunion/pastexam:backend-${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/nctucsunion/pastexam:backend-buildcache
+          cache-to: type=registry,ref=ghcr.io/nctucsunion/pastexam:backend-buildcache,mode=max

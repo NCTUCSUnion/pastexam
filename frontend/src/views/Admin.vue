@@ -5,6 +5,7 @@
         <TabList>
           <Tab value="0">課程管理</Tab>
           <Tab value="1">使用者管理</Tab>
+          <Tab value="2">網站分析</Tab>
         </TabList>
         <TabPanels>
           <TabPanel value="0">
@@ -183,6 +184,53 @@
                   </template>
                 </Column>
               </DataTable>
+            </div>
+          </TabPanel>
+
+          <TabPanel value="2">
+            <div class="p-2 md:p-4 h-full">
+              <div class="flex flex-column gap-3 h-full">
+                <div class="flex justify-content-end align-items-center mb-2">
+                  <Button
+                    v-if="umamiShareUrl"
+                    label="在新視窗開啟"
+                    icon="pi pi-external-link"
+                    severity="secondary"
+                    size="small"
+                    @click="openUmamiInNewTab"
+                  />
+                </div>
+
+                <!-- Loading state -->
+                <div
+                  v-if="umamiLoading"
+                  class="flex-1 flex align-items-center justify-content-center"
+                >
+                  <ProgressSpinner strokeWidth="4" />
+                </div>
+
+                <!-- Error state: No URL configured -->
+                <div
+                  v-else-if="!umamiShareUrl"
+                  class="flex-1 flex flex-column align-items-center justify-content-center gap-4"
+                >
+                  <i class="pi pi-exclamation-circle text-6xl text-red-500" />
+                  <div class="text-xl">無法載入網站分析</div>
+                  <div class="text-sm text-500">請聯絡管理員設定 Umami</div>
+                </div>
+
+                <!-- Success state: Show iframe -->
+                <div v-else class="umami-iframe-container">
+                  <iframe
+                    :src="umamiShareUrl"
+                    frameborder="0"
+                    class="umami-iframe"
+                    title="Umami Analytics"
+                    @load="handleUmamiLoaded"
+                    @error="handleUmamiError"
+                  ></iframe>
+                </div>
+              </div>
             </div>
           </TabPanel>
         </TabPanels>
@@ -382,6 +430,29 @@ const userForm = ref({
 const userFormErrors = ref({})
 
 const currentUserId = computed(() => getCurrentUser()?.id)
+
+const umamiShareUrl = ref(import.meta.env.VITE_UMAMI_SHARE_URL || '')
+const umamiLoading = ref(false)
+
+const openUmamiInNewTab = () => {
+  if (umamiShareUrl.value) {
+    window.open(umamiShareUrl.value, '_blank')
+  }
+}
+
+const handleUmamiLoaded = () => {
+  umamiLoading.value = false
+}
+
+const handleUmamiError = () => {
+  umamiLoading.value = false
+  toast.add({
+    severity: 'error',
+    summary: '錯誤',
+    detail: '無法載入 Umami 分析頁面',
+    life: 3000,
+  })
+}
 
 const categoryOptions = [
   { name: '大一課程', value: 'freshman' },
@@ -873,8 +944,29 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
+.umami-iframe-container {
+  width: 100%;
+  height: calc(100vh - var(--navbar-height) - 200px);
+  min-height: 600px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.umami-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
+  .umami-iframe-container {
+    height: calc(100vh - var(--navbar-height) - 200px);
+    min-height: 400px;
+  }
+
   :deep(.p-dialog .p-dialog-content) {
     font-size: 0.875rem;
   }
