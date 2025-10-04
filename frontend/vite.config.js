@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import Components from 'unplugin-vue-components/vite'
 import { PrimeVueResolver } from '@primevue/auto-import-resolver'
 import eslintPlugin from 'vite-plugin-eslint'
+import Sitemap from 'vite-plugin-sitemap'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,6 +16,15 @@ export default defineConfig({
     tailwindcss(),
     Components({
       resolvers: [PrimeVueResolver()],
+    }),
+    Sitemap({
+      hostname: 'https://pastexam.nctucsunion.me', // 請修改為您的實際網域
+      dynamicRoutes: ['/', '/archive', '/admin', '/login/callback'],
+      changefreq: 'weekly',
+      priority: 0.8,
+      lastmod: new Date(),
+      exclude: ['/login/callback', '/admin'],
+      readable: true,
     }),
   ],
 })
