@@ -121,6 +121,7 @@
                 label="系統管理"
                 @click="
                   () => {
+                    trackEvent(EVENTS.NAVIGATE_ADMIN, { from: 'mobile-drawer' })
                     router.push('/admin')
                     sidebarVisible = false
                   }
@@ -467,6 +468,7 @@ import UploadArchiveDialog from '../components/UploadArchiveDialog.vue'
 import { getCurrentUser, isAuthenticated } from '../utils/auth'
 import { useTheme } from '../utils/useTheme'
 import { useRouter } from 'vue-router'
+import { trackEvent, EVENTS } from '../utils/analytics'
 
 const toast = inject('toast')
 const confirm = inject('confirm')
@@ -489,6 +491,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', checkDevice)
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
 })
 
 // Auth related data
@@ -503,6 +508,39 @@ const filters = ref({
   type: '',
   hasAnswers: false,
 })
+
+// Track filter changes
+watch(
+  filters,
+  (newFilters, oldFilters) => {
+    // Only track if at least one filter is active and different from old value
+    const hasActiveFilter =
+      newFilters.year || newFilters.professor || newFilters.type || newFilters.hasAnswers
+
+    if (hasActiveFilter && oldFilters) {
+      const changedFilters = {}
+      if (newFilters.year !== oldFilters.year) changedFilters.year = !!newFilters.year
+      if (newFilters.professor !== oldFilters.professor)
+        changedFilters.professor = !!newFilters.professor
+      if (newFilters.type !== oldFilters.type) changedFilters.type = !!newFilters.type
+      if (newFilters.hasAnswers !== oldFilters.hasAnswers)
+        changedFilters.hasAnswers = newFilters.hasAnswers
+
+      if (Object.keys(changedFilters).length > 0) {
+        trackEvent(EVENTS.FILTER_ARCHIVES, {
+          activeFilters: {
+            year: !!newFilters.year,
+            professor: !!newFilters.professor,
+            type: !!newFilters.type,
+            hasAnswers: newFilters.hasAnswers,
+          },
+          changedFilters,
+        })
+      }
+    }
+  },
+  { deep: true }
+)
 
 const showPreview = ref(false)
 const selectedArchive = ref(null)
@@ -565,6 +603,23 @@ const professors = ref([])
 const archiveTypes = ref([])
 
 const searchQuery = ref('')
+
+// Track search query changes with debounce
+let searchDebounceTimer = null
+watch(searchQuery, (newValue) => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+
+  if (newValue && newValue.trim().length > 0) {
+    searchDebounceTimer = setTimeout(() => {
+      trackEvent(EVENTS.SEARCH_COURSE, {
+        query: newValue,
+        queryLength: newValue.length,
+      })
+    }, 1000) // 1 second debounce
+  }
+})
 
 const menuItems = computed(() => {
   if (!coursesList.value) return []
@@ -725,6 +780,11 @@ function filterBySubject(course) {
     return
   }
 
+  trackEvent(EVENTS.SELECT_COURSE, {
+    courseName: course.label,
+    courseId: course.id,
+  })
+
   selectedSubject.value = course.label
   selectedCourse.value = course.id
   filters.value.professor = ''
@@ -830,6 +890,15 @@ async function downloadArchive(archive) {
     window.URL.revokeObjectURL(url)
     link.remove()
 
+    trackEvent(EVENTS.DOWNLOAD_ARCHIVE, {
+      archiveName: archive.name,
+      year: archive.year,
+      professor: archive.professor,
+      type: archive.type,
+      courseName: selectedSubject.value,
+      source: 'archive-list',
+    })
+
     toast.add({
       severity: 'success',
       summary: '下載成功',
@@ -866,6 +935,14 @@ async function previewArchive(archive) {
       ...archive,
       previewUrl: data.url,
     }
+
+    trackEvent(EVENTS.PREVIEW_ARCHIVE, {
+      archiveName: archive.name,
+      year: archive.year,
+      professor: archive.professor,
+      type: archive.type,
+      courseName: selectedSubject.value,
+    })
   } catch (error) {
     console.error('Preview error:', error)
     previewError.value = true
@@ -979,6 +1056,15 @@ const confirmDelete = (archive) => {
 const deleteArchive = async (archive) => {
   try {
     await archiveService.deleteArchive(selectedCourse.value, archive.id)
+
+    trackEvent(EVENTS.DELETE_ARCHIVE, {
+      archiveName: archive.name,
+      year: archive.year,
+      professor: archive.professor,
+      type: archive.type,
+      courseName: selectedSubject.value,
+    })
+
     await fetchArchives()
     toast.add({
       severity: 'success',
@@ -1029,6 +1115,12 @@ const openEditDialog = async (archive) => {
 
     availableEditProfessors.value = uploadFormProfessors.value
 
+    trackEvent(EVENTS.EDIT_ARCHIVE, {
+      action: 'open-dialog',
+      archiveName: archive.name,
+      year: archive.year,
+    })
+
     showEditDialog.value = true
   } catch (error) {
     console.error('Error fetching professors:', error)
@@ -1071,6 +1163,12 @@ const handleEdit = async () => {
         )
       }
     }
+
+    trackEvent(EVENTS.EDIT_ARCHIVE, {
+      action: 'submit',
+      transferred: editForm.value.shouldTransfer,
+      targetCategory: editForm.value.shouldTransfer ? editForm.value.targetCategory : null,
+    })
 
     await fetchArchives()
 
@@ -1142,6 +1240,10 @@ onMounted(async () => {
 watch(isDarkTheme, () => {})
 
 async function handleUploadSuccess() {
+  trackEvent(EVENTS.UPLOAD_ARCHIVE, {
+    courseName: selectedSubject.value,
+  })
+
   await fetchCourses()
   if (selectedCourse.value) {
     await fetchArchives()
@@ -1166,6 +1268,7 @@ function formatDownloadCount(count) {
 }
 
 function toggleSidebar() {
+  trackEvent(EVENTS.TOGGLE_SIDEBAR, { visible: !sidebarVisible.value })
   sidebarVisible.value = !sidebarVisible.value
 }
 
@@ -1192,6 +1295,15 @@ async function handlePreviewDownload(onComplete) {
     link.click()
     window.URL.revokeObjectURL(url)
     link.remove()
+
+    trackEvent(EVENTS.DOWNLOAD_ARCHIVE, {
+      archiveName: selectedArchive.value.name,
+      year: selectedArchive.value.year,
+      professor: selectedArchive.value.professor,
+      type: selectedArchive.value.type,
+      courseName: selectedSubject.value,
+      source: 'preview-modal',
+    })
 
     toast.add({
       severity: 'success',

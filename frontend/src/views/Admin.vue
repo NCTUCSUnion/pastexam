@@ -1,7 +1,7 @@
 <template>
   <div class="h-full px-2 md:px-4 admin-container">
     <div class="card h-full flex flex-col">
-      <Tabs value="0" class="flex-1">
+      <Tabs value="0" class="flex-1" @update:value="handleTabChange">
         <TabList>
           <Tab value="0">課程管理</Tab>
           <Tab value="1">使用者管理</Tab>
@@ -382,6 +382,7 @@ import {
   updateUser,
   deleteUser,
 } from '../api'
+import { trackEvent, EVENTS } from '../utils/analytics'
 
 const confirm = useConfirm()
 const toast = useToast()
@@ -436,6 +437,7 @@ const umamiLoading = ref(false)
 
 const openUmamiInNewTab = () => {
   if (umamiShareUrl.value) {
+    trackEvent(EVENTS.OPEN_ANALYTICS_NEW_TAB)
     window.open(umamiShareUrl.value, '_blank')
   }
 }
@@ -570,6 +572,7 @@ const openCreateDialog = () => {
   courseFormErrors.value = {}
   editingCourse.value = null
   showCourseDialog.value = true
+  trackEvent(EVENTS.CREATE_COURSE, { action: 'open-dialog' })
 }
 
 const openEditDialog = (course) => {
@@ -580,6 +583,7 @@ const openEditDialog = (course) => {
   courseFormErrors.value = {}
   editingCourse.value = course
   showCourseDialog.value = true
+  trackEvent(EVENTS.UPDATE_COURSE, { action: 'open-dialog', courseName: course.name })
 }
 
 const closeCourseDialog = () => {
@@ -614,6 +618,11 @@ const saveCourse = async () => {
   try {
     if (editingCourse.value) {
       await updateCourse(editingCourse.value.id, courseForm.value)
+      trackEvent(EVENTS.UPDATE_COURSE, {
+        action: 'submit',
+        courseName: courseForm.value.name,
+        category: courseForm.value.category,
+      })
       toast.add({
         severity: 'success',
         summary: '成功',
@@ -622,6 +631,11 @@ const saveCourse = async () => {
       })
     } else {
       await createCourse(courseForm.value)
+      trackEvent(EVENTS.CREATE_COURSE, {
+        action: 'submit',
+        courseName: courseForm.value.name,
+        category: courseForm.value.category,
+      })
       toast.add({
         severity: 'success',
         summary: '成功',
@@ -660,6 +674,10 @@ const confirmDeleteCourse = (course) => {
 const deleteCourseAction = async (course) => {
   try {
     await deleteCourse(course.id)
+    trackEvent(EVENTS.DELETE_COURSE, {
+      courseName: course.name,
+      category: course.category,
+    })
     toast.add({
       severity: 'success',
       summary: '成功',
@@ -688,6 +706,7 @@ const openCreateUserDialog = () => {
   userFormErrors.value = {}
   editingUser.value = null
   showUserDialog.value = true
+  trackEvent(EVENTS.CREATE_USER, { action: 'open-dialog' })
 }
 
 const openEditUserDialog = (user) => {
@@ -700,6 +719,7 @@ const openEditUserDialog = (user) => {
   userFormErrors.value = {}
   editingUser.value = user
   showUserDialog.value = true
+  trackEvent(EVENTS.UPDATE_USER, { action: 'open-dialog', userName: user.name })
 }
 
 const closeUserDialog = () => {
@@ -750,6 +770,11 @@ const saveUser = async () => {
         updateData.password = userForm.value.password
       }
       await updateUser(editingUser.value.id, updateData)
+      trackEvent(EVENTS.UPDATE_USER, {
+        action: 'submit',
+        userName: userForm.value.name,
+        isAdmin: userForm.value.is_admin,
+      })
       toast.add({
         severity: 'success',
         summary: '成功',
@@ -758,6 +783,11 @@ const saveUser = async () => {
       })
     } else {
       await createUser(userForm.value)
+      trackEvent(EVENTS.CREATE_USER, {
+        action: 'submit',
+        userName: userForm.value.name,
+        isAdmin: userForm.value.is_admin,
+      })
       toast.add({
         severity: 'success',
         summary: '成功',
@@ -796,6 +826,10 @@ const confirmDeleteUser = (user) => {
 const deleteUserAction = async (user) => {
   try {
     await deleteUser(user.id)
+    trackEvent(EVENTS.DELETE_USER, {
+      userName: user.name,
+      isAdmin: user.is_admin,
+    })
     toast.add({
       severity: 'success',
       summary: '成功',
@@ -845,6 +879,22 @@ const formatDateTime = (dateString) => {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+}
+
+const handleTabChange = (value) => {
+  const tabNames = {
+    0: 'courses',
+    1: 'users',
+    2: 'analytics',
+  }
+
+  trackEvent(EVENTS.SWITCH_TAB, {
+    tab: tabNames[value] || value,
+  })
+
+  if (value === '2') {
+    trackEvent(EVENTS.VIEW_ANALYTICS)
   }
 }
 

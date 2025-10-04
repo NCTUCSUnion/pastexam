@@ -349,6 +349,7 @@ import { useToast } from 'primevue/usetoast'
 import { courseService, archiveService } from '../api'
 import PdfPreviewModal from './PdfPreviewModal.vue'
 import { PDFDocument } from 'pdf-lib'
+import { trackEvent, EVENTS } from '../utils/analytics'
 
 const props = defineProps({
   modelValue: {
@@ -561,6 +562,12 @@ function previewUploadFile() {
     const fileUrl = URL.createObjectURL(new Blob([form.value.file], { type: 'application/pdf' }))
     uploadPreviewUrl.value = fileUrl
     showUploadPreview.value = true
+
+    trackEvent(EVENTS.PREVIEW_ARCHIVE, {
+      context: 'upload-dialog',
+      fileName: form.value.filename,
+      fileSize: form.value.file.size,
+    })
   } catch (error) {
     console.error('Preview error:', error)
     uploadPreviewError.value = true
