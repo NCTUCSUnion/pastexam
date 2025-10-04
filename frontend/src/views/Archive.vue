@@ -813,9 +813,9 @@ const downloadingId = ref(null)
 async function downloadArchive(archive) {
   try {
     downloadingId.value = archive.id
-    const { data } = await archiveService.getArchiveUrl(selectedCourse.value, archive.id, true)
+    const { data } = await archiveService.getArchiveDownloadUrl(selectedCourse.value, archive.id)
 
-    const response = await fetch(data.download_url)
+    const response = await fetch(data.url)
     const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -860,11 +860,11 @@ async function previewArchive(archive) {
     previewError.value = false
     showPreview.value = true
 
-    const { data } = await archiveService.getArchiveUrl(selectedCourse.value, archive.id)
+    const { data } = await archiveService.getArchivePreviewUrl(selectedCourse.value, archive.id)
 
     selectedArchive.value = {
       ...archive,
-      previewUrl: data.preview_url,
+      previewUrl: data.url,
     }
   } catch (error) {
     console.error('Preview error:', error)
@@ -1173,13 +1173,12 @@ async function handlePreviewDownload(onComplete) {
   if (!selectedArchive.value) return
 
   try {
-    const { data } = await archiveService.getArchiveUrl(
+    const { data } = await archiveService.getArchiveDownloadUrl(
       selectedCourse.value,
-      selectedArchive.value.id,
-      true
+      selectedArchive.value.id
     )
 
-    const response = await fetch(data.download_url)
+    const response = await fetch(data.url)
     const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')

@@ -63,16 +63,15 @@ async def get_course_archives(
     
     return archives
 
-@router.get("/{course_id}/archives/{archive_id}/url")
-async def get_archive_url(
+@router.get("/{course_id}/archives/{archive_id}/preview")
+async def get_archive_preview_url(
     course_id: int,
     archive_id: int,
-    is_download: bool = False,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):
     """
-    Get presigned URLs for downloading and previewing an archive
+    Get presigned URL for previewing an archive (30 minutes expiry)
     """
     query = select(Archive).where(
         Archive.course_id == course_id,
@@ -88,14 +87,41 @@ async def get_archive_url(
             detail="Archive not found"
         )
     
-    if is_download:
-        archive.download_count += 1
-        await db.commit()
-        await db.refresh(archive)
-        
     return {
-        "download_url": presigned_get_url(archive.object_name, expires=timedelta(hours=1)),
-        "preview_url": presigned_get_url(archive.object_name, expires=timedelta(minutes=30))
+        "url": presigned_get_url(archive.object_name, expires=timedelta(minutes=30))
+    }
+
+@router.get("/{course_id}/archives/{archive_id}/download")
+async def get_archive_download_url(
+    course_id: int,
+    archive_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    """
+    Get presigned URL for downloading an archive (1 hour expiry)
+    This endpoint increments the download count
+    """
+    query = select(Archive).where(
+        Archive.course_id == course_id,
+        Archive.id == archive_id,
+        Archive.deleted_at.is_(None)
+    )
+    result = await db.execute(query)
+    archive = result.scalar_one_or_none()
+    
+    if not archive:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archive not found"
+        )
+    
+    archive.download_count += 1
+    await db.commit()
+    await db.refresh(archive)
+    
+    return {
+        "url": presigned_get_url(archive.object_name, expires=timedelta(hours=1))
     }
 
 @router.patch("/{course_id}/archives/{archive_id}")
