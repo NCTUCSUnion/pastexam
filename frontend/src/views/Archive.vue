@@ -239,7 +239,7 @@
                       </Column>
                       <Column header="操作" style="width: 35%">
                         <template #body="{ data }">
-                          <div class="flex gap-2.5 flex-wrap">
+                          <div class="flex gap-2.5">
                             <Button
                               icon="pi pi-eye"
                               @click="previewArchive(data)"
