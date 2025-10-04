@@ -81,6 +81,7 @@ jobs:
             ghcr.io/nctucsunion/pastexam:frontend-${{ github.sha }}
           build-args: |
             VITE_API_BASE_URL=${{ secrets.FRONTEND_API_BASE_URL }}
+            VITE_UMAMI_SHARE_URL=${{ secrets.FRONTEND_UMAMI_SHARE_URL }}
 
       - name: Build and push Backend Docker image
         uses: docker/build-push-action@v4
