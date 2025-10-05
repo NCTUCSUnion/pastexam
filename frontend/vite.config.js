@@ -19,7 +19,7 @@ export default defineConfig({
     }),
     Sitemap({
       hostname: 'https://pastexam.nctucsunion.me', // 請修改為您的實際網域
-      dynamicRoutes: ['/', '/archive', '/admin', '/login/callback'],
+      dynamicRoutes: ['/archive', '/admin', '/login/callback'],
       changefreq: 'weekly',
       priority: 0.8,
       lastmod: new Date(),
