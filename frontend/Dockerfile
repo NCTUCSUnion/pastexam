@@ -4,9 +4,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 ARG VITE_API_BASE_URL
-ARG VITE_UMAMI_SHARE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-ENV VITE_UMAMI_SHARE_URL=${VITE_UMAMI_SHARE_URL}
 
 COPY package.json pnpm-lock.yaml ./
 
@@ -15,7 +13,6 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 RUN echo "VITE_API_BASE_URL=${VITE_API_BASE_URL}" > .env
-RUN echo "VITE_UMAMI_SHARE_URL=${VITE_UMAMI_SHARE_URL}" >> .env
 RUN pnpm run build
 
 FROM nginx:alpine
