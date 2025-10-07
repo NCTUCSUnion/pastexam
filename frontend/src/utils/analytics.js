@@ -66,8 +66,6 @@ export const EVENTS = {
   CREATE_USER: 'create-user',
   UPDATE_USER: 'update-user',
   DELETE_USER: 'delete-user',
-  VIEW_ANALYTICS: 'view-analytics',
-  OPEN_ANALYTICS_NEW_TAB: 'open-analytics-new-tab',
 
   // Issue report events
   OPEN_ISSUE_REPORT: 'open-issue-report',
