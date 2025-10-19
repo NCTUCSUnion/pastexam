@@ -1,6 +1,7 @@
 import io
 from typing import List, Optional
-import google.generativeai as genai
+from google import genai
+from google.genai.types import UploadFileConfig
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -51,7 +52,7 @@ async def generate_exam_content(archive_ids: List[int], user_id: int, prompt: Op
         if not archives_with_courses:
             raise ValueError("Archives not found")
         
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
         minio_client = get_minio_client()
         
         uploaded_files = []
@@ -68,7 +69,8 @@ async def generate_exam_content(archive_ids: List[int], user_id: int, prompt: Op
                 response.close()
                 response.release_conn()
                 
-                uploaded_file = genai.upload_file(io.BytesIO(pdf_data), mime_type="application/pdf")
+                upload_config = UploadFileConfig(mime_type="application/pdf")
+                uploaded_file = client.files.upload(file=io.BytesIO(pdf_data), config=upload_config)
                 uploaded_files.append(uploaded_file)
                 
                 archives_info.append({
@@ -79,8 +81,6 @@ async def generate_exam_content(archive_ids: List[int], user_id: int, prompt: Op
                     "academic_year": archive.academic_year,
                     "archive_type": archive.archive_type
                 })
-
-            model = genai.GenerativeModel('gemini-2.5-flash')
 
             course_name = archives_info[0]["course"]
             professor = archives_info[0]["professor"]
@@ -131,17 +131,16 @@ START YOUR RESPONSE IMMEDIATELY WITH THE EXAM CONTENT. DO NOT include phrases li
             content = uploaded_files + [final_prompt]
             
             # logger.info(f"[AI Exam] Calling Gemini API (temperature={temperature})")
-            response = model.generate_content(
-                content,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=temperature,
-                )
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=content,
+                config={'temperature': temperature}
             )
             
             # logger.info(f"[AI Exam] Generation completed successfully")
             
             for uploaded_file in uploaded_files:
-                genai.delete_file(uploaded_file.name)
+                client.files.delete(name=uploaded_file.name)
             
             disclaimer = """⚠️ 注意事項 / NOTICE ⚠️
 此試題由 AI 自動生成，僅供參考練習使用。
@@ -163,7 +162,7 @@ Answers may contain errors. Please verify the correctness yourself.
             # logger.error(f"[AI Exam] Error: {type(e).__name__}: {str(e)}")
             for uploaded_file in uploaded_files:
                 try:
-                    genai.delete_file(uploaded_file.name)
+                    client.files.delete(name=uploaded_file.name)
                 except:
                     pass
             raise
