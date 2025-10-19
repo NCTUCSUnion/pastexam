@@ -343,7 +343,6 @@ const availableArchives = ref([])
 const selectedArchiveIds = ref([])
 const currentTaskId = ref(null)
 
-// API Key 相關
 const showApiKeyModal = ref(false)
 const apiKeyStatus = ref({ has_api_key: false, api_key_masked: null })
 const apiKeyForm = ref({ key: '' })
@@ -627,7 +626,7 @@ const resumeTask = async (taskId) => {
         life: 3000,
       })
     }
-  }, 5000)
+  }, 10000)
 }
 
 const generateExam = async () => {
@@ -704,7 +703,7 @@ const generateExam = async () => {
           life: 3000,
         })
       }
-    }, 5000)
+    }, 10000)
   } catch (error) {
     console.error('AI generation error:', error)
     clearTaskFromStorage()
