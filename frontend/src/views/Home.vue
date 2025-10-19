@@ -305,9 +305,9 @@ function formatNumber(num) {
     return 'NaN'
   }
   if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M'
+    return Math.floor(num / 100000) / 10 + 'M'
   } else if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'K'
+    return Math.floor(num / 100) / 10 + 'K'
   }
   return num.toString()
 }
