@@ -304,11 +304,6 @@ function formatNumber(num) {
   if (isNaN(num) || num === null || num === undefined) {
     return 'NaN'
   }
-  if (num >= 1000000) {
-    return Math.floor(num / 100000) / 10 + 'M'
-  } else if (num >= 1000) {
-    return Math.floor(num / 100) / 10 + 'K'
-  }
   return num.toString()
 }
 
