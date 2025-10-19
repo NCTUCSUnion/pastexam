@@ -1259,11 +1259,6 @@ function formatDownloadCount(count) {
   if (count === 0 || count === null || count === undefined) {
     return '0'
   }
-  if (count >= 1000000) {
-    return (count / 1000000).toFixed(1) + 'M'
-  } else if (count >= 1000) {
-    return (count / 1000).toFixed(1) + 'K'
-  }
   return count.toString()
 }
 
