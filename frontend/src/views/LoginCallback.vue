@@ -1,11 +1,7 @@
 <template>
   <div class="login-callback code-background h-full flex align-items-center justify-content-center">
-    <div class="text-center px-4 w-full max-w-md">
-      <div v-if="loading" class="loading-container">
-        <ProgressSpinner strokeWidth="4" class="mb-4" />
-        <p :style="{ color: 'var(--text-secondary)' }">驗證中...</p>
-      </div>
-      <div v-else-if="errorMessage">
+    <div class="text-center px-4 w-full max-w-md" :style="{ color: 'var(--text-secondary)' }">
+      <div v-if="errorMessage">
         <Card class="border-round shadow-2" :style="{ backgroundColor: 'var(--bg-secondary)' }">
           <template #title>
             <div class="text-red-400 text-xl mb-1">登入失敗</div>
@@ -23,6 +19,10 @@
           </template>
         </Card>
       </div>
+      <div v-else class="loading-container">
+        <ProgressSpinner strokeWidth="4" class="mb-4" />
+        <p>驗證中...</p>
+      </div>
     </div>
   </div>
 </template>
@@ -34,7 +34,6 @@ import { getCodeBgSvg } from '../utils/svgBg'
 export default {
   data() {
     return {
-      loading: true,
       errorMessage: '',
     }
   },
@@ -66,13 +65,10 @@ export default {
       }
 
       sessionStorage.setItem('authToken', token)
-
       this.$router.push('/archive')
     } catch (error) {
       console.error('Login callback error:', error)
       this.errorMessage = '驗證失敗，請重試或聯絡管理員。'
-    } finally {
-      this.loading = false
     }
   },
   watch: {
