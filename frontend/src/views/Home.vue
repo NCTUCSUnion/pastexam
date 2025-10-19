@@ -186,7 +186,7 @@ onMounted(async () => {
   await fetchRandomMeme()
   await fetchStatistics()
   setBg()
-  startStatsUpdates()
+  // startStatsUpdates()
 })
 
 onUnmounted(() => {
@@ -307,11 +307,11 @@ function formatNumber(num) {
   return num.toString()
 }
 
-function startStatsUpdates() {
-  statsInterval = setInterval(async () => {
-    await fetchStatistics()
-  }, 30000)
-}
+// function startStatsUpdates() {
+//   statsInterval = setInterval(async () => {
+//     await fetchStatistics()
+//   }, 30000)
+// }
 
 function setBg() {
   const el = document.querySelector('.code-background')
