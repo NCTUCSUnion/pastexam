@@ -327,11 +327,13 @@ async def update_api_key(
     
     try:
         if request.gemini_api_key:
-            import google.generativeai as genai
+            from google import genai
             
-            genai.configure(api_key=request.gemini_api_key)
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            response = model.generate_content("Hello")
+            client = genai.Client(api_key=request.gemini_api_key)
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents="Hello"
+            )
         
         stmt = update(User).where(User.id == current_user.user_id).values(
             gemini_api_key=request.gemini_api_key
