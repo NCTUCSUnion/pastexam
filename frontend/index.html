@@ -54,13 +54,6 @@
       data-website-id="8089a20a-ba6a-4bf5-b629-8a82c03c134e"
     ></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(regs => {
-          for (let r of regs) r.unregister();
-        });
-      }
-    </script>    
-    <script>
       function updateFavicon(isDark) {
         const theme = isDark ? 'dark' : 'bright'
         const appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]')
