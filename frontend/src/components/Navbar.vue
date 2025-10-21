@@ -76,11 +76,21 @@
               outlined
               aria-label="Logout"
             />
-            <Button
+            <!-- <Button
               v-else
               icon="pi pi-sign-in"
               label="登入"
               @click="openLoginDialog"
+              severity="secondary"
+              size="small"
+              outlined
+              aria-label="Login"
+            /> -->
+            <Button
+              v-else
+              icon="pi pi-sign-in"
+              label="登入"
+              @click="handleOAuthLogin"
               severity="secondary"
               size="small"
               outlined
@@ -99,11 +109,21 @@
               outlined
               aria-label="Logout"
             />
-            <Button
+            <!-- <Button
               v-else
               icon="pi pi-sign-in"
               label="登入"
               @click="openLoginDialog"
+              severity="secondary"
+              size="small"
+              outlined
+              aria-label="Login"
+            /> -->
+            <Button
+              v-else
+              icon="pi pi-sign-in"
+              label="登入"
+              @click="handleOAuthLogin"
               severity="secondary"
               size="small"
               outlined
@@ -418,7 +438,8 @@ export default {
 
     handleOAuthLogin() {
       this.loginVisible = false
-      trackEvent(EVENTS.LOGIN_OAUTH, { provider: 'NYCU' })
+      trackEvent(EVENTS.LOGIN, { type: 'direct-oauth' })
+      // trackEvent(EVENTS.LOGIN_OAUTH, { provider: 'NYCU' })
       authService.login()
     },
 
