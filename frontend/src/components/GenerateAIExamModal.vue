@@ -579,22 +579,35 @@ const resumeTask = async (taskId) => {
         clearInterval(pollInterval)
         pollInterval = null
 
-        result.value = statusData.result
-        currentStep.value = 'result'
+        if (statusData.result && statusData.result.generated_content) {
+          result.value = statusData.result
+          currentStep.value = 'result'
 
-        toast.add({
-          severity: 'success',
-          summary: '生成成功',
-          detail: '模擬試題已成功生成',
-          life: 3000,
-        })
+          toast.add({
+            severity: 'success',
+            summary: '生成成功',
+            detail: '模擬試題已成功生成',
+            life: 3000,
+          })
 
-        trackEvent(EVENTS.GENERATE_AI_EXAM, {
-          category: form.value.category || 'resumed',
-          courseName: form.value.course_name || 'resumed',
-          professor: form.value.professor || 'resumed',
-          archivesUsed: statusData.result.archives_used.length,
-        })
+          trackEvent(EVENTS.GENERATE_AI_EXAM, {
+            category: form.value.category || 'resumed',
+            courseName: form.value.course_name || 'resumed',
+            professor: form.value.professor || 'resumed',
+            archivesUsed: statusData.result.archives_used.length,
+          })
+        } else {
+          clearTaskFromStorage()
+          errorMessage.value = '生成失敗，請稍後再試'
+          currentStep.value = 'error'
+
+          toast.add({
+            severity: 'error',
+            summary: '生成失敗',
+            detail: errorMessage.value,
+            life: 3000,
+          })
+        }
       } else if (statusData.status === 'failed' || statusData.status === 'not_found') {
         clearInterval(pollInterval)
         pollInterval = null
@@ -656,22 +669,35 @@ const generateExam = async () => {
           clearInterval(pollInterval)
           pollInterval = null
 
-          result.value = statusData.result
-          currentStep.value = 'result'
+          if (statusData.result && statusData.result.generated_content) {
+            result.value = statusData.result
+            currentStep.value = 'result'
 
-          toast.add({
-            severity: 'success',
-            summary: '生成成功',
-            detail: '模擬試題已成功生成',
-            life: 3000,
-          })
+            toast.add({
+              severity: 'success',
+              summary: '生成成功',
+              detail: '模擬試題已成功生成',
+              life: 3000,
+            })
 
-          trackEvent(EVENTS.GENERATE_AI_EXAM, {
-            category: form.value.category,
-            courseName: form.value.course_name,
-            professor: form.value.professor,
-            archivesUsed: statusData.result.archives_used.length,
-          })
+            trackEvent(EVENTS.GENERATE_AI_EXAM, {
+              category: form.value.category,
+              courseName: form.value.course_name,
+              professor: form.value.professor,
+              archivesUsed: statusData.result.archives_used.length,
+            })
+          } else {
+            clearTaskFromStorage()
+            errorMessage.value = '生成失敗，請稍後再試'
+            currentStep.value = 'error'
+
+            toast.add({
+              severity: 'error',
+              summary: '生成失敗',
+              detail: errorMessage.value,
+              life: 3000,
+            })
+          }
         } else if (statusData.status === 'failed' || statusData.status === 'not_found') {
           clearInterval(pollInterval)
           pollInterval = null
@@ -812,19 +838,22 @@ watch(
           const { data: statusData } = await aiExamService.getTaskStatus(savedTask.taskId)
 
           if (statusData.status === 'complete') {
-            result.value = statusData.result
-            currentStep.value = 'result'
-            currentTaskId.value = savedTask.taskId
+            if (statusData.result && statusData.result.generated_content) {
+              result.value = statusData.result
+              currentStep.value = 'result'
+              currentTaskId.value = savedTask.taskId
 
-            // 恢復顯示信息
-            if (savedTask.displayInfo) {
-              if (savedTask.displayInfo.course_name)
-                form.value.course_name = savedTask.displayInfo.course_name
-              if (savedTask.displayInfo.professor)
-                form.value.professor = savedTask.displayInfo.professor
+              if (savedTask.displayInfo) {
+                if (savedTask.displayInfo.course_name)
+                  form.value.course_name = savedTask.displayInfo.course_name
+                if (savedTask.displayInfo.professor)
+                  form.value.professor = savedTask.displayInfo.professor
+              }
+            } else {
+              clearTaskFromStorage()
+              currentStep.value = 'selectProfessor'
             }
           } else if (statusData.status === 'pending' || statusData.status === 'in_progress') {
-            // 恢復顯示信息
             if (savedTask.displayInfo) {
               if (savedTask.displayInfo.course_name)
                 form.value.course_name = savedTask.displayInfo.course_name
