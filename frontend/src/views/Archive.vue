@@ -194,7 +194,11 @@
 
           <div v-else>
             <div v-if="selectedSubject">
-              <Accordion :value="expandedPanels" multiple class="max-w-[calc(100%-2rem)] mx-auto">
+              <Accordion
+                v-model:value="expandedPanels"
+                multiple
+                class="max-w-[calc(100%-2rem)] mx-auto"
+              >
                 <AccordionPanel
                   v-for="group in groupedArchives"
                   :key="group.year"
@@ -513,6 +517,8 @@ const filters = ref({
 watch(
   filters,
   (newFilters, oldFilters) => {
+    shouldResetPanels.value = true
+
     // Only track if at least one filter is active and different from old value
     const hasActiveFilter =
       newFilters.year || newFilters.professor || newFilters.type || newFilters.hasAnswers
@@ -550,6 +556,7 @@ const showUploadDialog = ref(false)
 const uploadFormProfessors = ref([])
 const expandedPanels = ref([])
 const expandedMenuItems = ref({})
+const shouldResetPanels = ref(true)
 
 const CATEGORIES = {
   freshman: { name: '大一課程', icon: 'pi pi-fw pi-book', tag: '大一' },
@@ -776,6 +783,7 @@ function filterBySubject(course) {
     selectedCourse.value = null
     archives.value = []
     expandedMenuItems.value = {}
+    shouldResetPanels.value = true
     localStorage.removeItem('selectedSubject')
     return
   }
@@ -791,6 +799,7 @@ function filterBySubject(course) {
   filters.value.year = ''
   filters.value.type = ''
   expandedPanels.value = []
+  shouldResetPanels.value = true
 
   const categoryKey = getCategoryKeyForCourse(course.id)
   if (categoryKey) {
@@ -870,9 +879,58 @@ async function fetchArchives() {
 
 const downloadingId = ref(null)
 
+async function syncArchiveDownloadCount(archiveId) {
+  if (!selectedCourse.value) return
+
+  const previousExpandedPanels = [...expandedPanels.value]
+  const resetRequested = shouldResetPanels.value
+
+  try {
+    const response = await courseService.getCourseArchives(selectedCourse.value)
+    const serverMap = new Map(response.data.map((item) => [item.id, item]))
+
+    archives.value = archives.value.map((archive) => {
+      const serverArchive = serverMap.get(archive.id)
+      if (!serverArchive || serverArchive.download_count === archive.downloadCount) {
+        return archive
+      }
+      return {
+        ...archive,
+        downloadCount: serverArchive.download_count,
+      }
+    })
+
+    const serverArchive = serverMap.get(archiveId)
+    if (serverArchive && selectedArchive.value?.id === archiveId) {
+      selectedArchive.value = {
+        ...selectedArchive.value,
+        downloadCount: serverArchive.download_count,
+      }
+    }
+
+    if (!resetRequested) {
+      const availableYears = Array.from(
+        new Set(
+          archives.value
+            .map((item) =>
+              item.year !== undefined && item.year !== null ? item.year.toString() : null
+            )
+            .filter((year) => year !== null)
+        )
+      )
+
+      const preservedPanels = previousExpandedPanels.filter((year) => availableYears.includes(year))
+      expandedPanels.value = preservedPanels
+    }
+  } catch (error) {
+    console.error('Sync download count error:', error)
+  }
+}
+
 async function downloadArchive(archive) {
   try {
     downloadingId.value = archive.id
+
     const { data } = await archiveService.getArchiveDownloadUrl(selectedCourse.value, archive.id)
 
     const response = await fetch(data.url)
@@ -906,7 +964,7 @@ async function downloadArchive(archive) {
       life: 3000,
     })
 
-    await fetchArchives()
+    await syncArchiveDownloadCount(archive.id)
   } catch (error) {
     console.error('Download error:', error)
     toast.add({
@@ -981,14 +1039,24 @@ const categoryOptions = Object.entries(CATEGORIES).map(([value, category]) => ({
 watch(
   () => groupedArchives.value,
   (newGroups) => {
-    if (newGroups.length) {
-      // Always set default expanded panels to first 3 years when switching subjects
-      // This ensures consistent behavior regardless of previous state
-      expandedPanels.value = newGroups.slice(0, 3).map((group) => group.year.toString())
-    } else {
+    if (!newGroups.length) {
       // Clear expanded panels if no groups available
       expandedPanels.value = []
+      shouldResetPanels.value = true
+      return
     }
+
+    const availableYears = newGroups.map((group) => group.year.toString())
+    const preservedPanels = expandedPanels.value.filter((year) => availableYears.includes(year))
+
+    if (shouldResetPanels.value) {
+      // Default to expanding the most recent three years when reset is requested
+      expandedPanels.value = newGroups.slice(0, 3).map((group) => group.year.toString())
+    } else {
+      expandedPanels.value = preservedPanels
+    }
+
+    shouldResetPanels.value = false
   },
   { immediate: true }
 )
@@ -1307,7 +1375,7 @@ async function handlePreviewDownload(onComplete) {
       life: 3000,
     })
 
-    await fetchArchives()
+    await syncArchiveDownloadCount(selectedArchive.value.id)
   } catch (error) {
     console.error('Download error:', error)
     toast.add({
