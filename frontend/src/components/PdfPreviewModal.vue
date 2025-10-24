@@ -62,6 +62,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import VuePdfEmbed from 'vue-pdf-embed'
+import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 
 const props = defineProps({
   visible: {
@@ -91,6 +92,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:visible', 'hide', 'load', 'error', 'download'])
+
+useUnauthorizedEvent(() => {
+  emit('update:visible', false)
+})
 
 const localVisible = computed({
   get: () => props.visible,

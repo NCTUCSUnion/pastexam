@@ -473,6 +473,7 @@ import { getCurrentUser, isAuthenticated } from '../utils/auth'
 import { useTheme } from '../utils/useTheme'
 import { useRouter } from 'vue-router'
 import { trackEvent, EVENTS } from '../utils/analytics'
+import { isUnauthorizedError } from '../utils/http'
 
 const toast = inject('toast')
 const confirm = inject('confirm')
@@ -766,6 +767,9 @@ async function fetchCourses() {
     }
   } catch (error) {
     console.error('Error fetching courses:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '載入失敗',
@@ -866,6 +870,9 @@ async function fetchArchives() {
       }))
   } catch (error) {
     console.error('Error fetching archives:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '載入失敗',
@@ -967,6 +974,9 @@ async function downloadArchive(archive) {
     await syncArchiveDownloadCount(archive.id)
   } catch (error) {
     console.error('Download error:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '下載失敗',
@@ -1004,6 +1014,9 @@ async function previewArchive(archive) {
   } catch (error) {
     console.error('Preview error:', error)
     previewError.value = true
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '預覽失敗',
@@ -1142,6 +1155,9 @@ const deleteArchive = async (archive) => {
     })
   } catch (error) {
     console.error('Delete error:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '刪除失敗',
@@ -1192,6 +1208,9 @@ const openEditDialog = async (archive) => {
     showEditDialog.value = true
   } catch (error) {
     console.error('Error fetching professors:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '載入失敗',
@@ -1259,6 +1278,9 @@ const handleEdit = async () => {
     })
   } catch (error) {
     console.error('Update error:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '更新失敗',
@@ -1378,6 +1400,9 @@ async function handlePreviewDownload(onComplete) {
     await syncArchiveDownloadCount(selectedArchive.value.id)
   } catch (error) {
     console.error('Download error:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '下載失敗',

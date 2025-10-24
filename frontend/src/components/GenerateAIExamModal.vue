@@ -322,9 +322,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, inject, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, inject } from 'vue'
 import { aiExamService, courseService } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
+import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
+import { isUnauthorizedError } from '../utils/http'
 
 const props = defineProps({
   visible: Boolean,
@@ -461,6 +463,9 @@ const onCourseChange = async () => {
     availableProfessors.value = Array.from(professorsSet).sort()
   } catch (error) {
     console.error('Error fetching professors:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '載入失敗',
@@ -515,6 +520,9 @@ const goToArchiveSelection = async () => {
     currentStep.value = 'selectArchives'
   } catch (error) {
     console.error('Error fetching archives:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '載入失敗',
@@ -632,6 +640,9 @@ const resumeTask = async (taskId) => {
       errorMessage.value = '服務暫時無法使用，請稍後再試'
       currentStep.value = 'error'
 
+      if (isUnauthorizedError(error)) {
+        return
+      }
       toast.add({
         severity: 'error',
         summary: '查詢失敗',
@@ -722,6 +733,9 @@ const generateExam = async () => {
         errorMessage.value = '服務暫時無法使用，請稍後再試'
         currentStep.value = 'error'
 
+        if (isUnauthorizedError(error)) {
+          return
+        }
         toast.add({
           severity: 'error',
           summary: '查詢失敗',
@@ -744,6 +758,9 @@ const generateExam = async () => {
         life: 3000,
       })
     } else {
+      if (isUnauthorizedError(error)) {
+        return
+      }
       errorMessage.value = '提交失敗，請稍後再試'
       toast.add({
         severity: 'error',
@@ -944,6 +961,9 @@ const saveApiKey = async () => {
     })
   } catch (error) {
     console.error('Failed to save API key:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '設定失敗',
@@ -970,6 +990,9 @@ const clearApiKey = async () => {
     })
   } catch (error) {
     console.error('Failed to clear API key:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '移除失敗',
@@ -994,17 +1017,7 @@ const handleUnauthorized = () => {
   emit('update:visible', false)
 }
 
-onMounted(() => {
-  if (typeof window !== 'undefined') {
-    window.addEventListener('app:unauthorized', handleUnauthorized)
-  }
-})
-
-onBeforeUnmount(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('app:unauthorized', handleUnauthorized)
-  }
-})
+useUnauthorizedEvent(handleUnauthorized)
 </script>
 
 <style scoped>
