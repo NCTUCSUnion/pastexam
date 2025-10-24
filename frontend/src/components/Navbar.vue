@@ -367,6 +367,23 @@ export default {
         }
       })
     }, 500)
+
+    if (typeof window !== 'undefined') {
+      const namespaceKey = '__pastexam'
+      const namespace = (window[namespaceKey] = window[namespaceKey] || {})
+      Object.defineProperty(namespace, 'openLoginModal', {
+        value: () => {
+          this.openLoginDialog()
+        },
+        configurable: true,
+      })
+    }
+  },
+
+  beforeUnmount() {
+    if (typeof window !== 'undefined' && window.__pastexam) {
+      delete window.__pastexam.openLoginModal
+    }
   },
 
   watch: {

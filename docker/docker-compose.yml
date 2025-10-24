@@ -1,3 +1,5 @@
+name: pastexam
+
 services:
   frontend:
     image: ghcr.io/nctucsunion/pastexam:frontend

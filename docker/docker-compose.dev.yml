@@ -1,3 +1,5 @@
+name: pastexam-dev
+
 services:
   # frontend:
   #   build: ../frontend
