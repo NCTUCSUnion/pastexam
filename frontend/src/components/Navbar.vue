@@ -306,6 +306,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import GenerateAIExamModal from './GenerateAIExamModal.vue'
+import { isUnauthorizedError } from '../utils/http'
 
 export default {
   name: 'AppNavbar',
@@ -521,6 +522,9 @@ export default {
           this.coursesList = data
         } catch (error) {
           console.error('Failed to load courses:', error)
+          if (isUnauthorizedError(error)) {
+            return
+          }
           this.toast.add({
             severity: 'error',
             summary: '載入失敗',

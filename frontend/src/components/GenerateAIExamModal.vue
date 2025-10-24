@@ -60,11 +60,11 @@
         </div>
       </div>
 
-      <!-- 步驟 2：選擇考古題 -->
+      <!-- Step 2: Select past exams -->
       <div v-else-if="currentStep === 'selectArchives'" class="flex flex-column gap-3">
         <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
 
-        <!-- 類型篩選 -->
+        <!-- Type filter -->
         <div class="field">
           <label for="archiveTypeFilter" class="block mb-2 font-semibold">考古題類型</label>
           <Select
@@ -155,7 +155,7 @@
         <p class="text-500">{{ errorMessage }}</p>
       </div>
 
-      <!-- 結果階段 -->
+      <!-- Result step -->
       <div v-else-if="currentStep === 'result'" class="flex flex-column gap-3">
         <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
         <div class="p-3 surface-100 border-round">
@@ -186,7 +186,7 @@
         </div>
       </div>
 
-      <!-- 底部按鈕 -->
+      <!-- Footer actions -->
 
       <template #footer>
         <div class="flex items-center gap-2 w-full">
@@ -247,7 +247,7 @@
       </template>
     </Dialog>
 
-    <!-- API Key 設定 Modal -->
+    <!-- API key settings modal -->
     <Dialog
       :visible="showApiKeyModal"
       @update:visible="handleApiKeyModalClose"
@@ -325,6 +325,8 @@
 import { ref, computed, watch, inject } from 'vue'
 import { aiExamService, courseService } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
+import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
+import { isUnauthorizedError } from '../utils/http'
 
 const props = defineProps({
   visible: Boolean,
@@ -461,6 +463,9 @@ const onCourseChange = async () => {
     availableProfessors.value = Array.from(professorsSet).sort()
   } catch (error) {
     console.error('Error fetching professors:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '載入失敗',
@@ -515,6 +520,9 @@ const goToArchiveSelection = async () => {
     currentStep.value = 'selectArchives'
   } catch (error) {
     console.error('Error fetching archives:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '載入失敗',
@@ -538,7 +546,7 @@ const saveTaskToStorage = (taskId, displayInfo = {}) => {
       TASK_STORAGE_KEY,
       JSON.stringify({
         taskId,
-        displayInfo, // 只保存顯示用的信息
+        displayInfo, // Store only the presentation-ready fields
         timestamp: Date.now(),
       })
     )
@@ -632,6 +640,9 @@ const resumeTask = async (taskId) => {
       errorMessage.value = '服務暫時無法使用，請稍後再試'
       currentStep.value = 'error'
 
+      if (isUnauthorizedError(error)) {
+        return
+      }
       toast.add({
         severity: 'error',
         summary: '查詢失敗',
@@ -722,6 +733,9 @@ const generateExam = async () => {
         errorMessage.value = '服務暫時無法使用，請稍後再試'
         currentStep.value = 'error'
 
+        if (isUnauthorizedError(error)) {
+          return
+        }
         toast.add({
           severity: 'error',
           summary: '查詢失敗',
@@ -744,6 +758,9 @@ const generateExam = async () => {
         life: 3000,
       })
     } else {
+      if (isUnauthorizedError(error)) {
+        return
+      }
       errorMessage.value = '提交失敗，請稍後再試'
       toast.add({
         severity: 'error',
@@ -901,13 +918,13 @@ watch(
   }
 )
 
-// API Key 相關方法
+// API key helpers
 const loadApiKeyStatus = async () => {
   try {
     const response = await aiExamService.getApiKeyStatus()
     apiKeyStatus.value = response.data
 
-    // 如果沒有設定 API key，自動打開設定 modal
+    // Automatically open the settings modal if no API key is configured
     if (!apiKeyStatus.value.has_api_key) {
       showApiKeyModal.value = true
     }
@@ -944,6 +961,9 @@ const saveApiKey = async () => {
     })
   } catch (error) {
     console.error('Failed to save API key:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '設定失敗',
@@ -970,6 +990,9 @@ const clearApiKey = async () => {
     })
   } catch (error) {
     console.error('Failed to clear API key:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '移除失敗',
@@ -988,6 +1011,13 @@ const handleApiKeyModalClose = (visible) => {
     emit('update:visible', false)
   }
 }
+
+const handleUnauthorized = () => {
+  showApiKeyModal.value = false
+  emit('update:visible', false)
+}
+
+useUnauthorizedEvent(handleUnauthorized)
 </script>
 
 <style scoped>

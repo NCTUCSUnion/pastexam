@@ -22,7 +22,7 @@ export default defineConfig({
       resolvers: [PrimeVueResolver()],
     }),
     Sitemap({
-      hostname: 'https://pastexam.nctucsunion.me', // 請修改為您的實際網域
+      hostname: 'https://pastexam.nctucsunion.me',
       dynamicRoutes: ['/archive', '/admin', '/login/callback'],
       changefreq: 'weekly',
       priority: 0.8,

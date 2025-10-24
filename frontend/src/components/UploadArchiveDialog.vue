@@ -350,6 +350,7 @@ import { courseService, archiveService } from '../api'
 import PdfPreviewModal from './PdfPreviewModal.vue'
 import { PDFDocument } from 'pdf-lib'
 import { trackEvent, EVENTS } from '../utils/analytics'
+import { isUnauthorizedError } from '../utils/http'
 
 const props = defineProps({
   modelValue: {
@@ -519,6 +520,9 @@ const handleUpload = async () => {
     })
   } catch (error) {
     console.error('Upload error:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
 
     toast.add({
       severity: 'error',

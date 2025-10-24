@@ -324,6 +324,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { getCurrentUser } from '../utils/auth'
+import { isUnauthorizedError } from '../utils/http'
 import {
   getCourses,
   createCourse,
@@ -395,7 +396,7 @@ const getInitialTab = () => {
   } catch (e) {
     console.error('Failed to load tab from storage:', e)
   }
-  return '0' // 默認值
+  return '0'
 }
 
 const currentTab = ref(getInitialTab())
@@ -479,6 +480,9 @@ const loadCourses = async () => {
     courses.value = response.data
   } catch (error) {
     console.error('載入課程失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '錯誤',
@@ -497,6 +501,9 @@ const loadUsers = async () => {
     users.value = response.data
   } catch (error) {
     console.error('載入使用者失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '錯誤',
@@ -591,6 +598,9 @@ const saveCourse = async () => {
     await loadCourses()
   } catch (error) {
     console.error('儲存課程失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '錯誤',
@@ -631,6 +641,9 @@ const deleteCourseAction = async (course) => {
     await loadCourses()
   } catch (error) {
     console.error('刪除課程失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '錯誤',
@@ -743,6 +756,9 @@ const saveUser = async () => {
     await loadUsers()
   } catch (error) {
     console.error('儲存使用者失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '錯誤',
@@ -783,6 +799,9 @@ const deleteUserAction = async (user) => {
     await loadUsers()
   } catch (error) {
     console.error('刪除使用者失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
     toast.add({
       severity: 'error',
       summary: '錯誤',
@@ -826,7 +845,7 @@ const formatDateTime = (dateString) => {
   }
 }
 
-// 保存分頁狀態到 localStorage
+// Persist the current tab in localStorage
 const saveTabToStorage = (tabValue) => {
   try {
     localStorage.setItem(TAB_STORAGE_KEY, tabValue)
