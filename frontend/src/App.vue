@@ -16,6 +16,7 @@ import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
+import { setGlobalToast } from './utils/toast'
 
 export default {
   components: {
@@ -27,6 +28,8 @@ export default {
     const sidebarVisible = ref(true)
     const toast = useToast()
     const confirm = useConfirm()
+
+    setGlobalToast(toast)
 
     provide('sidebarVisible', sidebarVisible)
     provide('toast', toast)
