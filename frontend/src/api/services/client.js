@@ -38,6 +38,10 @@ api.interceptors.response.use(
         })
       }
 
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('app:unauthorized'))
+      }
+
       if (router.currentRoute.value.path !== '/') {
         router.push('/')
       }

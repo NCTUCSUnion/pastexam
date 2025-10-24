@@ -322,7 +322,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, inject } from 'vue'
+import { ref, computed, watch, inject, onMounted, onBeforeUnmount } from 'vue'
 import { aiExamService, courseService } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
 
@@ -988,6 +988,23 @@ const handleApiKeyModalClose = (visible) => {
     emit('update:visible', false)
   }
 }
+
+const handleUnauthorized = () => {
+  showApiKeyModal.value = false
+  emit('update:visible', false)
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('app:unauthorized', handleUnauthorized)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('app:unauthorized', handleUnauthorized)
+  }
+})
 </script>
 
 <style scoped>
