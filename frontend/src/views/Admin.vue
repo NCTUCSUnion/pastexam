@@ -395,7 +395,7 @@ const getInitialTab = () => {
   } catch (e) {
     console.error('Failed to load tab from storage:', e)
   }
-  return '0' // 默認值
+  return '0'
 }
 
 const currentTab = ref(getInitialTab())
@@ -826,7 +826,7 @@ const formatDateTime = (dateString) => {
   }
 }
 
-// 保存分頁狀態到 localStorage
+// Persist the current tab in localStorage
 const saveTabToStorage = (tabValue) => {
   try {
     localStorage.setItem(TAB_STORAGE_KEY, tabValue)

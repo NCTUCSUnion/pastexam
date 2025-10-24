@@ -60,11 +60,11 @@
         </div>
       </div>
 
-      <!-- 步驟 2：選擇考古題 -->
+      <!-- Step 2: Select past exams -->
       <div v-else-if="currentStep === 'selectArchives'" class="flex flex-column gap-3">
         <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
 
-        <!-- 類型篩選 -->
+        <!-- Type filter -->
         <div class="field">
           <label for="archiveTypeFilter" class="block mb-2 font-semibold">考古題類型</label>
           <Select
@@ -155,7 +155,7 @@
         <p class="text-500">{{ errorMessage }}</p>
       </div>
 
-      <!-- 結果階段 -->
+      <!-- Result step -->
       <div v-else-if="currentStep === 'result'" class="flex flex-column gap-3">
         <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
         <div class="p-3 surface-100 border-round">
@@ -186,7 +186,7 @@
         </div>
       </div>
 
-      <!-- 底部按鈕 -->
+      <!-- Footer actions -->
 
       <template #footer>
         <div class="flex items-center gap-2 w-full">
@@ -247,7 +247,7 @@
       </template>
     </Dialog>
 
-    <!-- API Key 設定 Modal -->
+    <!-- API key settings modal -->
     <Dialog
       :visible="showApiKeyModal"
       @update:visible="handleApiKeyModalClose"
@@ -538,7 +538,7 @@ const saveTaskToStorage = (taskId, displayInfo = {}) => {
       TASK_STORAGE_KEY,
       JSON.stringify({
         taskId,
-        displayInfo, // 只保存顯示用的信息
+        displayInfo, // Store only the presentation-ready fields
         timestamp: Date.now(),
       })
     )
@@ -901,13 +901,13 @@ watch(
   }
 )
 
-// API Key 相關方法
+// API key helpers
 const loadApiKeyStatus = async () => {
   try {
     const response = await aiExamService.getApiKeyStatus()
     apiKeyStatus.value = response.data
 
-    // 如果沒有設定 API key，自動打開設定 modal
+    // Automatically open the settings modal if no API key is configured
     if (!apiKeyStatus.value.has_api_key) {
       showApiKeyModal.value = true
     }

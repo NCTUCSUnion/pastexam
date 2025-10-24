@@ -2,11 +2,11 @@ import { api } from './client'
 
 export const aiExamService = {
   /**
-   * 提交 AI 生成考題任務
-   * @param {Object} params - 生成參數
-   * @param {Array<number>} params.archive_ids - 考古題 ID 列表
-   * @param {string} params.prompt - 自定義 prompt（可選）
-   * @param {number} params.temperature - 生成溫度（可選，0-1）
+   * Submit a mock exam generation task
+   * @param {Object} params - Generation parameters
+   * @param {Array<number>} params.archive_ids - List of archive IDs
+   * @param {string} params.prompt - Optional custom prompt
+   * @param {number} params.temperature - Optional temperature (0-1)
    * @returns {Promise<{task_id: string, status: string, message: string}>}
    */
   generateMockExam(params) {
@@ -18,8 +18,8 @@ export const aiExamService = {
   },
 
   /**
-   * 查詢任務狀態
-   * @param {string} taskId - 任務 ID
+   * Get the status of a generation task
+   * @param {string} taskId - Task ID
    * @returns {Promise<{task_id: string, status: string, result: Object, error: string}>}
    */
   getTaskStatus(taskId) {
@@ -27,7 +27,7 @@ export const aiExamService = {
   },
 
   /**
-   * 列出用戶的所有任務
+   * List all tasks for the current user
    * @returns {Promise<{tasks: Array}>}
    */
   listTasks() {
@@ -35,8 +35,8 @@ export const aiExamService = {
   },
 
   /**
-   * 刪除任務
-   * @param {string} taskId - 任務 ID
+   * Delete a task
+   * @param {string} taskId - Task ID
    * @returns {Promise<{success: boolean, message: string}>}
    */
   deleteTask(taskId) {
@@ -44,7 +44,7 @@ export const aiExamService = {
   },
 
   /**
-   * 獲取 API Key 狀態
+   * Fetch the current API key status
    * @returns {Promise<{has_api_key: boolean, api_key_masked: string|null}>}
    */
   getApiKeyStatus() {
@@ -52,8 +52,8 @@ export const aiExamService = {
   },
 
   /**
-   * 更新 API Key（會自動測試有效性）
-   * @param {string} apiKey - API Key
+   * Update the API key (validity is tested automatically)
+   * @param {string} apiKey - API key
    * @returns {Promise<{has_api_key: boolean, api_key_masked: string|null}>}
    */
   updateApiKey(apiKey) {
