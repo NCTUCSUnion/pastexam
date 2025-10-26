@@ -3,7 +3,7 @@ name: pastexam-dev
 services:
   # frontend:
   #   build: ../frontend
-  #   container_name: frontend
+  #   container_name: pastexam-dev-frontend
   #   ports:
   #     - "5173:80"
   #   env_file:
@@ -13,7 +13,7 @@ services:
 
   # backend:
   #   build: ../backend
-  #   container_name: backend
+  #   container_name: pastexam-dev-backend
   #   depends_on:
   #     db:
   #       condition: service_healthy
@@ -30,7 +30,7 @@ services:
 
   db:
     image: postgres:15.14-alpine3.22
-    container_name: pastexam-postgres-dev
+    container_name: pastexam-dev-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -49,7 +49,7 @@ services:
 
   minio:
     image: quay.io/minio/minio:RELEASE.2025-05-24T17-08-30Z
-    container_name: pastexam-minio-dev
+    container_name: pastexam-dev-minio
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000"
@@ -71,7 +71,7 @@ services:
   redis:
     image: redis:7.4.5-alpine3.21
     restart: always
-    container_name: pastexam-redis-dev
+    container_name: pastexam-dev-redis
     ports:
       - "6379:6379"
     volumes:
@@ -80,8 +80,8 @@ services:
       - app_network
 
   # nginx:
-  #   image: nginx:latest
-  #   container_name: nginx
+  #   image: nginx:1.29.1-perl
+  #   container_name: pastexam-dev-nginx
   #   ports:
   #     - "8080:8080"
   #   volumes:
