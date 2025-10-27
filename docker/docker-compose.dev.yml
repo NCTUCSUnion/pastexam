@@ -1,32 +1,42 @@
 name: pastexam-dev
 
 services:
-  # frontend:
-  #   build: ../frontend
-  #   container_name: pastexam-dev-frontend
-  #   ports:
-  #     - "5173:80"
-  #   env_file:
-  #     - ../frontend/.env
-  #   networks:
-  #     - app_network
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.dev
+    container_name: pastexam-dev-frontend
+    ports:
+      - "5173:80"
+    env_file:
+      - ../frontend/.env
+    volumes:
+      - /app/node_modules
+      - ../frontend:/app
+    networks:
+      - app_network
 
-  # backend:
-  #   build: ../backend
-  #   container_name: pastexam-dev-backend
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_started
-  #     minio:
-  #       condition: service_started
-  #   # ports:
-  #   #   - "8000:8000"
-  #   env_file:
-  #     - ../backend/.env
-  #   networks:
-  #     - app_network
+  backend:
+    build: 
+      context: ../backend
+      dockerfile: Dockerfile.dev
+    container_name: pastexam-dev-backend
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    # ports:
+    #   - "8000:8000"
+    volumes:
+      - /app/.venv
+      - ../backend:/app
+    env_file:
+      - ../backend/.env
+    networks:
+      - app_network
 
   db:
     image: postgres:15.14-alpine3.22
@@ -70,7 +80,6 @@ services:
 
   redis:
     image: redis:7.4.5-alpine3.21
-    restart: always
     container_name: pastexam-dev-redis
     ports:
       - "6379:6379"
@@ -79,19 +88,19 @@ services:
     networks:
       - app_network
 
-  # nginx:
-  #   image: nginx:1.29.1-perl
-  #   container_name: pastexam-dev-nginx
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - ../proxy/nginx.conf:/etc/nginx/nginx.conf:ro
-  #   depends_on:
-  #     - frontend
-  #     - backend
-  #     - minio
-  #   networks:
-  #     - app_network
+  nginx:
+    image: nginx:1.29.1-perl
+    container_name: pastexam-dev-nginx
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+      - minio
+    networks:
+      - app_network
 
 networks:
   app_network:
