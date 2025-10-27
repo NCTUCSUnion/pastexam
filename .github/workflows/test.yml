@@ -1,10 +1,20 @@
-name: Backend Test
+name: Test
 
 on:
   workflow_call:
 
 jobs:
-  backend-test:
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Placeholder frontend tests
+        run: echo "Frontend tests are not configured yet."
+
+  backend:
     runs-on: ubuntu-latest
 
     steps:

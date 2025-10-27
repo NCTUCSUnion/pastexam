@@ -9,44 +9,21 @@ permissions:
   packages: write
 
 jobs:
-  frontend-lint:
-    uses: ./.github/workflows/frontend-lint.yml
+  lint:
+    uses: ./.github/workflows/lint.yml
 
-  backend-lint:
-    uses: ./.github/workflows/backend-lint.yml
+  test:
+    needs: lint
+    uses: ./.github/workflows/test.yml
 
-  frontend-test:
-    needs:
-      - frontend-lint
-      - backend-lint
-    uses: ./.github/workflows/frontend-test.yml
-
-  backend-test:
-    needs:
-      - frontend-lint
-      - backend-lint
-    uses: ./.github/workflows/backend-test.yml
-
-  frontend-build-image:
-    needs:
-      - frontend-test
-      - backend-test
+  build:
+    needs: test
     if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/frontend-build-image.yml
-    secrets: inherit
-
-  backend-build-image:
-    needs:
-      - frontend-test
-      - backend-test
-    if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/backend-build-image.yml
+    uses: ./.github/workflows/build.yml
     secrets: inherit
 
   deploy:
-    needs:
-      - frontend-build-image
-      - backend-build-image
+    needs: build
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy.yml
     secrets: inherit

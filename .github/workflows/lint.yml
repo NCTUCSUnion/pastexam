@@ -1,10 +1,10 @@
-name: Frontend Lint
+name: Lint
 
 on:
   workflow_call:
 
 jobs:
-  frontend-lint:
+  frontend:
     runs-on: ubuntu-latest
 
     steps:
@@ -41,3 +41,13 @@ jobs:
       - name: Run lint
         run: pnpm run lint
         working-directory: ./frontend
+
+  backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Backend lint placeholder
+        run: echo "Backend lint (flake8) will be added soon."
