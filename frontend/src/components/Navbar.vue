@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <Menubar :model="items">
+    <Menubar :model="menuItems">
       <template #start>
         <Button
           v-if="$route.path === '/archive'"
@@ -22,8 +22,7 @@
                 : '/favicon-bright/android-chrome-192x192.png'
             "
             alt="favicon"
-            class="mr-2 hidden md:block"
-            style="width: 24px; height: 24px; vertical-align: middle; display: inline-block"
+            class="mr-2 inline-block align-middle w-[20px] h-[20px] md:w-[24px] md:h-[24px]"
           />
           交大資工考古題系統
         </span>
@@ -38,33 +37,14 @@
               >{{ userData?.name || 'User' }}</span
             >
             <Button
-              v-if="isAuthenticated && userData?.is_admin"
-              icon="pi pi-cog"
-              label="系統管理"
-              @click="handleNavigateAdmin"
+              v-if="moreActions.length"
+              icon="pi pi-list"
+              label="功能列表"
               severity="secondary"
               size="small"
               outlined
-            />
-            <Button
-              v-if="isAuthenticated"
-              icon="pi pi-comments"
-              label="問題回報"
-              @click="openIssueReportDialog"
-              severity="secondary"
-              size="small"
-              outlined
-              aria-label="Report Issue"
-            />
-            <Button
-              v-if="isAuthenticated"
-              icon="pi pi-sparkles"
-              label="AI 模擬試題"
-              @click="openAIExamDialog"
-              severity="info"
-              size="small"
-              outlined
-              aria-label="Generate AI Exam"
+              @click="toggleMoreActions($event)"
+              aria-label="More actions"
             />
             <Button
               v-if="isAuthenticated"
@@ -76,16 +56,6 @@
               outlined
               aria-label="Logout"
             />
-            <!-- <Button
-              v-else
-              icon="pi pi-sign-in"
-              label="登入"
-              @click="openLoginDialog"
-              severity="secondary"
-              size="small"
-              outlined
-              aria-label="Login"
-            /> -->
             <Button
               v-else
               icon="pi pi-sign-in"
@@ -100,29 +70,26 @@
 
           <div class="flex md:hidden align-items-center gap-2">
             <Button
+              v-if="moreActions.length"
+              icon="pi pi-list"
+              @click="toggleMoreActions($event)"
+              severity="secondary"
+              size="small"
+              outlined
+              aria-label="More actions"
+            />
+            <Button
               v-if="isAuthenticated"
               icon="pi pi-sign-out"
-              label="登出"
               @click="handleLogout"
               severity="secondary"
               size="small"
               outlined
               aria-label="Logout"
             />
-            <!-- <Button
-              v-else
-              icon="pi pi-sign-in"
-              label="登入"
-              @click="openLoginDialog"
-              severity="secondary"
-              size="small"
-              outlined
-              aria-label="Login"
-            /> -->
             <Button
               v-else
               icon="pi pi-sign-in"
-              label="登入"
               @click="handleOAuthLogin"
               severity="secondary"
               size="small"
@@ -139,8 +106,26 @@
             @click="handleToggleTheme"
           />
         </div>
+        <Menu ref="moreActionsMenu" :model="moreActions" :popup="true" />
       </template>
     </Menubar>
+
+    <NotificationModal
+      v-if="isAuthenticated && pendingNotification"
+      :visible="notificationStore.state.modalVisible"
+      :notification="pendingNotification"
+      @update:visible="handleNotificationModalVisible"
+      @dismiss="handleNotificationDismiss"
+      @open-center="() => openNotificationCenter('notification-modal')"
+    />
+    <NotificationCenterModal
+      v-if="isAuthenticated"
+      :visible="notificationStore.state.centerVisible"
+      :notifications="notificationStore.state.all"
+      :loading="notificationStore.state.loadingAll"
+      @update:visible="handleNotificationCenterVisible"
+      @mark-seen="handleNotificationDetailSeen"
+    />
 
     <Dialog
       :visible="loginVisible"
@@ -267,6 +252,7 @@
         <div class="flex justify-between gap-3 mt-4">
           <Button
             label="取消"
+            icon="pi pi-times"
             severity="secondary"
             outlined
             @click="closeIssueReportDialog"
@@ -307,16 +293,20 @@ import { useToast } from 'primevue/usetoast'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import GenerateAIExamModal from './GenerateAIExamModal.vue'
 import { isUnauthorizedError } from '../utils/http'
+import { useNotifications } from '../utils/useNotifications'
+import NotificationModal from './NotificationModal.vue'
+import NotificationCenterModal from './NotificationCenterModal.vue'
 
 export default {
   name: 'AppNavbar',
   components: {
     GenerateAIExamModal,
+    NotificationModal,
+    NotificationCenterModal,
   },
   emits: ['toggle-sidebar'],
   data() {
     return {
-      items: [],
       loginVisible: false,
       username: '',
       password: '',
@@ -345,16 +335,21 @@ export default {
     const { isDarkTheme, toggleTheme } = useTheme()
     const router = useRouter()
     const toast = useToast()
+    const notificationStore = useNotifications()
 
     return {
       isDarkTheme,
       toggleTheme,
       router,
       toast,
+      notificationStore,
     }
   },
   mounted() {
     this.checkAuthentication()
+    if (this.isAuthenticated) {
+      void this.initializeNotifications()
+    }
 
     setInterval(() => {
       const focusedElements = document.querySelectorAll(
@@ -402,8 +397,75 @@ export default {
         })
       },
     },
+    isAuthenticated(newValue) {
+      if (newValue) {
+        void this.initializeNotifications()
+      } else {
+        this.notificationStore.state.modalVisible = false
+        this.notificationStore.state.centerVisible = false
+        this.notificationStore.state.active = []
+        this.notificationStore.state.all = []
+        this.notificationStore.state.initialized = false
+      }
+    },
   },
   methods: {
+    toggleMoreActions(event) {
+      if (!this.moreActions.length) {
+        return
+      }
+
+      if (this.$refs.moreActionsMenu?.toggle) {
+        this.$refs.moreActionsMenu.toggle(event)
+      }
+    },
+
+    invokeMenuAction(action) {
+      if (this.$refs.moreActionsMenu?.hide) {
+        this.$refs.moreActionsMenu.hide()
+      }
+
+      if (typeof action === 'function') {
+        action()
+      }
+    },
+
+    handleNotificationModalVisible(value) {
+      this.notificationStore.state.modalVisible = value
+    },
+
+    handleNotificationDismiss(notification) {
+      this.notificationStore.markNotificationAsSeen(notification)
+    },
+
+    handleNotificationCenterVisible(value) {
+      this.notificationStore.state.centerVisible = value
+    },
+
+    async initializeNotifications() {
+      await this.notificationStore.initNotifications()
+    },
+
+    async openNotificationCenter(source = 'navbar') {
+      if (!this.isAuthenticated) {
+        this.toast.add({
+          severity: 'warn',
+          summary: '請先登入',
+          detail: '登入後即可檢視所有公告',
+          life: 3000,
+        })
+        return
+      }
+
+      this.notificationStore.state.modalVisible = false
+      trackEvent(EVENTS.OPEN_NOTIFICATION_CENTER, { from: source })
+      await this.notificationStore.openCenter()
+    },
+
+    handleNotificationDetailSeen(notification) {
+      this.notificationStore.markNotificationAsSeen(notification)
+    },
+
     handleToggleTheme() {
       trackEvent(EVENTS.TOGGLE_THEME, {
         from: this.isDarkTheme ? 'dark' : 'light',
@@ -467,21 +529,14 @@ export default {
         const user = getCurrentUser()
         if (user) {
           this.userData = user
-          this.updateMenuItems()
         } else {
           this.isAuthenticated = false
           this.userData = null
-          this.items = []
         }
       } else {
         this.isAuthenticated = false
         this.userData = null
-        this.items = []
       }
-    },
-
-    updateMenuItems() {
-      this.items = []
     },
 
     async handleLogout() {
@@ -705,6 +760,49 @@ export default {
   },
 
   computed: {
+    menuItems() {
+      return []
+    },
+
+    pendingNotification() {
+      return this.notificationStore.latestUnseenNotification?.value || null
+    },
+
+    moreActions() {
+      if (!this.isAuthenticated) {
+        return []
+      }
+
+      const items = [
+        {
+          label: 'AI 模擬試題',
+          icon: 'pi pi-sparkles',
+          command: () => this.invokeMenuAction(() => this.openAIExamDialog()),
+        },
+        {
+          label: '公告中心',
+          icon: 'pi pi-bell',
+          command: () => this.invokeMenuAction(() => this.openNotificationCenter('navbar-menu')),
+        },
+        {
+          label: '問題回報',
+          icon: 'pi pi-comments',
+          command: () => this.invokeMenuAction(() => this.openIssueReportDialog()),
+        },
+      ]
+
+      if (this.userData?.is_admin) {
+        items.push({ separator: true })
+        items.push({
+          label: '系統管理',
+          icon: 'pi pi-cog',
+          command: () => this.invokeMenuAction(() => this.handleNavigateAdmin()),
+        })
+      }
+
+      return items
+    },
+
     canSubmitIssue() {
       return this.issueForm.type && this.issueForm.title.trim() && this.issueForm.description.trim()
     },

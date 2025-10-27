@@ -112,27 +112,6 @@
             </div>
             <PanelMenu v-else :model="mobileMenuItems" multiple class="w-full" />
           </div>
-
-          <!-- Fixed admin actions section -->
-          <template v-if="isAuthenticatedRef && userData?.is_admin">
-            <div class="admin-section p-3">
-              <Button
-                icon="pi pi-cog"
-                label="系統管理"
-                @click="
-                  () => {
-                    trackEvent(EVENTS.NAVIGATE_ADMIN, { from: 'mobile-drawer' })
-                    router.push('/admin')
-                    sidebarVisible = false
-                  }
-                "
-                severity="secondary"
-                size="small"
-                outlined
-                class="w-full"
-              />
-            </div>
-          </template>
         </div>
       </Drawer>
 
@@ -471,13 +450,11 @@ import PdfPreviewModal from '../components/PdfPreviewModal.vue'
 import UploadArchiveDialog from '../components/UploadArchiveDialog.vue'
 import { getCurrentUser, isAuthenticated } from '../utils/auth'
 import { useTheme } from '../utils/useTheme'
-import { useRouter } from 'vue-router'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { isUnauthorizedError } from '../utils/http'
 
 const toast = inject('toast')
 const confirm = inject('confirm')
-const router = useRouter()
 
 const { isDarkTheme } = useTheme()
 const sidebarVisible = inject('sidebarVisible')
