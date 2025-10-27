@@ -22,8 +22,7 @@
                 : '/favicon-bright/android-chrome-192x192.png'
             "
             alt="favicon"
-            class="mr-2 hidden md:block"
-            style="width: 24px; height: 24px; vertical-align: middle; display: inline-block"
+            class="mr-2 inline-block align-middle w-[20px] h-[20px] md:w-[24px] md:h-[24px]"
           />
           交大資工考古題系統
         </span>
@@ -102,7 +101,6 @@
             <Button
               v-if="isAuthenticated"
               icon="pi pi-sign-out"
-              label="登出"
               @click="handleLogout"
               severity="secondary"
               size="small"
@@ -122,7 +120,6 @@
             <Button
               v-else
               icon="pi pi-sign-in"
-              label="登入"
               @click="handleOAuthLogin"
               severity="secondary"
               size="small"
