@@ -1146,6 +1146,7 @@ const deleteArchive = async (archive) => {
       courseName: selectedSubject.value,
     })
 
+    shouldResetPanels.value = true
     await fetchArchives()
     toast.add({
       severity: 'success',
@@ -1257,6 +1258,7 @@ const handleEdit = async () => {
       targetCategory: editForm.value.shouldTransfer ? editForm.value.targetCategory : null,
     })
 
+    shouldResetPanels.value = true
     await fetchArchives()
 
     // If transfer was performed, refresh the course list to show the new course
@@ -1335,6 +1337,7 @@ async function handleUploadSuccess() {
   })
 
   await fetchCourses()
+  shouldResetPanels.value = true
   if (selectedCourse.value) {
     await fetchArchives()
   }
