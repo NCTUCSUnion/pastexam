@@ -37,7 +37,7 @@
               >{{ userData?.name || 'User' }}</span
             >
             <Button
-              v-if="isAuthenticated && moreActions.length"
+              v-if="moreActions.length"
               icon="pi pi-list"
               label="功能列表"
               severity="secondary"
@@ -70,7 +70,7 @@
 
           <div class="flex md:hidden align-items-center gap-2">
             <Button
-              v-if="isAuthenticated && moreActions.length"
+              v-if="moreActions.length"
               icon="pi pi-list"
               @click="toggleMoreActions($event)"
               severity="secondary"
@@ -109,6 +109,23 @@
         <Menu ref="moreActionsMenu" :model="moreActions" :popup="true" />
       </template>
     </Menubar>
+
+    <NotificationModal
+      v-if="isAuthenticated && pendingNotification"
+      :visible="notificationStore.state.modalVisible"
+      :notification="pendingNotification"
+      @update:visible="handleNotificationModalVisible"
+      @dismiss="handleNotificationDismiss"
+      @open-center="() => openNotificationCenter('notification-modal')"
+    />
+    <NotificationCenterModal
+      v-if="isAuthenticated"
+      :visible="notificationStore.state.centerVisible"
+      :notifications="notificationStore.state.all"
+      :loading="notificationStore.state.loadingAll"
+      @update:visible="handleNotificationCenterVisible"
+      @mark-seen="handleNotificationDetailSeen"
+    />
 
     <Dialog
       :visible="loginVisible"
@@ -275,11 +292,16 @@ import { useToast } from 'primevue/usetoast'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import GenerateAIExamModal from './GenerateAIExamModal.vue'
 import { isUnauthorizedError } from '../utils/http'
+import { useNotifications } from '../utils/useNotifications'
+import NotificationModal from './NotificationModal.vue'
+import NotificationCenterModal from './NotificationCenterModal.vue'
 
 export default {
   name: 'AppNavbar',
   components: {
     GenerateAIExamModal,
+    NotificationModal,
+    NotificationCenterModal,
   },
   emits: ['toggle-sidebar'],
   data() {
@@ -312,16 +334,21 @@ export default {
     const { isDarkTheme, toggleTheme } = useTheme()
     const router = useRouter()
     const toast = useToast()
+    const notificationStore = useNotifications()
 
     return {
       isDarkTheme,
       toggleTheme,
       router,
       toast,
+      notificationStore,
     }
   },
   mounted() {
     this.checkAuthentication()
+    if (this.isAuthenticated) {
+      void this.initializeNotifications()
+    }
 
     setInterval(() => {
       const focusedElements = document.querySelectorAll(
@@ -369,6 +396,17 @@ export default {
         })
       },
     },
+    isAuthenticated(newValue) {
+      if (newValue) {
+        void this.initializeNotifications()
+      } else {
+        this.notificationStore.state.modalVisible = false
+        this.notificationStore.state.centerVisible = false
+        this.notificationStore.state.active = []
+        this.notificationStore.state.all = []
+        this.notificationStore.state.initialized = false
+      }
+    },
   },
   methods: {
     toggleMoreActions(event) {
@@ -389,6 +427,42 @@ export default {
       if (typeof action === 'function') {
         action()
       }
+    },
+
+    handleNotificationModalVisible(value) {
+      this.notificationStore.state.modalVisible = value
+    },
+
+    handleNotificationDismiss(notification) {
+      this.notificationStore.markNotificationAsSeen(notification)
+    },
+
+    handleNotificationCenterVisible(value) {
+      this.notificationStore.state.centerVisible = value
+    },
+
+    async initializeNotifications() {
+      await this.notificationStore.initNotifications()
+    },
+
+    async openNotificationCenter(source = 'navbar') {
+      if (!this.isAuthenticated) {
+        this.toast.add({
+          severity: 'warn',
+          summary: '請先登入',
+          detail: '登入後即可檢視所有公告',
+          life: 3000,
+        })
+        return
+      }
+
+      this.notificationStore.state.modalVisible = false
+      trackEvent(EVENTS.OPEN_NOTIFICATION_CENTER, { from: source })
+      await this.notificationStore.openCenter()
+    },
+
+    handleNotificationDetailSeen(notification) {
+      this.notificationStore.markNotificationAsSeen(notification)
     },
 
     handleToggleTheme() {
@@ -689,30 +763,39 @@ export default {
       return []
     },
 
+    pendingNotification() {
+      return this.notificationStore.latestUnseenNotification?.value || null
+    },
+
     moreActions() {
       if (!this.isAuthenticated) {
         return []
       }
 
-      const items = []
+      const items = [
+        {
+          label: '公告中心',
+          icon: 'pi pi-bell',
+          command: () => this.invokeMenuAction(() => this.openNotificationCenter('navbar-menu')),
+        },
+      ]
 
-      items.push({
-        label: '問題回報',
-        icon: 'pi pi-comments',
-        command: () => this.invokeMenuAction(() => this.openIssueReportDialog()),
-      })
+      if (this.isAuthenticated) {
+        items.push({
+          label: '問題回報',
+          icon: 'pi pi-comments',
+          command: () => this.invokeMenuAction(() => this.openIssueReportDialog()),
+        })
 
-      items.push({
-        label: 'AI 模擬試題',
-        icon: 'pi pi-sparkles',
-        command: () => this.invokeMenuAction(() => this.openAIExamDialog()),
-      })
+        items.push({
+          label: 'AI 模擬試題',
+          icon: 'pi pi-sparkles',
+          command: () => this.invokeMenuAction(() => this.openAIExamDialog()),
+        })
+      }
 
       if (this.userData?.is_admin) {
-        if (items.length) {
-          items.push({ separator: true })
-        }
-
+        items.push({ separator: true })
         items.push({
           label: '系統管理',
           icon: 'pi pi-cog',

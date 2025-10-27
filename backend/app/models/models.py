@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from enum import Enum as PyEnum
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import BaseModel, Field as PydanticField, computed_field
-from sqlalchemy import Column, DateTime, Integer, ForeignKey, Date, String, Boolean
+from sqlalchemy import Column, DateTime, Integer, ForeignKey, Date, String, Boolean, Text
 
 
 
@@ -21,6 +21,10 @@ class ArchiveType(str, PyEnum):
     MIDTERM = "midterm"
     FINAL = "final"
     OTHER = "other"
+
+class NotificationSeverity(str, PyEnum):
+    INFO = "info"
+    DANGER = "danger"
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
@@ -108,6 +112,40 @@ class Meme(SQLModel, table=True):
     content: str
     language: str
 
+class Notification(SQLModel, table=True):
+    __tablename__ = "notifications"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str = Field(sa_column=Column(String(150), nullable=False))
+    body: str = Field(sa_column=Column(Text, nullable=False))
+    severity: NotificationSeverity = Field(default=NotificationSeverity.INFO)
+    is_active: bool = Field(default=True)
+    starts_at: Optional[datetime] = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=True
+        )
+    )
+    ends_at: Optional[datetime] = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=True
+        )
+    )
+    created_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            default=lambda: datetime.now(timezone.utc),
+            nullable=False
+        )
+    )
+    updated_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            default=lambda: datetime.now(timezone.utc),
+            nullable=False
+        )
+    )
+
 
 
 class UserRead(BaseModel):
@@ -144,6 +182,33 @@ class MemeRead(BaseModel):
     id: int
     content: str
     language: str
+
+    class Config:
+        from_attributes = True
+
+class NotificationBase(BaseModel):
+    title: str
+    body: str
+    severity: NotificationSeverity = NotificationSeverity.INFO
+    is_active: bool = True
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+
+class NotificationCreate(NotificationBase):
+    pass
+
+class NotificationUpdate(BaseModel):
+    title: Optional[str] = None
+    body: Optional[str] = None
+    severity: Optional[NotificationSeverity] = None
+    is_active: Optional[bool] = None
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+
+class NotificationRead(NotificationBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

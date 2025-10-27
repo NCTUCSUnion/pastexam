@@ -66,6 +66,10 @@ export const EVENTS = {
   CREATE_USER: 'create-user',
   UPDATE_USER: 'update-user',
   DELETE_USER: 'delete-user',
+  CREATE_NOTIFICATION: 'create-notification',
+  UPDATE_NOTIFICATION: 'update-notification',
+  DELETE_NOTIFICATION: 'delete-notification',
+  OPEN_NOTIFICATION_CENTER: 'open-notification-center',
 
   // Issue report events
   OPEN_ISSUE_REPORT: 'open-issue-report',

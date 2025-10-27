@@ -5,6 +5,7 @@
         <TabList>
           <Tab value="0">課程管理</Tab>
           <Tab value="1">使用者管理</Tab>
+          <Tab value="2">公告管理</Tab>
         </TabList>
         <TabPanels>
           <TabPanel value="0">
@@ -185,6 +186,103 @@
               </DataTable>
             </div>
           </TabPanel>
+
+          <TabPanel value="2">
+            <div class="p-2 md:p-4">
+              <div
+                class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center mb-4 gap-3"
+              >
+                <div class="flex flex-column md:flex-row gap-3 w-full md:w-auto">
+                  <div class="relative w-full md:w-20rem">
+                    <i class="pi pi-search search-icon"></i>
+                    <InputText
+                      v-model="notificationSearchQuery"
+                      placeholder="搜尋公告"
+                      class="w-full pl-6"
+                    />
+                  </div>
+                  <Select
+                    v-model="notificationStatusFilter"
+                    :options="notificationStatusOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="篩選狀態"
+                    showClear
+                    class="w-full md:w-12rem"
+                  />
+                </div>
+                <Button
+                  label="新增公告"
+                  icon="pi pi-plus"
+                  severity="success"
+                  @click="openNotificationCreateDialog"
+                  class="w-full md:w-auto"
+                />
+              </div>
+
+              <ProgressSpinner
+                v-if="notificationsLoading"
+                class="w-full flex justify-content-center mt-4"
+                strokeWidth="4"
+              />
+              <DataTable
+                v-else
+                :value="filteredNotifications"
+                paginator
+                :rows="10"
+                :rowsPerPageOptions="[5, 10, 15, 25, 50]"
+                tableStyle="min-width: 50rem"
+                scrollable
+                scrollHeight="65vh"
+                sortMode="multiple"
+                :multiSortMeta="notificationSortMeta"
+                removableSort
+              >
+                <Column field="title" header="標題" sortable style="width: 28%"></Column>
+                <Column field="severity" header="重要程度" sortable style="width: 12%">
+                  <template #body="{ data }">
+                    <Tag :severity="getNotificationSeverity(data.severity)">
+                      {{ getNotificationSeverityLabel(data.severity) }}
+                    </Tag>
+                  </template>
+                </Column>
+                <Column field="is_active" header="狀態" sortable style="width: 16%">
+                  <template #body="{ data }">
+                    <Tag :severity="data.is_active ? 'success' : 'secondary'">
+                      {{ data.is_active ? '啟用中' : '已停用' }}
+                    </Tag>
+                  </template>
+                </Column>
+                <Column field="updated_at" header="最後更新" sortable style="width: 22%">
+                  <template #body="{ data }">
+                    <span class="text-sm text-700">
+                      {{ formatNotificationDate(data.updated_at) }}
+                    </span>
+                  </template>
+                </Column>
+                <Column header="操作" style="width: 25%">
+                  <template #body="{ data }">
+                    <div class="flex gap-2">
+                      <Button
+                        icon="pi pi-pencil"
+                        severity="warning"
+                        size="small"
+                        @click="openNotificationEditDialog(data)"
+                        label="編輯"
+                      />
+                      <Button
+                        icon="pi pi-trash"
+                        severity="danger"
+                        size="small"
+                        @click="confirmDeleteNotification(data)"
+                        label="刪除"
+                      />
+                    </div>
+                  </template>
+                </Column>
+              </DataTable>
+            </div>
+          </TabPanel>
         </TabPanels>
       </Tabs>
 
@@ -311,6 +409,110 @@
           />
         </div>
       </Dialog>
+
+      <Dialog
+        :visible="showNotificationDialog"
+        @update:visible="showNotificationDialog = $event"
+        :modal="true"
+        :draggable="false"
+        :closeOnEscape="false"
+        :header="editingNotification ? '編輯公告' : '新增公告'"
+        :style="{ width: '540px', maxWidth: '92vw' }"
+        :autoFocus="false"
+      >
+        <div class="flex flex-column gap-4">
+          <div class="flex flex-column gap-2">
+            <label>標題</label>
+            <InputText
+              v-model="notificationForm.title"
+              placeholder="輸入公告標題"
+              class="w-full"
+              :class="{ 'p-invalid': notificationFormErrors.title }"
+            />
+            <small v-if="notificationFormErrors.title" class="p-error">
+              {{ notificationFormErrors.title }}
+            </small>
+          </div>
+
+          <div class="flex flex-column md:flex-row gap-3">
+            <div class="flex-1 flex flex-column gap-2">
+              <label>重要程度</label>
+              <Select
+                v-model="notificationForm.severity"
+                :options="notificationSeverityOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="選擇重要程度"
+                class="w-full"
+              />
+            </div>
+            <div class="flex align-items-center gap-2 mt-3 md:mt-5">
+              <ToggleSwitch v-model="notificationForm.is_active" />
+              <label class="m-0 font-medium">啟用公告</label>
+            </div>
+          </div>
+
+          <div class="flex flex-column gap-2">
+            <label>內容</label>
+            <Textarea
+              v-model="notificationForm.body"
+              rows="6"
+              autoResize
+              class="w-full"
+              placeholder="輸入公告內容"
+              :class="{ 'p-invalid': notificationFormErrors.body }"
+            />
+            <small v-if="notificationFormErrors.body" class="p-error">
+              {{ notificationFormErrors.body }}
+            </small>
+          </div>
+
+          <div class="flex flex-column gap-3">
+            <div class="flex flex-column gap-2">
+              <label>生效時間 (選填)</label>
+              <DatePicker
+                v-model="notificationForm.starts_at"
+                showTime
+                hourFormat="24"
+                :showIcon="true"
+                placeholder="選擇生效時間"
+                class="w-full"
+              />
+            </div>
+            <div class="flex flex-column gap-2">
+              <label>結束時間 (選填)</label>
+              <DatePicker
+                v-model="notificationForm.ends_at"
+                showTime
+                hourFormat="24"
+                :showIcon="true"
+                placeholder="選擇結束時間"
+                class="w-full"
+                :class="{ 'p-invalid': notificationFormErrors.ends_at }"
+              />
+              <small v-if="notificationFormErrors.ends_at" class="p-error">
+                {{ notificationFormErrors.ends_at }}
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex pt-6 justify-end gap-2.5">
+          <Button
+            label="取消"
+            icon="pi pi-times"
+            severity="secondary"
+            @click="closeNotificationDialog"
+          />
+          <Button
+            :label="editingNotification ? '更新' : '新增'"
+            :icon="editingNotification ? 'pi pi-check' : 'pi pi-plus'"
+            severity="success"
+            @click="saveNotification"
+            :loading="notificationSaveLoading"
+          />
+        </div>
+      </Dialog>
     </div>
   </div>
 </template>
@@ -320,7 +522,7 @@ defineOptions({
   name: 'AdminView',
 })
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { getCurrentUser } from '../utils/auth'
@@ -334,11 +536,14 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  notificationService,
 } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
+import { useNotifications } from '../utils/useNotifications'
 
 const confirm = useConfirm()
 const toast = useToast()
+const notificationStore = useNotifications()
 
 const courses = ref([])
 const coursesLoading = ref(false)
@@ -383,6 +588,39 @@ const userForm = ref({
 
 const userFormErrors = ref({})
 
+const notifications = ref([])
+const notificationsLoading = ref(false)
+const notificationSearchQuery = ref('')
+const notificationStatusFilter = ref(null)
+
+const notificationSortMeta = ref([
+  { field: 'is_active', order: -1 },
+  { field: 'updated_at', order: -1 },
+])
+
+const notificationStatusOptions = [
+  { label: '啟用中', value: true },
+  { label: '已停用', value: false },
+]
+
+const notificationSeverityOptions = [
+  { label: '一般', value: 'info' },
+  { label: '重要', value: 'danger' },
+]
+
+const showNotificationDialog = ref(false)
+const editingNotification = ref(null)
+const notificationSaveLoading = ref(false)
+const notificationForm = ref({
+  title: '',
+  body: '',
+  severity: 'info',
+  is_active: true,
+  starts_at: null,
+  ends_at: null,
+})
+const notificationFormErrors = ref({})
+
 const currentUserId = computed(() => getCurrentUser()?.id)
 
 const TAB_STORAGE_KEY = 'adminCurrentTab'
@@ -390,7 +628,7 @@ const TAB_STORAGE_KEY = 'adminCurrentTab'
 const getInitialTab = () => {
   try {
     const savedTab = localStorage.getItem(TAB_STORAGE_KEY)
-    if (savedTab && ['0', '1'].includes(savedTab)) {
+    if (savedTab && ['0', '1', '2'].includes(savedTab)) {
       return savedTab
     }
   } catch (e) {
@@ -441,6 +679,60 @@ const getCategorySeverity = (category) => {
   return severityMap[category] || 'secondary'
 }
 
+const getNotificationSeverity = (severity) => {
+  const map = {
+    info: 'info',
+    success: 'success',
+    warning: 'warning',
+    danger: 'danger',
+  }
+  return map[severity] || 'secondary'
+}
+
+const getNotificationSeverityLabel = (severity) => {
+  const map = {
+    info: '一般',
+    success: '成功',
+    warning: '提醒',
+    danger: '重要',
+  }
+  return map[severity] || '未知'
+}
+
+const formatNotificationDate = (value) => {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+  return date.toLocaleString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const resetNotificationForm = () => {
+  notificationForm.value = {
+    title: '',
+    body: '',
+    severity: 'info',
+    is_active: true,
+    starts_at: null,
+    ends_at: null,
+  }
+  notificationFormErrors.value = {}
+  editingNotification.value = null
+}
+
+const toDate = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 const filteredCourses = computed(() => {
   let filtered = courses.value
 
@@ -468,6 +760,27 @@ const filteredUsers = computed(() => {
 
   if (filterUserType.value !== null) {
     filtered = filtered.filter((user) => user.is_admin === filterUserType.value)
+  }
+
+  return filtered
+})
+
+const filteredNotifications = computed(() => {
+  let filtered = notifications.value
+
+  if (notificationSearchQuery.value) {
+    const query = notificationSearchQuery.value.toLowerCase()
+    filtered = filtered.filter(
+      (notification) =>
+        notification.title.toLowerCase().includes(query) ||
+        notification.body.toLowerCase().includes(query)
+    )
+  }
+
+  if (notificationStatusFilter.value !== null && notificationStatusFilter.value !== undefined) {
+    filtered = filtered.filter(
+      (notification) => notification.is_active === notificationStatusFilter.value
+    )
   }
 
   return filtered
@@ -512,6 +825,28 @@ const loadUsers = async () => {
     })
   } finally {
     usersLoading.value = false
+  }
+}
+
+const loadNotifications = async () => {
+  notificationsLoading.value = true
+  try {
+    const { data } = await notificationService.getAllAdmin()
+    notifications.value = Array.isArray(data) ? data : []
+    await notificationStore.refreshActive()
+  } catch (error) {
+    console.error('載入公告失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
+    toast.add({
+      severity: 'error',
+      summary: '錯誤',
+      detail: '載入公告失敗',
+      life: 3000,
+    })
+  } finally {
+    notificationsLoading.value = false
   }
 }
 
@@ -811,6 +1146,152 @@ const deleteUserAction = async (user) => {
   }
 }
 
+const openNotificationCreateDialog = () => {
+  resetNotificationForm()
+  showNotificationDialog.value = true
+  trackEvent(EVENTS.CREATE_NOTIFICATION, { action: 'open-dialog' })
+}
+
+const openNotificationEditDialog = (notification) => {
+  notificationForm.value = {
+    title: notification.title,
+    body: notification.body,
+    severity: notification.severity,
+    is_active: notification.is_active,
+    starts_at: toDate(notification.starts_at),
+    ends_at: toDate(notification.ends_at),
+  }
+  notificationFormErrors.value = {}
+  editingNotification.value = notification
+  showNotificationDialog.value = true
+  trackEvent(EVENTS.UPDATE_NOTIFICATION, {
+    action: 'open-dialog',
+    notificationId: notification.id,
+  })
+}
+
+const closeNotificationDialog = () => {
+  showNotificationDialog.value = false
+  resetNotificationForm()
+}
+
+const validateNotificationForm = () => {
+  const errors = {}
+
+  if (!notificationForm.value.title.trim()) {
+    errors.title = '公告標題是必填欄位'
+  }
+
+  if (!notificationForm.value.body.trim()) {
+    errors.body = '公告內容是必填欄位'
+  }
+
+  if (notificationForm.value.starts_at && notificationForm.value.ends_at) {
+    if (notificationForm.value.ends_at.getTime() < notificationForm.value.starts_at.getTime()) {
+      errors.ends_at = '結束時間需晚於生效時間'
+    }
+  }
+
+  notificationFormErrors.value = errors
+  return Object.keys(errors).length === 0
+}
+
+const saveNotification = async () => {
+  if (!validateNotificationForm()) {
+    return
+  }
+
+  notificationSaveLoading.value = true
+  const payload = {
+    title: notificationForm.value.title.trim(),
+    body: notificationForm.value.body.trim(),
+    severity: notificationForm.value.severity,
+    is_active: notificationForm.value.is_active,
+    starts_at: notificationForm.value.starts_at
+      ? notificationForm.value.starts_at.toISOString()
+      : null,
+    ends_at: notificationForm.value.ends_at ? notificationForm.value.ends_at.toISOString() : null,
+  }
+
+  try {
+    if (editingNotification.value) {
+      await notificationService.update(editingNotification.value.id, payload)
+      trackEvent(EVENTS.UPDATE_NOTIFICATION, {
+        action: 'submit',
+        notificationId: editingNotification.value.id,
+      })
+      toast.add({
+        severity: 'success',
+        summary: '成功',
+        detail: '公告更新成功',
+        life: 3000,
+      })
+    } else {
+      await notificationService.create(payload)
+      trackEvent(EVENTS.CREATE_NOTIFICATION, { action: 'submit' })
+      toast.add({
+        severity: 'success',
+        summary: '成功',
+        detail: '公告新增成功',
+        life: 3000,
+      })
+    }
+    closeNotificationDialog()
+    await loadNotifications()
+  } catch (error) {
+    console.error('儲存公告失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
+    toast.add({
+      severity: 'error',
+      summary: '錯誤',
+      detail: editingNotification.value ? '公告更新失敗' : '公告新增失敗',
+      life: 3000,
+    })
+  } finally {
+    notificationSaveLoading.value = false
+  }
+}
+
+const confirmDeleteNotification = (notification) => {
+  confirm.require({
+    message: `確定要刪除公告「${notification.title}」嗎？`,
+    header: '刪除確認',
+    icon: 'pi pi-exclamation-triangle',
+    rejectClass: 'p-button-secondary p-button-outlined',
+    acceptClass: 'p-button-danger',
+    rejectLabel: '取消',
+    acceptLabel: '刪除',
+    accept: () => deleteNotificationAction(notification),
+  })
+}
+
+const deleteNotificationAction = async (notification) => {
+  try {
+    await notificationService.remove(notification.id)
+    trackEvent(EVENTS.DELETE_NOTIFICATION, { notificationId: notification.id })
+    toast.add({
+      severity: 'success',
+      summary: '成功',
+      detail: '公告刪除成功',
+      life: 3000,
+    })
+    await loadNotifications()
+  } catch (error) {
+    console.error('刪除公告失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
+    toast.add({
+      severity: 'error',
+      summary: '錯誤',
+      detail: '公告刪除失敗',
+      life: 3000,
+    })
+  }
+}
+
 const formatDateTime = (dateString) => {
   if (!dateString) return '從未登入'
 
@@ -861,12 +1342,23 @@ const handleTabChange = (value) => {
   const tabNames = {
     0: 'courses',
     1: 'users',
+    2: 'notifications',
   }
 
   trackEvent(EVENTS.SWITCH_TAB, {
     tab: tabNames[value] || value,
   })
 }
+
+watch(
+  currentTab,
+  async (value) => {
+    if (value === '2' && notifications.value.length === 0 && !notificationsLoading.value) {
+      await loadNotifications()
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   loadCourses()
