@@ -10,29 +10,29 @@ permissions:
 
 jobs:
   frontend-lint:
-    uses: ./.github/workflows/pipelines/frontend-lint.yml
+    uses: ./.github/workflows/frontend-lint.yml
 
   backend-lint:
-    uses: ./.github/workflows/pipelines/backend-lint.yml
+    uses: ./.github/workflows/backend-lint.yml
 
   frontend-test:
     needs:
       - frontend-lint
       - backend-lint
-    uses: ./.github/workflows/pipelines/frontend-test.yml
+    uses: ./.github/workflows/frontend-test.yml
 
   backend-test:
     needs:
       - frontend-lint
       - backend-lint
-    uses: ./.github/workflows/pipelines/backend-test.yml
+    uses: ./.github/workflows/backend-test.yml
 
   frontend-build-image:
     needs:
       - frontend-test
       - backend-test
     if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/pipelines/frontend-build-image.yml
+    uses: ./.github/workflows/frontend-build-image.yml
     secrets: inherit
 
   backend-build-image:
@@ -40,7 +40,7 @@ jobs:
       - frontend-test
       - backend-test
     if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/pipelines/backend-build-image.yml
+    uses: ./.github/workflows/backend-build-image.yml
     secrets: inherit
 
   deploy:
@@ -48,5 +48,5 @@ jobs:
       - frontend-build-image
       - backend-build-image
     if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/pipelines/deploy.yml
+    uses: ./.github/workflows/deploy.yml
     secrets: inherit
