@@ -5,7 +5,6 @@
     modal
     :style="{ width: '480px', maxWidth: '90vw' }"
     :draggable="false"
-    :dismissableMask="true"
     :showHeader="true"
     header="系統公告"
     :blockScroll="true"
