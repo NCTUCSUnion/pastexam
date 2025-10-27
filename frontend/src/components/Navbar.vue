@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <Menubar :model="items">
+    <Menubar :model="menuItems">
       <template #start>
         <Button
           v-if="$route.path === '/archive'"
@@ -37,33 +37,14 @@
               >{{ userData?.name || 'User' }}</span
             >
             <Button
-              v-if="isAuthenticated && userData?.is_admin"
-              icon="pi pi-cog"
-              label="系統管理"
-              @click="handleNavigateAdmin"
+              v-if="isAuthenticated && moreActions.length"
+              icon="pi pi-list"
+              label="功能列表"
               severity="secondary"
               size="small"
               outlined
-            />
-            <Button
-              v-if="isAuthenticated"
-              icon="pi pi-comments"
-              label="問題回報"
-              @click="openIssueReportDialog"
-              severity="secondary"
-              size="small"
-              outlined
-              aria-label="Report Issue"
-            />
-            <Button
-              v-if="isAuthenticated"
-              icon="pi pi-sparkles"
-              label="AI 模擬試題"
-              @click="openAIExamDialog"
-              severity="info"
-              size="small"
-              outlined
-              aria-label="Generate AI Exam"
+              @click="toggleMoreActions($event)"
+              aria-label="More actions"
             />
             <Button
               v-if="isAuthenticated"
@@ -75,16 +56,6 @@
               outlined
               aria-label="Logout"
             />
-            <!-- <Button
-              v-else
-              icon="pi pi-sign-in"
-              label="登入"
-              @click="openLoginDialog"
-              severity="secondary"
-              size="small"
-              outlined
-              aria-label="Login"
-            /> -->
             <Button
               v-else
               icon="pi pi-sign-in"
@@ -99,6 +70,15 @@
 
           <div class="flex md:hidden align-items-center gap-2">
             <Button
+              v-if="isAuthenticated && moreActions.length"
+              icon="pi pi-list"
+              @click="toggleMoreActions($event)"
+              severity="secondary"
+              size="small"
+              outlined
+              aria-label="More actions"
+            />
+            <Button
               v-if="isAuthenticated"
               icon="pi pi-sign-out"
               @click="handleLogout"
@@ -107,16 +87,6 @@
               outlined
               aria-label="Logout"
             />
-            <!-- <Button
-              v-else
-              icon="pi pi-sign-in"
-              label="登入"
-              @click="openLoginDialog"
-              severity="secondary"
-              size="small"
-              outlined
-              aria-label="Login"
-            /> -->
             <Button
               v-else
               icon="pi pi-sign-in"
@@ -136,6 +106,7 @@
             @click="handleToggleTheme"
           />
         </div>
+        <Menu ref="moreActionsMenu" :model="moreActions" :popup="true" />
       </template>
     </Menubar>
 
@@ -313,7 +284,6 @@ export default {
   emits: ['toggle-sidebar'],
   data() {
     return {
-      items: [],
       loginVisible: false,
       username: '',
       password: '',
@@ -401,6 +371,26 @@ export default {
     },
   },
   methods: {
+    toggleMoreActions(event) {
+      if (!this.moreActions.length) {
+        return
+      }
+
+      if (this.$refs.moreActionsMenu?.toggle) {
+        this.$refs.moreActionsMenu.toggle(event)
+      }
+    },
+
+    invokeMenuAction(action) {
+      if (this.$refs.moreActionsMenu?.hide) {
+        this.$refs.moreActionsMenu.hide()
+      }
+
+      if (typeof action === 'function') {
+        action()
+      }
+    },
+
     handleToggleTheme() {
       trackEvent(EVENTS.TOGGLE_THEME, {
         from: this.isDarkTheme ? 'dark' : 'light',
@@ -464,21 +454,14 @@ export default {
         const user = getCurrentUser()
         if (user) {
           this.userData = user
-          this.updateMenuItems()
         } else {
           this.isAuthenticated = false
           this.userData = null
-          this.items = []
         }
       } else {
         this.isAuthenticated = false
         this.userData = null
-        this.items = []
       }
-    },
-
-    updateMenuItems() {
-      this.items = []
     },
 
     async handleLogout() {
@@ -702,6 +685,44 @@ export default {
   },
 
   computed: {
+    menuItems() {
+      return []
+    },
+
+    moreActions() {
+      if (!this.isAuthenticated) {
+        return []
+      }
+
+      const items = []
+
+      items.push({
+        label: '問題回報',
+        icon: 'pi pi-comments',
+        command: () => this.invokeMenuAction(() => this.openIssueReportDialog()),
+      })
+
+      items.push({
+        label: 'AI 模擬試題',
+        icon: 'pi pi-sparkles',
+        command: () => this.invokeMenuAction(() => this.openAIExamDialog()),
+      })
+
+      if (this.userData?.is_admin) {
+        if (items.length) {
+          items.push({ separator: true })
+        }
+
+        items.push({
+          label: '系統管理',
+          icon: 'pi pi-cog',
+          command: () => this.invokeMenuAction(() => this.handleNavigateAdmin()),
+        })
+      }
+
+      return items
+    },
+
     canSubmitIssue() {
       return this.issueForm.type && this.issueForm.title.trim() && this.issueForm.description.trim()
     },
