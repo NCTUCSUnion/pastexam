@@ -1,0 +1,37 @@
+name: Frontend Build Image
+
+on:
+  workflow_call:
+
+jobs:
+  frontend-build-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/nctucsunion/pastexam:frontend
+            ghcr.io/nctucsunion/pastexam:frontend-${{ github.sha }}
+          build-args: |
+            VITE_API_BASE_URL=${{ secrets.FRONTEND_API_BASE_URL }}
+          cache-from: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache
+          cache-to: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache,mode=max

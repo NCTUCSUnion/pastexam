@@ -1,0 +1,15 @@
+name: Backend Test
+
+on:
+  workflow_call:
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Placeholder backend tests
+        run: echo "Backend tests (pytest) will be hooked up soon."

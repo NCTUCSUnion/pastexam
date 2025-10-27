@@ -9,108 +9,44 @@ permissions:
   packages: write
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
+  frontend-lint:
+    uses: ./.github/workflows/pipelines/frontend-lint.yml
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  backend-lint:
+    uses: ./.github/workflows/pipelines/backend-lint.yml
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
+  frontend-test:
+    needs:
+      - frontend-lint
+      - backend-lint
+    uses: ./.github/workflows/pipelines/frontend-test.yml
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
+  backend-test:
+    needs:
+      - frontend-lint
+      - backend-lint
+    uses: ./.github/workflows/pipelines/backend-test.yml
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: ./frontend
-
-      - name: Run lint
-        run: pnpm run lint
-        working-directory: ./frontend
-
-  build-image:
-    runs-on: ubuntu-latest
-    needs: lint
+  frontend-build-image:
+    needs:
+      - frontend-test
+      - backend-test
     if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/pipelines/frontend-build-image.yml
+    secrets: inherit
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Frontend Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          platforms: linux/amd64
-          tags: |
-            ghcr.io/nctucsunion/pastexam:frontend
-            ghcr.io/nctucsunion/pastexam:frontend-${{ github.sha }}
-          build-args: |
-            VITE_API_BASE_URL=${{ secrets.FRONTEND_API_BASE_URL }}
-          cache-from: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache
-          cache-to: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache,mode=max
-
-      - name: Build and push Backend Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          platforms: linux/amd64
-          tags: |
-            ghcr.io/nctucsunion/pastexam:backend
-            ghcr.io/nctucsunion/pastexam:backend-${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/nctucsunion/pastexam:backend-buildcache
-          cache-to: type=registry,ref=ghcr.io/nctucsunion/pastexam:backend-buildcache,mode=max
+  backend-build-image:
+    needs:
+      - frontend-test
+      - backend-test
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/pipelines/backend-build-image.yml
+    secrets: inherit
 
   deploy:
-    runs-on: ubuntu-latest
-    needs: build-image
+    needs:
+      - frontend-build-image
+      - backend-build-image
     if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script: |
-            cd ${{ secrets.DEPLOY_DIRECTORY }}
-            if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
-              echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
-            fi
-            docker compose pull
-            docker compose up -d
-            docker compose restart nginx
+    uses: ./.github/workflows/pipelines/deploy.yml
+    secrets: inherit
