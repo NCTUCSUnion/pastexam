@@ -9,6 +9,15 @@ import Sitemap from 'vite-plugin-sitemap'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    host: true,
+    port: 80,
+    strictPort: true,
+    hmr: {
+      port: 24678,
+      clientPort: 24678,
+    },
+  },
   plugins: [
     vue(),
     vueDevTools({
