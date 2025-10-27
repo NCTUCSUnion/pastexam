@@ -202,11 +202,29 @@
                     />
                   </div>
                   <Select
+                    v-model="notificationSeverityFilter"
+                    :options="notificationSeverityFilterOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="篩選重要程度"
+                    showClear
+                    class="w-full md:w-12rem"
+                  />
+                  <Select
                     v-model="notificationStatusFilter"
                     :options="notificationStatusOptions"
                     optionLabel="label"
                     optionValue="value"
-                    placeholder="篩選狀態"
+                    placeholder="篩選啟用狀態"
+                    showClear
+                    class="w-full md:w-12rem"
+                  />
+                  <Select
+                    v-model="notificationEffectiveFilter"
+                    :options="notificationEffectiveFilterOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="篩選是否生效"
                     showClear
                     class="w-full md:w-12rem"
                   />
@@ -238,7 +256,7 @@
                 :multiSortMeta="notificationSortMeta"
                 removableSort
               >
-                <Column field="title" header="標題" sortable style="width: 28%"></Column>
+                <Column field="title" header="標題" sortable style="width: 26%"></Column>
                 <Column field="severity" header="重要程度" sortable style="width: 12%">
                   <template #body="{ data }">
                     <Tag :severity="getNotificationSeverity(data.severity)">
@@ -246,21 +264,40 @@
                     </Tag>
                   </template>
                 </Column>
-                <Column field="is_active" header="狀態" sortable style="width: 16%">
+                <Column
+                  field="is_active"
+                  sortField="is_active"
+                  header="啟用中"
+                  sortable
+                  style="width: 12%"
+                >
                   <template #body="{ data }">
                     <Tag :severity="data.is_active ? 'success' : 'secondary'">
                       {{ data.is_active ? '啟用中' : '已停用' }}
                     </Tag>
                   </template>
                 </Column>
-                <Column field="updated_at" header="最後更新" sortable style="width: 22%">
+                <Column header="生效中" sortField="effectiveOrder" sortable style="width: 12%">
+                  <template #body="{ data }">
+                    <Tag :severity="isNotificationEffective(data) ? 'success' : 'secondary'">
+                      {{ isNotificationEffective(data) ? '生效中' : '未生效' }}
+                    </Tag>
+                  </template>
+                </Column>
+                <Column
+                  field="created_at"
+                  sortField="id"
+                  header="建立時間"
+                  sortable
+                  style="width: 18%"
+                >
                   <template #body="{ data }">
                     <span class="text-sm text-700">
-                      {{ formatNotificationDate(data.updated_at) }}
+                      {{ formatNotificationDate(data.created_at) }}
                     </span>
                   </template>
                 </Column>
-                <Column header="操作" style="width: 25%">
+                <Column header="操作" style="width: 20%">
                   <template #body="{ data }">
                     <div class="flex gap-2">
                       <Button
@@ -592,10 +629,13 @@ const notifications = ref([])
 const notificationsLoading = ref(false)
 const notificationSearchQuery = ref('')
 const notificationStatusFilter = ref(null)
+const notificationSeverityFilter = ref(null)
+const notificationEffectiveFilter = ref(null)
 
 const notificationSortMeta = ref([
   { field: 'is_active', order: -1 },
-  { field: 'updated_at', order: -1 },
+  { field: 'effectiveOrder', order: -1 },
+  { field: 'id', order: -1 },
 ])
 
 const notificationStatusOptions = [
@@ -606,6 +646,13 @@ const notificationStatusOptions = [
 const notificationSeverityOptions = [
   { label: '一般', value: 'info' },
   { label: '重要', value: 'danger' },
+]
+
+const notificationSeverityFilterOptions = notificationSeverityOptions
+
+const notificationEffectiveFilterOptions = [
+  { label: '生效中', value: true },
+  { label: '未生效', value: false },
 ]
 
 const showNotificationDialog = ref(false)
@@ -699,6 +746,30 @@ const getNotificationSeverityLabel = (severity) => {
   return map[severity] || '未知'
 }
 
+const isNotificationEffective = (notification) => {
+  if (!notification || !notification.is_active) {
+    return false
+  }
+
+  const now = new Date()
+
+  if (notification.starts_at) {
+    const startsAt = new Date(notification.starts_at)
+    if (!Number.isNaN(startsAt.getTime()) && startsAt > now) {
+      return false
+    }
+  }
+
+  if (notification.ends_at) {
+    const endsAt = new Date(notification.ends_at)
+    if (!Number.isNaN(endsAt.getTime()) && endsAt < now) {
+      return false
+    }
+  }
+
+  return true
+}
+
 const formatNotificationDate = (value) => {
   if (!value) return '—'
   const date = new Date(value)
@@ -783,7 +854,28 @@ const filteredNotifications = computed(() => {
     )
   }
 
-  return filtered
+  if (notificationSeverityFilter.value) {
+    filtered = filtered.filter(
+      (notification) => notification.severity === notificationSeverityFilter.value
+    )
+  }
+
+  if (
+    notificationEffectiveFilter.value !== null &&
+    notificationEffectiveFilter.value !== undefined
+  ) {
+    filtered = filtered.filter(
+      (notification) => isNotificationEffective(notification) === notificationEffectiveFilter.value
+    )
+  }
+
+  return filtered.map((notification) => {
+    const effectiveOrder = isNotificationEffective(notification) ? 1 : 0
+    return {
+      ...notification,
+      effectiveOrder,
+    }
+  })
 })
 
 const loadCourses = async () => {

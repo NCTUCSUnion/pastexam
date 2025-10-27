@@ -75,7 +75,7 @@ async function refreshActive() {
   errors.active = null
   try {
     const { data } = await notificationService.getActive()
-    state.active = Array.isArray(data) ? data : []
+    state.active = Array.isArray(data) ? [...data].sort((a, b) => (b.id || 0) - (a.id || 0)) : []
     const latest = latestUnseenNotification.value
     state.modalVisible = !!latest
   } catch (error) {
@@ -94,7 +94,7 @@ async function refreshAll() {
   errors.all = null
   try {
     const { data } = await notificationService.getAll()
-    state.all = Array.isArray(data) ? data : []
+    state.all = Array.isArray(data) ? [...data].sort((a, b) => (b.id || 0) - (a.id || 0)) : []
   } catch (error) {
     errors.all = error
     if (!isUnauthorizedError(error)) {

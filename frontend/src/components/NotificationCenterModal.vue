@@ -13,8 +13,12 @@
         <ProgressSpinner style="width: 40px; height: 40px" strokeWidth="4" />
       </div>
       <div v-else>
-        <div v-if="notifications.length === 0" class="text-center text-500 text-sm py-5">
-          目前沒有公告。
+        <div
+          v-if="notifications.length === 0"
+          class="flex flex-column align-items-center gap-2 py-5 text-500"
+        >
+          <i class="pi pi-megaphone text-4xl"></i>
+          <span class="text-sm mt-2">目前沒有公告</span>
         </div>
         <DataTable
           v-else

@@ -252,6 +252,7 @@
         <div class="flex justify-between gap-3 mt-4">
           <Button
             label="取消"
+            icon="pi pi-times"
             severity="secondary"
             outlined
             @click="closeIssueReportDialog"
@@ -774,25 +775,21 @@ export default {
 
       const items = [
         {
+          label: 'AI 模擬試題',
+          icon: 'pi pi-sparkles',
+          command: () => this.invokeMenuAction(() => this.openAIExamDialog()),
+        },
+        {
           label: '公告中心',
           icon: 'pi pi-bell',
           command: () => this.invokeMenuAction(() => this.openNotificationCenter('navbar-menu')),
         },
-      ]
-
-      if (this.isAuthenticated) {
-        items.push({
+        {
           label: '問題回報',
           icon: 'pi pi-comments',
           command: () => this.invokeMenuAction(() => this.openIssueReportDialog()),
-        })
-
-        items.push({
-          label: 'AI 模擬試題',
-          icon: 'pi pi-sparkles',
-          command: () => this.invokeMenuAction(() => this.openAIExamDialog()),
-        })
-      }
+        },
+      ]
 
       if (this.userData?.is_admin) {
         items.push({ separator: true })
