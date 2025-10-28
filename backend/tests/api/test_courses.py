@@ -6,11 +6,22 @@ from httpx import AsyncClient
 from sqlalchemy import delete
 
 from app.main import app
-from app.models.models import Archive, ArchiveType, Course, CourseCategory, UserRoles
+from app.models.models import (
+    Archive,
+    ArchiveType,
+    Course,
+    CourseCategory,
+    UserRoles,
+)
 from app.utils.auth import get_current_user
 
 
-async def _create_course(session_maker, *, name=None, category=CourseCategory.GENERAL):
+async def _create_course(
+    session_maker,
+    *,
+    name=None,
+    category=CourseCategory.GENERAL,
+):
     async with session_maker() as session:
         course = Course(
             name=name or f"Course {uuid.uuid4().hex[:6]}",
@@ -63,7 +74,10 @@ async def test_get_categorized_courses_returns_courses(
     make_user,
 ):
     user = await make_user()
-    course = await _create_course(session_maker, category=CourseCategory.GENERAL)
+    course = await _create_course(
+        session_maker,
+        category=CourseCategory.GENERAL,
+    )
 
     app.dependency_overrides[get_current_user] = _override_user(user)
     try:
@@ -75,7 +89,9 @@ async def test_get_categorized_courses_returns_courses(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
@@ -107,8 +123,12 @@ async def test_get_course_archives_returns_active_archives(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.course_id == course.id))
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Archive).where(Archive.course_id == course.id)
+            )
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
@@ -145,8 +165,12 @@ async def test_get_archive_preview_url_returns_presigned_link(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
@@ -187,8 +211,12 @@ async def test_get_archive_download_url_increments_count(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
@@ -214,8 +242,12 @@ async def test_update_archive_requires_admin(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
@@ -253,8 +285,12 @@ async def test_admin_update_archive_changes_fields(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
@@ -309,7 +345,9 @@ async def test_admin_course_crud_flow(
                 await session.execute(
                     delete(Archive).where(Archive.course_id == course_id)
                 )
-                await session.execute(delete(Course).where(Course.id == course_id))
+                await session.execute(
+                    delete(Course).where(Course.id == course_id)
+                )
                 await session.commit()
 
 
@@ -347,5 +385,7 @@ async def test_admin_course_endpoints_require_admin(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()

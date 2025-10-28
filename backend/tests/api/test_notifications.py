@@ -86,15 +86,20 @@ async def test_admin_can_crud_notifications(
     created_id = None
 
     try:
+        start_time = datetime.now(timezone.utc)
+        end_time = start_time + timedelta(hours=1)
         payload = {
             "title": "Site maintenance",
             "body": "Expected downtime",
             "severity": NotificationSeverity.DANGER.value,
             "is_active": True,
-            "starts_at": datetime.now(timezone.utc).isoformat(),
-            "ends_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+            "starts_at": start_time.isoformat(),
+            "ends_at": end_time.isoformat(),
         }
-        response = await client.post("/notifications/admin/notifications", json=payload)
+        response = await client.post(
+            "/notifications/admin/notifications",
+            json=payload,
+        )
         assert response.status_code == 201
         created = response.json()
         created_id = created["id"]
@@ -139,13 +144,15 @@ async def test_admin_notifications_require_admin(
     )
 
     try:
+        start_time = datetime.now(timezone.utc)
+        end_time = start_time + timedelta(hours=1)
         payload = {
             "title": "Forbidden",
             "body": "Nope",
             "severity": NotificationSeverity.INFO.value,
             "is_active": True,
-            "starts_at": datetime.now(timezone.utc).isoformat(),
-            "ends_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+            "starts_at": start_time.isoformat(),
+            "ends_at": end_time.isoformat(),
         }
 
         response = await client.get("/notifications/admin/notifications")
