@@ -49,6 +49,13 @@ async def override_db_session(monkeypatch):
     await engine.dispose()
 
 
+@pytest.fixture()
+def session_maker():
+    from app.db.session import AsyncSessionLocal
+
+    return AsyncSessionLocal
+
+
 @pytest_asyncio.fixture()
 async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
     """Return an AsyncClient backed by the FastAPI app."""
