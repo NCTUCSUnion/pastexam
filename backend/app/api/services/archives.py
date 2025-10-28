@@ -5,7 +5,7 @@ import uuid
 import os
 import io
 
-from app.db.init_db import get_session
+from app.db.session import get_session
 from app.models.models import User, Course, Archive, CourseCategory
 from app.utils.auth import get_current_user
 from app.utils.storage import get_minio_client

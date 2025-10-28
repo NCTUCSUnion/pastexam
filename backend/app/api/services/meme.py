@@ -3,7 +3,7 @@ from sqlmodel import select
 from sqlalchemy import func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db.init_db import get_session
+from app.db.session import get_session
 from app.models.models import Meme, MemeRead
 
 router = APIRouter()
