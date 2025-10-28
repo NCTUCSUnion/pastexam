@@ -1,12 +1,17 @@
 import uuid
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import delete, select
 from urllib.parse import urlparse, parse_qs
 
+from fastapi import HTTPException
+
 from app.main import app
 from app.models.models import User, UserRoles
 from app.utils.auth import get_current_user
+from app.api.services import auth as auth_service
 
 
 @pytest.mark.asyncio
@@ -228,3 +233,112 @@ async def test_logout_updates_last_logout_and_blacklists(
             assert refreshed.last_logout is not None
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_login_direct_returns_token(monkeypatch, make_user, session_maker):
+    user = await make_user()
+    captured = {}
+
+    def fake_encode(payload, key, algorithm):
+        captured["payload"] = payload
+        return "fake-token"
+
+    monkeypatch.setattr("app.api.services.auth.jwt.encode", fake_encode)
+
+    async with session_maker() as session:
+        response = await auth_service.login(
+            form_data=SimpleNamespace(username=user.name, password=user.password),
+            db=session,
+        )
+        assert response == {"access_token": "fake-token", "token_type": "bearer"}
+
+    async with session_maker() as verify_session:
+        refreshed = await verify_session.get(User, user.id)
+        assert refreshed.last_login is not None
+        assert captured["payload"]["uid"] == user.id
+
+
+@pytest.mark.asyncio
+async def test_login_direct_rejects_unknown_user(session_maker):
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await auth_service.login(
+                form_data=SimpleNamespace(username="missing", password="nope"),
+                db=session,
+            )
+        assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_auth_callback_direct_creates_user(monkeypatch, session_maker):
+    state = "csrf-token"
+    fake_request = SimpleNamespace(session={"csrf_token": state})
+    monkeypatch.setattr(
+        "app.api.services.auth.oauth_callback",
+        AsyncMock(
+            return_value={
+                "provider": "nycu",
+                "sub": "direct-sub",
+                "email": "direct@example.com",
+                "name": "Direct User",
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        "app.api.services.auth.jwt.encode",
+        lambda payload, key, algorithm: "direct-token",
+    )
+
+    async with session_maker() as session:
+        response = await auth_service.auth_callback_endpoint(
+            request=fake_request,
+            code="code-1",
+            state=state,
+            db=session,
+        )
+        assert response.status_code in {302, 307}
+        assert "direct-token" in response.headers["location"]
+
+    async with session_maker() as session:
+        created = await session.execute(
+            select(User).where(User.email == "direct@example.com")
+        )
+        user = created.scalar_one_or_none()
+        assert user is not None
+        await session.delete(user)
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_logout_direct_without_header(monkeypatch, session_maker):
+    user = User(
+        name="logout-direct",
+        email="logout-direct@example.com",
+        is_admin=False,
+        is_local=True,
+    )
+    async with session_maker() as session:
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+    fake_request = SimpleNamespace(headers={})
+    calls = []
+    monkeypatch.setattr("app.api.services.auth.blacklist_token", lambda token: calls.append(token))
+
+    async with session_maker() as session:
+        result = await auth_service.logout(
+            request=fake_request,
+            current_user=UserRoles(user_id=user.id, is_admin=False),
+            db=session,
+        )
+        assert result == {"message": "Successfully logged out"}
+
+    async with session_maker() as session:
+        refreshed = await session.get(User, user.id)
+        assert refreshed.last_logout is not None
+        await session.delete(refreshed)
+        await session.commit()
+
+    assert calls == []
