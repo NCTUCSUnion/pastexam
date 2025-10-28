@@ -33,7 +33,7 @@ jobs:
         run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run alembic upgrade head
 
       - name: Seed database
-        run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run python scripts/seed_db.py
+        run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run python app/scripts/seed_db.py
 
       - name: Run backend tests
         run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run pytest
