@@ -440,8 +440,14 @@ async def test_update_archive_course_transfers_to_existing_course(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
-            await session.execute(delete(Course).where(Course.id.in_([course_a.id, course_b.id])))
+            await session.execute(
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(
+                    Course.id.in_([course_a.id, course_b.id])
+                )
+            )
             await session.commit()
 
 
@@ -479,9 +485,13 @@ async def test_update_archive_course_creates_new_course_when_missing(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
             await session.execute(
-                delete(Course).where(Course.name.in_(["Original Course", "New Course"]))
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(
+                    Course.name.in_(["Original Course", "New Course"])
+                )
             )
             await session.commit()
 
@@ -512,8 +522,12 @@ async def test_update_archive_course_rejects_same_course(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
@@ -546,16 +560,26 @@ async def test_delete_archive_admin_success(
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
 @pytest.mark.asyncio
 async def test_get_categorized_courses_direct(session_maker, make_user):
     user = await make_user()
-    course_general = await _create_course(session_maker, category=CourseCategory.GENERAL)
-    course_graduate = await _create_course(session_maker, category=CourseCategory.GRADUATE)
+    course_general = await _create_course(
+        session_maker,
+        category=CourseCategory.GENERAL,
+    )
+    course_graduate = await _create_course(
+        session_maker,
+        category=CourseCategory.GRADUATE,
+    )
 
     try:
         async with session_maker() as session:
@@ -564,11 +588,21 @@ async def test_get_categorized_courses_direct(session_maker, make_user):
                 db=session,
             )
         payload = result.model_dump()
-        assert any(item["id"] == course_general.id for item in payload["general"])
-        assert any(item["id"] == course_graduate.id for item in payload["graduate"])
+        assert any(
+            item["id"] == course_general.id
+            for item in payload["general"]
+        )
+        assert any(
+            item["id"] == course_graduate.id
+            for item in payload["graduate"]
+        )
     finally:
         async with session_maker() as session:
-            await session.execute(delete(Course).where(Course.id.in_([course_general.id, course_graduate.id])))
+            await session.execute(
+                delete(Course).where(
+                    Course.id.in_([course_general.id, course_graduate.id])
+                )
+            )
             await session.commit()
 
 
@@ -604,7 +638,9 @@ async def test_archive_preview_and_download_direct(
     download_url = "https://example.com/download"
 
     def fake_presigned(object_name: str, *, expires):
-        return preview_url if expires.total_seconds() == 1800 else download_url
+        if expires.total_seconds() == 1800:
+            return preview_url
+        return download_url
 
     monkeypatch.setattr(
         "app.api.services.courses.presigned_get_url",
@@ -633,8 +669,12 @@ async def test_archive_preview_and_download_direct(
             assert refreshed.download_count == 1
     finally:
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
@@ -669,8 +709,12 @@ async def test_update_archive_direct_sets_fields(
             assert updated.academic_year == 2026
     finally:
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id == archive.id))
-            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.execute(
+                delete(Archive).where(Archive.id == archive.id)
+            )
+            await session.execute(
+                delete(Course).where(Course.id == course.id)
+            )
             await session.commit()
 
 
@@ -911,7 +955,9 @@ async def test_update_course_duplicate_name_rejected(
             assert exc.value.status_code == 400
     finally:
         async with session_maker() as session:
-            await session.execute(delete(Course).where(Course.id.in_([original.id, other.id])))
+            await session.execute(
+                delete(Course).where(Course.id.in_([original.id, other.id]))
+            )
             await session.commit()
 
 

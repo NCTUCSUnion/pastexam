@@ -20,7 +20,14 @@ class FakeScalarResult:
 
 class FakeSession:
     def __init__(self, admin_exists=False, course_count=0, meme_count=0):
-        self.admin = User(name=settings.DEFAULT_ADMIN_NAME, email=settings.DEFAULT_ADMIN_EMAIL) if admin_exists else None
+        self.admin = (
+            User(
+                name=settings.DEFAULT_ADMIN_NAME,
+                email=settings.DEFAULT_ADMIN_EMAIL,
+            )
+            if admin_exists
+            else None
+        )
         self.course_count = course_count
         self.meme_count = meme_count
         self.added_courses: list[Course] = []
@@ -71,8 +78,14 @@ async def test_init_db_creates_admin_and_seeds(monkeypatch):
 
     seed_payload = {
         "courses": [
-            {"name": "Seed Course A", "category": CourseCategory.GENERAL.name},
-            {"name": "Seed Course B", "category": CourseCategory.GRADUATE.name},
+            {
+                "name": "Seed Course A",
+                "category": CourseCategory.GENERAL.name,
+            },
+            {
+                "name": "Seed Course B",
+                "category": CourseCategory.GRADUATE.name,
+            },
         ],
         "memes": [
             {"content": "Study hard!", "language": "en"},
@@ -91,9 +104,23 @@ async def test_init_db_creates_admin_and_seeds(monkeypatch):
         async with fake_session:
             yield fake_session
 
-    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: Result())
-    monkeypatch.setattr(init_db, "load_seed_data", lambda: seed_payload, raising=False)
-    monkeypatch.setattr(init_db, "AsyncSessionLocal", lambda: fake_session_factory(), raising=False)
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: Result(),
+    )
+    monkeypatch.setattr(
+        init_db,
+        "load_seed_data",
+        lambda: seed_payload,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        init_db,
+        "AsyncSessionLocal",
+        lambda: fake_session_factory(),
+        raising=False,
+    )
 
     await init_db.init_db()
 
@@ -153,10 +180,29 @@ async def test_init_db_fallback_when_migration_fails(monkeypatch):
 
     tracker = {"create_all": 0}
 
-    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: FailResult())
-    monkeypatch.setattr(init_db, "load_seed_data", lambda: {"courses": [], "memes": []}, raising=False)
-    monkeypatch.setattr(init_db, "AsyncSessionLocal", lambda: fake_session_factory(), raising=False)
-    monkeypatch.setattr(init_db, "engine", FakeEngine(tracker), raising=False)
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: FailResult(),
+    )
+    monkeypatch.setattr(
+        init_db,
+        "load_seed_data",
+        lambda: {"courses": [], "memes": []},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        init_db,
+        "AsyncSessionLocal",
+        lambda: fake_session_factory(),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        init_db,
+        "engine",
+        FakeEngine(tracker),
+        raising=False,
+    )
 
     await init_db.init_db()
 

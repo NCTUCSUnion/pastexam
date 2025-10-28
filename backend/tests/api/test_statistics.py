@@ -38,7 +38,12 @@ async def test_statistics_endpoint_handles_errors(monkeypatch, client):
     async def failing_execute(self, *args, **kwargs):
         raise RuntimeError("db error")
 
-    monkeypatch.setattr(AsyncSession, "execute", failing_execute, raising=False)
+    monkeypatch.setattr(
+        AsyncSession,
+        "execute",
+        failing_execute,
+        raising=False,
+    )
 
     response = await client.get("/statistics")
     assert response.status_code == 200
@@ -131,7 +136,10 @@ async def test_get_system_statistics_direct_success(session_maker):
 
 
 @pytest.mark.asyncio
-async def test_get_system_statistics_direct_handles_exception(monkeypatch, session_maker):
+async def test_get_system_statistics_direct_handles_exception(
+    monkeypatch,
+    session_maker,
+):
     async with session_maker() as session:
         async def boom(*args, **kwargs):
             raise RuntimeError("broken")

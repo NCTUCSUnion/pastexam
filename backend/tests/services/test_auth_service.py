@@ -59,7 +59,11 @@ async def test_oauth_callback_valid(monkeypatch):
     fake_client = FakeAsyncClient()
     monkeypatch.setattr(httpx, "AsyncClient", lambda: fake_client)
 
-    result = await oauth_callback(code="abc", state="same", stored_state="same")
+    result = await oauth_callback(
+        code="abc",
+        state="same",
+        stored_state="same",
+    )
     assert result["provider"] == "nycu"
     assert result["sub"] == "student"
     assert result["email"] == "student@example.com"

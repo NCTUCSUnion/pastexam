@@ -266,7 +266,12 @@ async def test_get_task_status_reports_not_found_when_job_missing(
 
     await fake_redis.set(
         f"task_metadata:{task_id}",
-        json.dumps({"user_id": user.id, "created_at": datetime.utcnow().isoformat()}),
+        json.dumps(
+            {
+                "user_id": user.id,
+                "created_at": datetime.utcnow().isoformat(),
+            }
+        ),
     )
     fake_redis.job_statuses[task_id] = None
 
@@ -478,7 +483,10 @@ async def test_delete_task_success(
         response = await client.delete(f"/ai-exam/task/{task_id}")
         assert response.status_code == 200
         assert response.json()["success"] is True
-        assert f"task_metadata:{task_id}".encode("utf-8") not in fake_redis.metadata
+        assert (
+            f"task_metadata:{task_id}".encode("utf-8")
+            not in fake_redis.metadata
+        )
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -568,7 +576,11 @@ async def test_get_task_status_forbidden(
 
 
 @pytest.mark.asyncio
-async def test_get_task_status_handles_exception(monkeypatch, client, make_user):
+async def test_get_task_status_handles_exception(
+    monkeypatch,
+    client,
+    make_user,
+):
     user = await make_user()
 
     async def raise_error():
@@ -588,7 +600,11 @@ async def test_get_task_status_handles_exception(monkeypatch, client, make_user)
 
 
 @pytest.mark.asyncio
-async def test_list_user_tasks_handles_exception(monkeypatch, client, make_user):
+async def test_list_user_tasks_handles_exception(
+    monkeypatch,
+    client,
+    make_user,
+):
     user = await make_user()
 
     async def raise_error():
@@ -608,7 +624,11 @@ async def test_list_user_tasks_handles_exception(monkeypatch, client, make_user)
 
 
 @pytest.mark.asyncio
-async def test_delete_task_handles_exception(monkeypatch, client, make_user):
+async def test_delete_task_handles_exception(
+    monkeypatch,
+    client,
+    make_user,
+):
     user = await make_user()
 
     async def raise_error():
@@ -735,7 +755,12 @@ async def test_update_api_key_handles_other_errors(
 
     app.dependency_overrides[get_current_user] = fake_get_current_user
     monkeypatch.setattr("google.genai.Client", NoopClient)
-    monkeypatch.setattr(AsyncSession, "execute", failing_execute, raising=False)
+    monkeypatch.setattr(
+        AsyncSession,
+        "execute",
+        failing_execute,
+        raising=False,
+    )
 
     try:
         response = await client.put(

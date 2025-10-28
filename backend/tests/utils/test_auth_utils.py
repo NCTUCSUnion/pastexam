@@ -55,12 +55,19 @@ async def test_authenticate_user_validates_credentials(session_maker):
         await session.commit()
         await session.refresh(user)
         user_name = user.name
-        user_email = user.email
 
     async with session_maker() as session:
-        found = await auth_utils.authenticate_user(user_name, password, session)
+        found = await auth_utils.authenticate_user(
+            user_name,
+            password,
+            session,
+        )
         assert found is not None
-        missing = await auth_utils.authenticate_user(user_name, "wrong", session)
+        missing = await auth_utils.authenticate_user(
+            user_name,
+            "wrong",
+            session,
+        )
         assert missing is None
         await session.delete(found)
         await session.commit()
@@ -88,16 +95,27 @@ async def test_get_current_user_success(monkeypatch, session_maker):
     token = auth_utils.jwt.encode(
         {
             "uid": user_id,
-            "exp": int((datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()),
+            "exp": int(
+                (
+                    datetime.now(timezone.utc)
+                    + timedelta(minutes=5)
+                ).timestamp()
+            ),
         },
         auth_utils.settings.SECRET_KEY,
         algorithm=auth_utils.settings.ALGORITHM,
     )
 
-    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+    credentials = HTTPAuthorizationCredentials(
+        scheme="Bearer",
+        credentials=token,
+    )
 
     async with session_maker() as session:
-        user_roles = await auth_utils.get_current_user(token=credentials, db=session)
+        user_roles = await auth_utils.get_current_user(
+            token=credentials,
+            db=session,
+        )
         assert user_roles.user_id == user_id
         assert user_roles.is_admin is True
         refreshed = await session.get(User, user_id)
@@ -111,10 +129,16 @@ async def test_get_current_user_blacklisted(monkeypatch, session_maker):
     fake_redis.setex("blacklist:blocked", 100, "1")
     monkeypatch.setattr(auth_utils, "redis_client", fake_redis)
 
-    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="blocked")
+    credentials = HTTPAuthorizationCredentials(
+        scheme="Bearer",
+        credentials="blocked",
+    )
     async with session_maker() as session:
         with pytest.raises(HTTPException) as exc:
-            await auth_utils.get_current_user(token=credentials, db=session)
+            await auth_utils.get_current_user(
+                token=credentials,
+                db=session,
+            )
         assert exc.value.status_code == 401
 
 
@@ -126,14 +150,25 @@ async def test_get_current_user_missing_user(monkeypatch, session_maker):
     token = auth_utils.jwt.encode(
         {
             "uid": 999999,
-            "exp": int((datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()),
+            "exp": int(
+                (
+                    datetime.now(timezone.utc)
+                    + timedelta(minutes=5)
+                ).timestamp()
+            ),
         },
         auth_utils.settings.SECRET_KEY,
         algorithm=auth_utils.settings.ALGORITHM,
     )
-    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+    credentials = HTTPAuthorizationCredentials(
+        scheme="Bearer",
+        credentials=token,
+    )
 
     async with session_maker() as session:
         with pytest.raises(HTTPException) as exc:
-            await auth_utils.get_current_user(token=credentials, db=session)
+            await auth_utils.get_current_user(
+                token=credentials,
+                db=session,
+            )
         assert exc.value.status_code == 401

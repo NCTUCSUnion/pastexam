@@ -99,7 +99,13 @@ async def test_upload_archive_returns_404_when_user_missing(
     try:
         response = await client.post(
             "/archives/upload",
-            files={"file": ("sample.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf")},
+            files={
+                "file": (
+                    "sample.pdf",
+                    io.BytesIO(b"%PDF-1.4"),
+                    "application/pdf",
+                )
+            },
             data={
                 "subject": "Missing User Course",
                 "category": CourseCategory.GENERAL.value,
@@ -149,7 +155,13 @@ async def test_upload_archive_reuses_existing_course(
     try:
         response = await client.post(
             "/archives/upload",
-            files={"file": ("sample.pdf", io.BytesIO(b"%PDF-1.4 reuse"), "application/pdf")},
+            files={
+                "file": (
+                    "sample.pdf",
+                    io.BytesIO(b"%PDF-1.4 reuse"),
+                    "application/pdf",
+                )
+            },
             data={
                 "subject": subject,
                 "category": CourseCategory.GENERAL.value,
@@ -350,7 +362,11 @@ async def test_upload_archive_function_covers_creation_and_reuse(
 
     if first_id and second_id and course_id:
         async with session_maker() as session:
-            await session.execute(delete(Archive).where(Archive.id.in_([first_id, second_id])))
+            await session.execute(
+                delete(Archive).where(
+                    Archive.id.in_([first_id, second_id])
+                )
+            )
             await session.execute(
                 delete(Course).where(Course.id == course_id)
             )

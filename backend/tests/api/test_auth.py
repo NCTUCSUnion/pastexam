@@ -236,7 +236,11 @@ async def test_logout_updates_last_logout_and_blacklists(
 
 
 @pytest.mark.asyncio
-async def test_login_direct_returns_token(monkeypatch, make_user, session_maker):
+async def test_login_direct_returns_token(
+    monkeypatch,
+    make_user,
+    session_maker,
+):
     user = await make_user()
     captured = {}
 
@@ -248,10 +252,16 @@ async def test_login_direct_returns_token(monkeypatch, make_user, session_maker)
 
     async with session_maker() as session:
         response = await auth_service.login(
-            form_data=SimpleNamespace(username=user.name, password=user.password),
+            form_data=SimpleNamespace(
+                username=user.name,
+                password=user.password,
+            ),
             db=session,
         )
-        assert response == {"access_token": "fake-token", "token_type": "bearer"}
+        assert response == {
+            "access_token": "fake-token",
+            "token_type": "bearer",
+        }
 
     async with session_maker() as verify_session:
         refreshed = await verify_session.get(User, user.id)
@@ -264,7 +274,10 @@ async def test_login_direct_rejects_unknown_user(session_maker):
     async with session_maker() as session:
         with pytest.raises(HTTPException) as exc:
             await auth_service.login(
-                form_data=SimpleNamespace(username="missing", password="nope"),
+                form_data=SimpleNamespace(
+                    username="missing",
+                    password="nope",
+                ),
                 db=session,
             )
         assert exc.value.status_code == 401
@@ -325,7 +338,10 @@ async def test_logout_direct_without_header(monkeypatch, session_maker):
 
     fake_request = SimpleNamespace(headers={})
     calls = []
-    monkeypatch.setattr("app.api.services.auth.blacklist_token", lambda token: calls.append(token))
+    monkeypatch.setattr(
+        "app.api.services.auth.blacklist_token",
+        lambda token: calls.append(token),
+    )
 
     async with session_maker() as session:
         result = await auth_service.logout(

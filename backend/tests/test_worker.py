@@ -1,5 +1,3 @@
-import io
-from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
 import pytest
@@ -98,14 +96,21 @@ async def test_generate_exam_content_success(monkeypatch):
         deleted_at=None,
     )
     course = SimpleNamespace(name="Algorithms", deleted_at=None)
-    fake_session = FakeSession([_user_result(user), _archives_result([(archive, course)])])
+    fake_session = FakeSession(
+        [_user_result(user), _archives_result([(archive, course)])]
+    )
 
     monkeypatch.setattr(
         worker,
         "AsyncSession",
         lambda *_args, **_kwargs: fake_session,
     )
-    monkeypatch.setattr(worker, "load_default_prompt_template", lambda: "Prompt {professor} {course_name} {archives_count} {archives_details}")
+    monkeypatch.setattr(
+        worker,
+        "load_default_prompt_template",
+        lambda: "Prompt {professor} {course_name} "
+        "{archives_count} {archives_details}",
+    )
 
     fake_minio = FakeMinio()
     monkeypatch.setattr(worker, "get_minio_client", lambda: fake_minio)
@@ -125,13 +130,19 @@ async def test_generate_exam_content_success(monkeypatch):
     assert len(result["archives_used"]) == 1
     assert fake_client.uploads
     assert fake_client.deleted == ["uploaded-1"]
-    assert fake_minio.requests == [(worker.settings.MINIO_BUCKET_NAME, "archives/1.pdf")]
+    assert fake_minio.requests == [
+        (worker.settings.MINIO_BUCKET_NAME, "archives/1.pdf")
+    ]
 
 
 @pytest.mark.asyncio
 async def test_generate_exam_content_missing_user(monkeypatch):
     fake_session = FakeSession([_user_result(None)])
-    monkeypatch.setattr(worker, "AsyncSession", lambda *_args, **_kwargs: fake_session)
+    monkeypatch.setattr(
+        worker,
+        "AsyncSession",
+        lambda *_args, **_kwargs: fake_session,
+    )
 
     with pytest.raises(ValueError, match="API key not found"):
         await worker.generate_exam_content(
@@ -146,7 +157,11 @@ async def test_generate_exam_content_missing_user(monkeypatch):
 async def test_generate_exam_content_missing_archives(monkeypatch):
     user = SimpleNamespace(gemini_api_key="KEY")
     fake_session = FakeSession([_user_result(user), _archives_result([])])
-    monkeypatch.setattr(worker, "AsyncSession", lambda *_args, **_kwargs: fake_session)
+    monkeypatch.setattr(
+        worker,
+        "AsyncSession",
+        lambda *_args, **_kwargs: fake_session,
+    )
 
     with pytest.raises(ValueError, match="Archives not found"):
         await worker.generate_exam_content(
@@ -170,9 +185,19 @@ async def test_generate_exam_content_cleans_up_on_failure(monkeypatch):
         deleted_at=None,
     )
     course = SimpleNamespace(name="Algorithms", deleted_at=None)
-    fake_session = FakeSession([_user_result(user), _archives_result([(archive, course)])])
-    monkeypatch.setattr(worker, "AsyncSession", lambda *_args, **_kwargs: fake_session)
-    monkeypatch.setattr(worker, "load_default_prompt_template", lambda: "Prompt {professor}")
+    fake_session = FakeSession(
+        [_user_result(user), _archives_result([(archive, course)])]
+    )
+    monkeypatch.setattr(
+        worker,
+        "AsyncSession",
+        lambda *_args, **_kwargs: fake_session,
+    )
+    monkeypatch.setattr(
+        worker,
+        "load_default_prompt_template",
+        lambda: "Prompt {professor}",
+    )
     monkeypatch.setattr(worker, "get_minio_client", lambda: FakeMinio())
 
     failing_client = FakeGenAIClient(should_fail=True)
