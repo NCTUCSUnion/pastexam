@@ -1,0 +1,408 @@
+courses:
+  - name: "微積分(一)"
+    category: FRESHMAN
+  - name: "微積分(二)"
+    category: FRESHMAN
+  - name: "物理(一)"
+    category: FRESHMAN
+  - name: "物理(二)"
+    category: FRESHMAN
+  - name: "化學(一)"
+    category: FRESHMAN
+  - name: "化學(二)"
+    category: FRESHMAN
+  - name: "線性代數"
+    category: FRESHMAN
+  - name: "計算機概論與程式設計"
+    category: FRESHMAN
+  - name: "資料結構與物件導向程式設計"
+    category: FRESHMAN
+  - name: "離散數學"
+    category: FRESHMAN
+  - name: "數位電路設計"
+    category: FRESHMAN
+  - name: "MATLAB 程式語言"
+    category: FRESHMAN
+  - name: "機率"
+    category: SOPHOMORE
+  - name: "演算法概論"
+    category: SOPHOMORE
+  - name: "計算機組織"
+    category: SOPHOMORE
+  - name: "資料庫系統概論"
+    category: SOPHOMORE
+  - name: "人工智慧概論"
+    category: SOPHOMORE
+  - name: "計算機網路概論"
+    category: SOPHOMORE
+  - name: "密碼學概論"
+    category: SOPHOMORE
+  - name: "數值方法"
+    category: SOPHOMORE
+  - name: "通訊原理與無線網路"
+    category: SOPHOMORE
+  - name: "數位電路實驗"
+    category: SOPHOMORE
+  - name: "正規語言概論"
+    category: SOPHOMORE
+  - name: "組合數學"
+    category: SOPHOMORE
+  - name: "訊號與系統"
+    category: SOPHOMORE
+  - name: "數位訊號處理概論"
+    category: SOPHOMORE
+  - name: "數位系統設計"
+    category: SOPHOMORE
+  - name: "圖形理論導論"
+    category: SOPHOMORE
+  - name: "作業系統概論"
+    category: JUNIOR
+  - name: "機器學習概論"
+    category: JUNIOR
+  - name: "人工智慧總整與實作"
+    category: JUNIOR
+  - name: "網路程式設計概論"
+    category: JUNIOR
+  - name: "電腦安全總整與實作"
+    category: JUNIOR
+  - name: "計算機圖學概論"
+    category: JUNIOR
+  - name: "影像處理概論"
+    category: JUNIOR
+  - name: "網路系統總整與實作"
+    category: JUNIOR
+  - name: "編譯器設計概論"
+    category: JUNIOR
+  - name: "微處理機系統原理與實作"
+    category: JUNIOR
+  - name: "微處理機系統實驗"
+    category: JUNIOR
+  - name: "嵌入式系統總整與實作"
+    category: JUNIOR
+  - name: "企業網路安全"
+    category: JUNIOR
+  - name: "多媒體資訊系統概論"
+    category: JUNIOR
+  - name: "軟體工程概論"
+    category: JUNIOR
+  - name: "網路規劃與管理實務"
+    category: JUNIOR
+  - name: "多媒體與人機互動總整與實作"
+    category: SENIOR
+  - name: "計算機系統管理"
+    category: SENIOR
+  - name: "計算機網路管理"
+    category: SENIOR
+  - name: "作業系統總整與實作"
+    category: SENIOR
+  - name: "密碼工程"
+    category: GRADUATE
+  - name: "高等 UNIX 程式設計"
+    category: GRADUATE
+  - name: "計算機網路(研)"
+    category: GRADUATE
+  - name: "演算法(研)"
+    category: GRADUATE
+  - name: "網路程式設計(研)"
+    category: GRADUATE
+  - name: "網路安全"
+    category: GRADUATE
+  - name: "演化計算"
+    category: GRADUATE
+  - name: "視訊壓縮"
+    category: GRADUATE
+  - name: "圖形理論"
+    category: GRADUATE
+  - name: "計算機架構"
+    category: GRADUATE
+  - name: "分散式演算法"
+    category: GRADUATE
+  - name: "圖形識別"
+    category: GRADUATE
+  - name: "資料探勘"
+    category: GRADUATE
+  - name: "作業系統"
+    category: GRADUATE
+  - name: "編譯器設計"
+    category: GRADUATE
+  - name: "影像處理"
+    category: GRADUATE
+  - name: "計算機圖學"
+    category: GRADUATE
+  - name: "正規語言"
+    category: GRADUATE
+  - name: "軟體測試"
+    category: GRADUATE
+  - name: "無線網路"
+    category: GRADUATE
+  - name: "容錯計算"
+    category: GRADUATE
+  - name: "網路安全實務-攻擊與防禦"
+    category: GRADUATE
+  - name: "深度學習與實務"
+    category: GRADUATE
+  - name: "賽局理論及應用"
+    category: GRADUATE
+  - name: "電腦對局理論"
+    category: GRADUATE
+  - name: "生醫資料探勘"
+    category: GRADUATE
+  - name: "嵌入式即時系統"
+    category: GRADUATE
+  - name: "計算機系統安全"
+    category: GRADUATE
+  - name: "計算機網路安全"
+    category: GRADUATE
+  - name: "軟體工程"
+    category: GRADUATE
+  - name: "軟體架構"
+    category: GRADUATE
+  - name: "組合語言與系統程式"
+    category: GRADUATE
+  - name: "電腦安全概論"
+    category: GRADUATE
+  - name: "物聯網概論"
+    category: GRADUATE
+  - name: "嵌入式系統設計(研)"
+    category: GRADUATE
+  - name: "電子學(一)"
+    category: INTERDISCIPLINARY
+  - name: "電路與電子學(一)"
+    category: INTERDISCIPLINARY
+  - name: "電路與電子學(二)"
+    category: INTERDISCIPLINARY
+  - name: "分析導論(一)"
+    category: INTERDISCIPLINARY
+  - name: "微分方程"
+    category: INTERDISCIPLINARY
+  - name: "有機化學(二)"
+    category: INTERDISCIPLINARY
+  - name: "基礎圖論"
+    category: INTERDISCIPLINARY
+  - name: "音樂理論導論"
+    category: GENERAL
+  - name: "統計學"
+    category: GENERAL
+  - name: "經濟學概論"
+    category: GENERAL
+  - name: "全球化與兩岸關係"
+    category: GENERAL
+  - name: "地球科學概論"
+    category: GENERAL
+  - name: "日本文化論"
+    category: GENERAL
+  - name: "營建管理"
+    category: GENERAL
+  - name: "法學緒論"
+    category: GENERAL
+  - name: "財務管理"
+    category: GENERAL
+  - name: "伊斯蘭文明"
+    category: GENERAL
+  - name: "投資學"
+    category: GENERAL
+  - name: "會計學(一)"
+    category: GENERAL
+  - name: "會計學(二)"
+    category: GENERAL
+  - name: "財務工程導論"
+    category: GENERAL
+  - name: "普通心理學"
+    category: GENERAL
+  - name: "統計學(一)"
+    category: GENERAL
+  - name: "統計學(二)"
+    category: GENERAL
+  - name: "邏輯學"
+    category: GENERAL
+  - name: "日文(二)"
+    category: GENERAL
+  - name: "期貨與選擇權"
+    category: GENERAL
+  - name: "公司法"
+    category: GENERAL
+
+memes:
+  - content: |-
+      #!/bin/bash
+      
+      # Finals Week
+      while true; do
+        if [ "$(coffee_level)" -lt 50 ]; then
+          echo "CRITICAL: Coffee low!"
+          make_coffee
+        fi
+      done
+    language: bash
+  - content: |-
+      while (!coffee) {
+        printf("Need more C0FF33\n");
+        productivity--;
+        stress++;
+      }
+    language: c
+  - content: |-
+      # Python developers be like
+      import solution
+      from stackoverflow import code
+      
+      def actual_work():
+          pass  # TODO: Implement later
+    language: python
+  - content: |-
+      try {
+        life();
+      } catch (err) {
+        coffee.drink();
+        life.retry();
+      }
+    language: javascript
+  - content: |-
+      /* CSS: The blessing and curse */
+      #submit-button {
+        display: block;
+        margin: 0 auto;
+        position: relative !important;
+        z-index: 999; /* Please work */
+      }
+    language: css
+  - content: |-
+      // 99 bugs in the code
+      // Take one down, patch it around
+      // 127 bugs in the code
+    language: javascript
+  - content: |-
+      def time_estimate(task):
+          """Estimates completion time"""
+          realistic = calculate_hours(task)
+          return realistic * 3  # Developer's constant
+    language: python
+  - content: |-
+      if (brain.available()) {
+        code.write();
+      } else {
+        coffee.consume();
+      }
+    language: javascript
+  - content: |-
+      class Student {
+        constructor() {
+          this.sleep = 0;
+          this.stress = 100;
+        }
+      }
+    language: javascript
+  - content: |-
+      SELECT motivation
+      FROM student
+      WHERE deadline < CURRENT_DATE
+      AND hours_slept > 3
+      -- Returns empty set
+    language: sql
+  - content: |-
+      const examTime = () => {
+        panic();
+        cram();
+        return "Somehow passed";
+      };
+    language: javascript
+  - content: |-
+      fn main() {
+          let code_quality = 100;
+          let deadline = true;
+      
+          if deadline {
+              println!("Who needs clean code anyway?");
+              code_quality -= 80;
+          }
+      }
+    language: rust
+  - content: |-
+      switch (mood) {
+        case "happy":
+          code.works();
+          break;
+        default: // 99% of the time
+          code.breaks();
+      }
+    language: javascript
+  - content: |-
+      class MyCat < Pet
+        def initialize
+          @helps_coding = false
+        end
+      
+        def sit_on_keyboard
+          puts "kjasdhIHDIhaoiy87yh" # Commit this
+        end
+      end
+    language: ruby
+  - content: |-
+      function sleep() {
+        return new Promise((resolve) => {
+          // Never resolves for CS students
+        });
+      }
+    language: javascript
+  - content: |-
+      <!-- Types of HTML elements -->
+      <div>What I wanted</div>
+      <div style="position:absolute;top:-500px;">
+        What the designer wanted
+      </div>
+      <marquee>What the client asked for</marquee>
+    language: html
+  - content: |-
+      #include <iostream>
+      
+      void debugCode() {
+        std::cout << "This should work..." << std::endl;
+        std::cout << "WHY doesn't it work?" << std::endl;
+        std::cout << "Oh, semicolon missing" << std::endl;
+      }
+    language: cpp
+  - content: |-
+      <?php
+      // The official debugging technique
+      @$result = dangerous_function();
+      echo $result ?? "It broke again!";
+      // Add more @ symbols until it works
+      ?>
+    language: php
+  - content: |-
+      // Types of errors:
+      // 1. Syntax errors
+      // 2. Logic errors
+      // 3. "It worked on my machine" errors
+    language: javascript
+  - content: |-
+      fun main() {
+          val states = listOf("It works!", "It doesn't work", "WHY doesn't it work??")
+          println("Current: ${states.random()}")
+      }
+    language: kotlin
+  - content: |-
+      // Found in production code:
+      // Dear future me,
+      // I am sorry.
+      // Sincerely, past me.
+    language: javascript
+  - content: |-
+      let motivation = new Promise((resolve) => {
+        setTimeout(resolve, Infinity);
+        // Pending since 2020
+      });
+    language: javascript
+  - content: |-
+      -- SQL: Debugging in production
+      BEGIN TRANSACTION;
+      UPDATE users SET admin = TRUE;
+      -- TODO: Add WHERE clause
+      -- ...forgot to add it
+      COMMIT;
+    language: sql
+  - content: |-
+      function estimateProjectTime(hours) {
+        return hours * 3; // The developer's constant
+      }
+    language: javascript

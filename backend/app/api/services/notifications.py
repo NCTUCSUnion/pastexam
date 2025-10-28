@@ -22,8 +22,14 @@ def _apply_time_filters(statement):
     now = datetime.now(timezone.utc)
     return (
         statement.where(Notification.is_active.is_(True))
-        .where((Notification.starts_at.is_(None)) | (Notification.starts_at <= now))
-        .where((Notification.ends_at.is_(None)) | (Notification.ends_at >= now))
+        .where(
+            (Notification.starts_at.is_(None)) |
+            (Notification.starts_at <= now)
+        )
+        .where(
+            (Notification.ends_at.is_(None)) |
+            (Notification.ends_at >= now)
+        )
     )
 
 
@@ -35,7 +41,10 @@ async def get_active_notifications(
     query = _apply_time_filters(query)
     result = await db.execute(query)
     notifications = result.scalars().all()
-    return [NotificationRead.model_validate(notification) for notification in notifications]
+    return [
+        NotificationRead.model_validate(notification)
+        for notification in notifications
+    ]
 
 
 @router.get("", response_model=List[NotificationRead])
@@ -46,7 +55,10 @@ async def list_public_notifications(
     query = _apply_time_filters(query)
     result = await db.execute(query)
     notifications = result.scalars().all()
-    return [NotificationRead.model_validate(notification) for notification in notifications]
+    return [
+        NotificationRead.model_validate(notification)
+        for notification in notifications
+    ]
 
 
 @router.get("/admin/notifications", response_model=List[NotificationRead])
@@ -55,12 +67,18 @@ async def list_admin_notifications(
     current_user: UserRoles = Depends(get_current_user),
 ):
     if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
 
     query = select(Notification).order_by(Notification.created_at.desc())
     result = await db.execute(query)
     notifications = result.scalars().all()
-    return [NotificationRead.model_validate(notification) for notification in notifications]
+    return [
+        NotificationRead.model_validate(notification)
+        for notification in notifications
+    ]
 
 
 @router.post(
@@ -74,7 +92,10 @@ async def create_notification(
     current_user: UserRoles = Depends(get_current_user),
 ):
     if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
 
     notification = Notification(**notification_data.model_dump())
     now = datetime.now(timezone.utc)
@@ -87,7 +108,10 @@ async def create_notification(
     return NotificationRead.model_validate(notification)
 
 
-@router.put("/admin/notifications/{notification_id}", response_model=NotificationRead)
+@router.put(
+    "/admin/notifications/{notification_id}",
+    response_model=NotificationRead
+)
 async def update_notification(
     notification_id: int,
     notification_data: NotificationUpdate,
@@ -95,12 +119,20 @@ async def update_notification(
     current_user: UserRoles = Depends(get_current_user),
 ):
     if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
 
-    result = await db.execute(select(Notification).where(Notification.id == notification_id))
+    result = await db.execute(
+        select(Notification).where(Notification.id == notification_id)
+    )
     notification = result.scalar_one_or_none()
     if not notification:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found"
+        )
 
     update_data = notification_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -114,19 +146,30 @@ async def update_notification(
     return NotificationRead.model_validate(notification)
 
 
-@router.delete("/admin/notifications/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/admin/notifications/{notification_id}",
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_notification(
     notification_id: int,
     db: AsyncSession = Depends(get_session),
     current_user: UserRoles = Depends(get_current_user),
 ):
     if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
 
-    result = await db.execute(select(Notification).where(Notification.id == notification_id))
+    result = await db.execute(
+        select(Notification).where(Notification.id == notification_id)
+    )
     notification = result.scalar_one_or_none()
     if not notification:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found"
+        )
 
     await db.delete(notification)
     await db.commit()

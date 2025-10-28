@@ -13,6 +13,7 @@ from app.core.config import settings
 
 router = APIRouter()
 
+
 @router.post("/upload")
 async def upload_archive(
     file: UploadFile,
@@ -32,7 +33,7 @@ async def upload_archive(
     user_query = select(User).where(User.id == current_user.user_id)
     user_result = await db.execute(user_query)
     user = user_result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -46,7 +47,7 @@ async def upload_archive(
     )
     result = await db.execute(query)
     course = result.scalar_one_or_none()
-    
+
     if not course:
         course = Course(
             name=subject,
@@ -61,17 +62,17 @@ async def upload_archive(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only PDF files are allowed"
         )
-    
+
     file_content = await file.read()
     file_size = len(file_content)
-    
+
     max_size = 10 * 1024 * 1024  # 10MB
     if file_size > max_size:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File size exceeds 10MB limit"
         )
-    
+
     _, file_extension = os.path.splitext(file.filename)
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     object_name = f"archives/{course.id}/{unique_filename}"
@@ -79,7 +80,7 @@ async def upload_archive(
     try:
         minio_client = get_minio_client()
         file_data = io.BytesIO(file_content)
-        
+
         minio_client.put_object(
             bucket_name=settings.MINIO_BUCKET_NAME,
             object_name=object_name,
@@ -87,7 +88,7 @@ async def upload_archive(
             length=file_size,
             content_type="application/pdf"
         )
-        
+
         archive = Archive(
             course_id=course.id,
             name=filename,
@@ -98,11 +99,11 @@ async def upload_archive(
             academic_year=academic_year,
             uploader_id=current_user.user_id
         )
-        
+
         db.add(archive)
         await db.commit()
         await db.refresh(archive)
-        
+
         return {
             "success": True,
             "message": "File uploaded successfully",
@@ -116,7 +117,7 @@ async def upload_archive(
                 "file_size": file_size
             }
         }
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

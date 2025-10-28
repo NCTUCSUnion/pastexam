@@ -1,10 +1,9 @@
-from typing import Optional, List, Dict
+from typing import Optional, List
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
 from sqlmodel import SQLModel, Field, Relationship
-from pydantic import BaseModel, Field as PydanticField, computed_field
-from sqlalchemy import Column, DateTime, Integer, ForeignKey, Date, String, Boolean, Text
-
+from pydantic import BaseModel
+from sqlalchemy import Column, DateTime, String, Text
 
 
 class CourseCategory(str, PyEnum):
@@ -16,15 +15,18 @@ class CourseCategory(str, PyEnum):
     INTERDISCIPLINARY = "interdisciplinary"
     GENERAL = "general"
 
+
 class ArchiveType(str, PyEnum):
     QUIZ = "quiz"
     MIDTERM = "midterm"
     FINAL = "final"
     OTHER = "other"
 
+
 class NotificationSeverity(str, PyEnum):
     INFO = "info"
     DANGER = "danger"
+
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
@@ -52,6 +54,7 @@ class User(SQLModel, table=True):
 
     archives: List["Archive"] = Relationship(back_populates="uploader")
 
+
 class Course(SQLModel, table=True):
     __tablename__ = "courses"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -63,28 +66,29 @@ class Course(SQLModel, table=True):
             nullable=True
         )
     )
-    
+
     archives: List["Archive"] = Relationship(back_populates="course")
+
 
 class Archive(SQLModel, table=True):
     __tablename__ = "archives"
     id: Optional[int] = Field(default=None, primary_key=True)
-    
+
     name: str
     academic_year: int
     archive_type: ArchiveType
     professor: str = Field(index=True)
     has_answers: bool = False
     download_count: int = Field(default=0)
-    
+
     object_name: str
-    
+
     uploader_id: Optional[int] = Field(default=None, foreign_key="users.id")
     uploader: Optional["User"] = Relationship(back_populates="archives")
-    
+
     course_id: int = Field(foreign_key="courses.id")
     course: "Course" = Relationship(back_populates="archives")
-    
+
     created_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
@@ -106,11 +110,13 @@ class Archive(SQLModel, table=True):
         )
     )
 
+
 class Meme(SQLModel, table=True):
     __tablename__ = "memes"
     id: Optional[int] = Field(default=None, primary_key=True)
     content: str
     language: str
+
 
 class Notification(SQLModel, table=True):
     __tablename__ = "notifications"
@@ -147,7 +153,6 @@ class Notification(SQLModel, table=True):
     )
 
 
-
 class UserRead(BaseModel):
     id: int
     email: str
@@ -159,11 +164,13 @@ class UserRead(BaseModel):
     class Config:
         from_attributes = True
 
+
 class UserCreate(BaseModel):
     name: str
     email: str
     password: str
     is_admin: bool = False
+
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -171,12 +178,14 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     is_admin: Optional[bool] = None
 
+
 class UserRoles(BaseModel):
     user_id: int
     is_admin: bool = False
-    
+
     class Config:
         from_attributes = True
+
 
 class MemeRead(BaseModel):
     id: int
@@ -186,6 +195,7 @@ class MemeRead(BaseModel):
     class Config:
         from_attributes = True
 
+
 class NotificationBase(BaseModel):
     title: str
     body: str
@@ -194,8 +204,10 @@ class NotificationBase(BaseModel):
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
 
+
 class NotificationCreate(NotificationBase):
     pass
+
 
 class NotificationUpdate(BaseModel):
     title: Optional[str] = None
@@ -205,6 +217,7 @@ class NotificationUpdate(BaseModel):
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
 
+
 class NotificationRead(NotificationBase):
     id: int
     created_at: datetime
@@ -213,12 +226,14 @@ class NotificationRead(NotificationBase):
     class Config:
         from_attributes = True
 
+
 class CourseInfo(BaseModel):
     id: int
     name: str
 
     class Config:
         from_attributes = True
+
 
 class CoursesByCategory(BaseModel):
     freshman: List[CourseInfo] = []
@@ -232,6 +247,7 @@ class CoursesByCategory(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ArchiveRead(BaseModel):
     id: int
     name: str
@@ -242,17 +258,20 @@ class ArchiveRead(BaseModel):
     created_at: datetime
     uploader_id: Optional[int] = None
     download_count: int = 0
-    
+
     class Config:
         from_attributes = True
+
 
 class CourseCreate(BaseModel):
     name: str
     category: CourseCategory
 
+
 class CourseUpdate(BaseModel):
     name: Optional[str] = None
     category: Optional[CourseCategory] = None
+
 
 class CourseRead(BaseModel):
     id: int
@@ -262,6 +281,7 @@ class CourseRead(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ArchiveUpdateCourse(BaseModel):
     course_id: Optional[int] = None
     course_name: Optional[str] = None
@@ -269,6 +289,8 @@ class ArchiveUpdateCourse(BaseModel):
 
 
 # AI Exam related models
+
+
 class GenerateExamRequest(BaseModel):
     archive_ids: List[int]
     prompt: Optional[str] = None
@@ -297,6 +319,8 @@ class GenerateExamResponse(BaseModel):
 
 
 # API Key related models
+
+
 class ApiKeyUpdate(BaseModel):
     gemini_api_key: Optional[str] = None
 
@@ -304,5 +328,3 @@ class ApiKeyUpdate(BaseModel):
 class ApiKeyResponse(BaseModel):
     has_api_key: bool
     api_key_masked: Optional[str] = None
-
- 
