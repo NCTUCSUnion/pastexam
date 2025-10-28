@@ -120,7 +120,11 @@ async def test_submit_generate_task_enqueues_job(
     app.dependency_overrides[get_current_user] = fake_get_current_user
 
     try:
-        payload = {"archive_ids": [1, 2], "prompt": "Generate exam.", "temperature": 0.5}
+        payload = {
+            "archive_ids": [1, 2],
+            "prompt": "Generate exam.",
+            "temperature": 0.5,
+        }
         response = await client.post("/ai-exam/generate", json=payload)
         assert response.status_code == 200
         body = response.json()
@@ -134,7 +138,9 @@ async def test_submit_generate_task_enqueues_job(
 
         metadata_key = f"task_metadata:{task_id}".encode("utf-8")
         assert metadata_key in fake_redis.metadata
-        metadata = json.loads(fake_redis.metadata[metadata_key].decode("utf-8"))
+        metadata = json.loads(
+            fake_redis.metadata[metadata_key].decode("utf-8")
+        )
         assert metadata["user_id"] == user.id
         assert metadata["archive_ids"] == [1, 2]
         assert metadata["status"] == "pending"
@@ -171,7 +177,10 @@ async def test_get_task_status_returns_result(
         ex=86400,
     )
     fake_redis.job_statuses[task_id] = JobStatus.complete
-    fake_redis.results[task_id] = {"success": True, "generated_content": "Example"}
+    fake_redis.results[task_id] = {
+        "success": True,
+        "generated_content": "Example",
+    }
 
     try:
         response = await client.get(f"/ai-exam/task/{task_id}")
@@ -231,7 +240,10 @@ async def test_update_api_key_persists_value(
         body = response.json()
         assert body["has_api_key"] is True
         assert body["api_key_masked"] == f"****{new_key[-4:]}"
-        assert FakeClient.instances and FakeClient.instances[0].api_key == new_key
+        assert (
+            FakeClient.instances
+            and FakeClient.instances[0].api_key == new_key
+        )
         assert FakeClient.instances[0].models.calls
 
         async with session_maker() as session:
