@@ -2,6 +2,7 @@ import io
 import uuid
 
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 from sqlalchemy import delete, select, func
 from starlette.datastructures import UploadFile
@@ -386,3 +387,97 @@ async def test_upload_archive_requires_pdf(
         assert response.json()["detail"] == "Only PDF files are allowed"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_upload_archive_function_user_missing(
+    session_maker,
+    make_user,
+):
+    user = await make_user()
+    async with session_maker() as session:
+        db_user = await session.get(User, user.id)
+        await session.delete(db_user)
+        await session.commit()
+
+    upload = UploadFile(
+        filename="missing.pdf",
+        file=io.BytesIO(b"%PDF missing user"),
+    )
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await upload_archive(
+                file=upload,
+                subject="Missing Subject",
+                category=CourseCategory.GENERAL,
+                professor="Prof. Missing",
+                archive_type="midterm",
+                has_answers=False,
+                filename="Missing Archive",
+                academic_year=2024,
+                current_user=UserRoles(user_id=user.id, is_admin=False),
+                db=session,
+            )
+        assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_upload_archive_function_rejects_non_pdf(
+    session_maker,
+    make_user,
+):
+    user = await make_user()
+    upload = UploadFile(filename="invalid.txt", file=io.BytesIO(b"text"))
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await upload_archive(
+                file=upload,
+                subject="Bad File",
+                category=CourseCategory.GENERAL,
+                professor="Prof. Text",
+                archive_type="midterm",
+                has_answers=False,
+                filename="Bad File",
+                academic_year=2024,
+                current_user=UserRoles(user_id=user.id, is_admin=False),
+                db=session,
+            )
+        assert exc.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_upload_archive_function_handles_storage_error(
+    session_maker,
+    make_user,
+    monkeypatch,
+):
+    user = await make_user()
+
+    class FailingMinio:
+        def put_object(self, **kwargs):
+            raise RuntimeError("storage down")
+
+    monkeypatch.setattr(
+        "app.api.services.archives.get_minio_client",
+        lambda: FailingMinio(),
+    )
+
+    upload = UploadFile(filename="fail.pdf", file=io.BytesIO(b"%PDF fail"))
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await upload_archive(
+                file=upload,
+                subject="Failure",
+                category=CourseCategory.GENERAL,
+                professor="Prof. Fail",
+                archive_type="final",
+                has_answers=False,
+                filename="Failure",
+                academic_year=2024,
+                current_user=UserRoles(user_id=user.id, is_admin=False),
+                db=session,
+            )
+        assert exc.value.status_code == 500
