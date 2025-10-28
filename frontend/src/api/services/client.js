@@ -27,7 +27,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status
+    const requestUrl = error.config?.url || ''
+    const method = (error.config?.method || '').toLowerCase()
+    const isLoginRequest = status === 401 && method === 'post' && requestUrl.includes('/auth/login')
+
+    if (isLoginRequest) {
+      error.isInvalidCredentials = true
+      return Promise.reject(error)
+    }
+
+    if (status === 401) {
       sessionStorage.removeItem('authToken')
       error.isUnauthorized = true
 
