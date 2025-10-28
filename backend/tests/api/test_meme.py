@@ -30,7 +30,9 @@ async def test_get_random_meme_returns_meme(client, session_maker):
     finally:
         if created_id is not None:
             async with session_maker() as session:
-                await session.execute(delete(Meme).where(Meme.id == created_id))
+                await session.execute(
+                    delete(Meme).where(Meme.id == created_id)
+                )
                 await session.commit()
 
 

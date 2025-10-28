@@ -1082,7 +1082,10 @@ async def test_list_all_courses_direct_returns_courses(
 
 
 @pytest.mark.asyncio
-async def test_get_course_archives_not_found_direct(session_maker, make_user):
+async def test_get_course_archives_not_found_direct(
+    session_maker,
+    make_user,
+):
     user = await make_user()
     async with session_maker() as session:
         with pytest.raises(HTTPException) as exc:
@@ -1095,7 +1098,10 @@ async def test_get_course_archives_not_found_direct(session_maker, make_user):
 
 
 @pytest.mark.asyncio
-async def test_get_archive_preview_url_not_found_direct(session_maker, make_user):
+async def test_get_archive_preview_url_not_found_direct(
+    session_maker,
+    make_user,
+):
     user = await make_user()
     async with session_maker() as session:
         with pytest.raises(HTTPException) as exc:
@@ -1109,7 +1115,10 @@ async def test_get_archive_preview_url_not_found_direct(session_maker, make_user
 
 
 @pytest.mark.asyncio
-async def test_get_archive_download_url_not_found_direct(session_maker, make_user):
+async def test_get_archive_download_url_not_found_direct(
+    session_maker,
+    make_user,
+):
     user = await make_user()
     async with session_maker() as session:
         with pytest.raises(HTTPException) as exc:
@@ -1123,7 +1132,10 @@ async def test_get_archive_download_url_not_found_direct(session_maker, make_use
 
 
 @pytest.mark.asyncio
-async def test_update_archive_course_creates_new_course_direct(session_maker, make_user):
+async def test_update_archive_course_creates_new_course_direct(
+    session_maker,
+    make_user,
+):
     admin = await make_user(is_admin=True)
     course = await _create_course(session_maker, name="Direct Course")
     archive = await _create_archive(
@@ -1154,7 +1166,10 @@ async def test_update_archive_course_creates_new_course_direct(session_maker, ma
 
 
 @pytest.mark.asyncio
-async def test_create_course_duplicate_direct(session_maker, make_user):
+async def test_create_course_duplicate_direct(
+    session_maker,
+    make_user,
+):
     admin = await make_user(is_admin=True)
     course = await _create_course(
         session_maker,
@@ -1180,7 +1195,10 @@ async def test_create_course_duplicate_direct(session_maker, make_user):
 
 
 @pytest.mark.asyncio
-async def test_delete_course_soft_deletes_direct(session_maker, make_user):
+async def test_delete_course_soft_deletes_direct(
+    session_maker,
+    make_user,
+):
     admin = await make_user(is_admin=True)
     course = await _create_course(session_maker, name="Delete Direct")
     archive = await _create_archive(
