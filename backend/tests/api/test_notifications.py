@@ -133,6 +133,39 @@ async def test_admin_can_crud_notifications(
 
 
 @pytest.mark.asyncio
+async def test_update_notification_not_found(client: AsyncClient, make_user):
+    admin = await make_user(is_admin=True)
+    app.dependency_overrides[get_current_user] = _override_user(
+        {"id": admin.id, "is_admin": True}
+    )
+
+    try:
+        response = await client.put(
+            "/notifications/admin/notifications/99999",
+            json={"title": "Missing"},
+        )
+        assert response.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_delete_notification_not_found(client: AsyncClient, make_user):
+    admin = await make_user(is_admin=True)
+    app.dependency_overrides[get_current_user] = _override_user(
+        {"id": admin.id, "is_admin": True}
+    )
+
+    try:
+        response = await client.delete(
+            "/notifications/admin/notifications/424242"
+        )
+        assert response.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
 async def test_admin_notifications_require_admin(
     client: AsyncClient,
     session_maker,

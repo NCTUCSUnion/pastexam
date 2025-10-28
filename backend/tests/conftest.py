@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock
 
 from app.core.config import settings
 from app.main import app
-from app.models.models import User
+from app.models.models import Archive, User
 from app.utils.auth import get_password_hash
 
 DATABASE_URL = (
@@ -109,6 +109,9 @@ async def make_user(session_maker):
 
     if created_ids:
         async with session_maker() as session:
+            await session.execute(
+                delete(Archive).where(Archive.uploader_id.in_(created_ids))
+            )
             await session.execute(delete(User).where(User.id.in_(created_ids)))
             await session.commit()
 
