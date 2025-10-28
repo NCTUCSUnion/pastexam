@@ -28,6 +28,9 @@ jobs:
 
       - name: Start core services
         run: docker compose -f docker/docker-compose.dev.yml up -d db redis minio
+      
+      - name: Initialize database
+        run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run python app/db/init_db.py
 
       - name: Run backend tests
         run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run pytest
