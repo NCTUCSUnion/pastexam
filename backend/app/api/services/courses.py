@@ -3,14 +3,17 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import List
 from datetime import datetime, timezone, timedelta
-import uuid
 
 from app.db.init_db import get_session
-from app.models.models import User, Course, CourseInfo, CoursesByCategory, Archive, ArchiveRead, CourseCategory, ArchiveType, CourseCreate, CourseUpdate, CourseRead, ArchiveUpdateCourse
+from app.models.models import (
+    User, Course, CourseInfo, CoursesByCategory, Archive, ArchiveRead,
+    ArchiveType, CourseCreate, CourseUpdate, CourseRead, ArchiveUpdateCourse
+)
 from app.utils.auth import get_current_user
 from app.utils.storage import presigned_get_url
 
 router = APIRouter()
+
 
 @router.get("", response_model=CoursesByCategory)
 async def get_categorized_courses(
@@ -24,13 +27,14 @@ async def get_categorized_courses(
     query = select(Course).where(Course.deleted_at.is_(None))
     result = await db.execute(query)
     courses = result.scalars().all()
-    
+
     categorized_courses = CoursesByCategory()
     for course in courses:
         course_info = CourseInfo(id=course.id, name=course.name)
         getattr(categorized_courses, course.category).append(course_info)
-    
+
     return categorized_courses
+
 
 @router.get("/{course_id}/archives", response_model=List[ArchiveRead])
 async def get_course_archives(
@@ -47,7 +51,7 @@ async def get_course_archives(
     )
     result = await db.execute(course_query)
     course = result.scalar_one_or_none()
-    
+
     if not course:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -60,8 +64,9 @@ async def get_course_archives(
     ).order_by(Archive.created_at.desc())
     result = await db.execute(query)
     archives = result.scalars().all()
-    
+
     return archives
+
 
 @router.get("/{course_id}/archives/{archive_id}/preview")
 async def get_archive_preview_url(
@@ -80,16 +85,19 @@ async def get_archive_preview_url(
     )
     result = await db.execute(query)
     archive = result.scalar_one_or_none()
-    
+
     if not archive:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Archive not found"
         )
-    
+
     return {
-        "url": presigned_get_url(archive.object_name, expires=timedelta(minutes=30))
+        "url": presigned_get_url(
+            archive.object_name, expires=timedelta(minutes=30)
+        )
     }
+
 
 @router.get("/{course_id}/archives/{archive_id}/download")
 async def get_archive_download_url(
@@ -100,7 +108,7 @@ async def get_archive_download_url(
 ):
     """
     Get presigned URL for downloading an archive (1 hour expiry)
-    This endpoint increments the download count
+    This endpoint increments the download coun
     """
     query = select(Archive).where(
         Archive.course_id == course_id,
@@ -109,20 +117,23 @@ async def get_archive_download_url(
     )
     result = await db.execute(query)
     archive = result.scalar_one_or_none()
-    
+
     if not archive:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Archive not found"
         )
-    
+
     archive.download_count += 1
     await db.commit()
     await db.refresh(archive)
-    
+
     return {
-        "url": presigned_get_url(archive.object_name, expires=timedelta(hours=1))
+        "url": presigned_get_url(
+            archive.object_name, expires=timedelta(hours=1)
+        )
     }
+
 
 @router.patch("/{course_id}/archives/{archive_id}")
 async def update_archive(
@@ -152,7 +163,7 @@ async def update_archive(
     )
     result = await db.execute(query)
     archive = result.scalar_one_or_none()
-    
+
     if not archive:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -171,10 +182,10 @@ async def update_archive(
         archive.academic_year = academic_year
 
     archive.updated_at = datetime.now(timezone.utc)
-    
+
     await db.commit()
     await db.refresh(archive)
-    
+
     return archive
 
 
@@ -188,7 +199,8 @@ async def update_archive_course(
 ):
     """
     Update archive's course. Only admins can change archive's course.
-    Supports both transferring to existing course by ID or creating new course by name and category.
+    Supports both transferring to existing course by ID or creating new
+    course by name and category.
     """
     if not current_user.is_admin:
         raise HTTPException(
@@ -203,7 +215,7 @@ async def update_archive_course(
     )
     archive_result = await db.execute(archive_query)
     archive = archive_result.scalar_one_or_none()
-    
+
     if not archive:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -212,7 +224,7 @@ async def update_archive_course(
 
     # Determine target course
     new_course = None
-    
+
     if course_update.course_id:
         # Check if trying to transfer to the same course
         if course_update.course_id == course_id:
@@ -220,7 +232,7 @@ async def update_archive_course(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot transfer archive to the same course"
             )
-            
+
         # Transfer to existing course by ID
         new_course_query = select(Course).where(
             Course.id == course_update.course_id,
@@ -228,7 +240,7 @@ async def update_archive_course(
         )
         new_course_result = await db.execute(new_course_query)
         new_course = new_course_result.scalar_one_or_none()
-        
+
         if not new_course:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -243,7 +255,7 @@ async def update_archive_course(
         )
         new_course_result = await db.execute(new_course_query)
         new_course = new_course_result.scalar_one_or_none()
-        
+
         if new_course:
             # Check if trying to transfer to the same course
             if new_course.id == course_id:
@@ -252,7 +264,7 @@ async def update_archive_course(
                     detail="Cannot transfer archive to the same course"
                 )
         else:
-            # Create new course if it doesn't exist
+            # Create new course if it doesn't exis
             new_course = Course(
                 name=course_update.course_name,
                 category=course_update.course_category
@@ -263,21 +275,25 @@ async def update_archive_course(
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either course_id or both course_name and course_category must be provided"
+            detail=(
+                "Either course_id or both course_name and course_category "
+                "must be provided"
+            )
         )
-    
+
     archive.course_id = new_course.id
     archive.updated_at = datetime.now(timezone.utc)
-    
+
     await db.commit()
     await db.refresh(archive)
-    
+
     return {
         "message": f"Archive moved to course '{new_course.name}'",
         "archive_id": archive.id,
         "old_course_id": course_id,
         "new_course_id": new_course.id
     }
+
 
 @router.delete("/{course_id}/archives/{archive_id}")
 async def delete_archive(
@@ -297,14 +313,17 @@ async def delete_archive(
     )
     result = await db.execute(query)
     archive = result.scalar_one_or_none()
-    
+
     if not archive:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Archive not found"
         )
 
-    if not current_user.is_admin and archive.uploader_id != current_user.user_id:
+    if (
+        not current_user.is_admin and
+        archive.uploader_id != current_user.user_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to delete this archive"
@@ -312,9 +331,8 @@ async def delete_archive(
 
     archive.deleted_at = datetime.now(timezone.utc)
     await db.commit()
-    
-    return {"message": "Archive deleted successfully"}
 
+    return {"message": "Archive deleted successfully"}
 
 
 @router.post("/admin/courses", response_model=CourseRead)
@@ -339,7 +357,7 @@ async def create_course(
     )
     result = await db.execute(query)
     existing_course = result.scalar_one_or_none()
-    
+
     if existing_course:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -350,12 +368,13 @@ async def create_course(
         name=course_data.name,
         category=course_data.category
     )
-    
+
     db.add(course)
     await db.commit()
     await db.refresh(course)
-    
+
     return course
+
 
 @router.put("/admin/courses/{course_id}", response_model=CourseRead)
 async def update_course(
@@ -379,7 +398,7 @@ async def update_course(
     )
     result = await db.execute(query)
     course = result.scalar_one_or_none()
-    
+
     if not course:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -387,9 +406,14 @@ async def update_course(
         )
 
     if course_data.name is not None or course_data.category is not None:
-        new_name = course_data.name if course_data.name is not None else course.name
-        new_category = course_data.category if course_data.category is not None else course.category
-        
+        new_name = (
+            course_data.name if course_data.name is not None else course.name
+        )
+        new_category = (
+            course_data.category if course_data.category is not None
+            else course.category
+        )
+
         if new_name != course.name or new_category != course.category:
             check_query = select(Course).where(
                 Course.name == new_name,
@@ -399,21 +423,23 @@ async def update_course(
             )
             check_result = await db.execute(check_query)
             existing_course = check_result.scalar_one_or_none()
-            
+
             if existing_course:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Course with this name and category already exists"
                 )
+
     if course_data.name is not None:
         course.name = course_data.name
     if course_data.category is not None:
         course.category = course_data.category
-    
+
     await db.commit()
     await db.refresh(course)
-    
+
     return course
+
 
 @router.delete("/admin/courses/{course_id}")
 async def delete_course(
@@ -437,7 +463,7 @@ async def delete_course(
     )
     result = await db.execute(query)
     course = result.scalar_one_or_none()
-    
+
     if not course:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -450,18 +476,24 @@ async def delete_course(
     )
     archives_result = await db.execute(archives_query)
     archives = archives_result.scalars().all()
-    
+
     # Soft delete all associated archives and the course
     current_time = datetime.now(timezone.utc)
     for archive in archives:
         archive.deleted_at = current_time
-    
+
     # Soft delete the course
     course.deleted_at = current_time
-    
+
     await db.commit()
-    
-    return {"message": f"Course '{course.name}' and {len(archives)} associated archives deleted successfully"}
+
+    return {
+        "message": (
+            f"Course '{course.name}' and {len(archives)} associated "
+            f"archives deleted successfully"
+        )
+    }
+
 
 @router.get("/admin/courses", response_model=List[CourseRead])
 async def list_all_courses(
@@ -477,8 +509,10 @@ async def list_all_courses(
             detail="Only admins can access all courses"
         )
 
-    query = select(Course).where(Course.deleted_at.is_(None)).order_by(Course.category, Course.name)
+    query = select(Course).where(Course.deleted_at.is_(None)).order_by(
+        Course.category, Course.name
+    )
     result = await db.execute(query)
     courses = result.scalars().all()
-    
+
     return courses

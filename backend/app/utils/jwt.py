@@ -1,4 +1,4 @@
 from jose import jwt
 
 
-__all__ = ['jwt'] 
+__all__ = ['jwt']

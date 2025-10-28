@@ -4,6 +4,7 @@ from app.core.config import settings
 
 _minio_client = None
 
+
 def get_minio_client() -> Minio:
     global _minio_client
     if _minio_client is None:
@@ -17,7 +18,10 @@ def get_minio_client() -> Minio:
             _minio_client.make_bucket(settings.MINIO_BUCKET_NAME)
     return _minio_client
 
-def presigned_get_url(object_name: str, expires: timedelta = timedelta(hours=1)) -> str:
+
+def presigned_get_url(
+    object_name: str, expires: timedelta = timedelta(hours=1)
+) -> str:
     """
     Get a presigned GET URL for frontend to download/preview PDF files.
     """
@@ -27,7 +31,11 @@ def presigned_get_url(object_name: str, expires: timedelta = timedelta(hours=1))
         object_name=object_name,
         expires=expires
     )
-    
-    presigned_url = presigned_url.replace(f"http://{settings.MINIO_ENDPOINT}", f"{settings.EXTERNAL_ENDPOINT}", 1)
-    
-    return presigned_url 
+
+    presigned_url = presigned_url.replace(
+        f"http://{settings.MINIO_ENDPOINT}",
+        f"{settings.EXTERNAL_ENDPOINT}",
+        1
+    )
+
+    return presigned_url

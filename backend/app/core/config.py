@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     DB_HOST: str
     DB_PORT: int
@@ -35,6 +36,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         from_attributes = True
 
+
 settings = Settings()
 
 SQLALCHEMY_DATABASE_URL = (
@@ -42,4 +44,4 @@ SQLALCHEMY_DATABASE_URL = (
     f"{settings.DB_USER}:{settings.DB_PASSWORD}@"
     f"{settings.DB_HOST}:{settings.DB_PORT}/"
     f"{settings.DB_NAME}"
-) 
+)
