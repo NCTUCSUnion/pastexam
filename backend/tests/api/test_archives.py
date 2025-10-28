@@ -4,7 +4,9 @@ import uuid
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import delete, select, func
+from starlette.datastructures import UploadFile
 
+from app.api.services.archives import upload_archive
 from app.main import app
 from app.models.models import Archive, Course, CourseCategory, User, UserRoles
 from app.utils.auth import get_current_user
@@ -279,6 +281,77 @@ async def test_upload_archive_handles_storage_failure(
         async with session_maker() as session:
             await session.execute(
                 delete(Course).where(Course.name == "Fail Course")
+            )
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_upload_archive_function_covers_creation_and_reuse(
+    session_maker,
+    make_user,
+    monkeypatch,
+):
+    user = await make_user()
+    uploads = []
+    first_id = None
+    second_id = None
+    course_id = None
+
+    class RecordingMinio:
+        def __init__(self):
+            self.calls = []
+
+        def put_object(self, **kwargs):
+            self.calls.append(kwargs)
+
+    monkeypatch.setattr(
+        "app.api.services.archives.get_minio_client",
+        lambda: RecordingMinio(),
+    )
+
+    async with session_maker() as session:
+        uploader = UserRoles(user_id=user.id, is_admin=False)
+
+        async def _call(subject, filename):
+            upload = UploadFile(
+                filename=filename,
+                file=io.BytesIO(b"%PDF-1.4 direct test"),
+            )
+            uploads.append(upload)
+            return await upload_archive(
+                file=upload,
+                subject=subject,
+                category=CourseCategory.GENERAL,
+                professor="Prof. Direct",
+                archive_type="final",
+                has_answers=True,
+                filename=filename,
+                academic_year=2024,
+                current_user=uploader,
+                db=session,
+            )
+
+        first = await _call("Direct Subject", "Direct Archive.pdf")
+        second = await _call("Direct Subject", "Second Archive.pdf")
+
+        assert first["success"] is True
+        assert second["success"] is True
+        assert first["archive"]["name"] == "Direct Archive.pdf"
+        assert second["archive"]["name"] == "Second Archive.pdf"
+
+        # Ensure both archives share the same course
+        first_id = first["archive"]["id"]
+        second_id = second["archive"]["id"]
+        first_archive = await session.get(Archive, first_id)
+        second_archive = await session.get(Archive, second_id)
+        assert first_archive.course_id == second_archive.course_id
+        course_id = first_archive.course_id
+
+    if first_id and second_id and course_id:
+        async with session_maker() as session:
+            await session.execute(delete(Archive).where(Archive.id.in_([first_id, second_id])))
+            await session.execute(
+                delete(Course).where(Course.id == course_id)
             )
             await session.commit()
 

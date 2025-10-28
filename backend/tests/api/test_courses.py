@@ -2,15 +2,32 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 from sqlalchemy import delete
 
+from app.api.services.courses import (
+    create_course,
+    delete_archive,
+    delete_course,
+    get_archive_download_url,
+    get_archive_preview_url,
+    get_categorized_courses,
+    get_course_archives,
+    list_all_courses,
+    update_archive,
+    update_archive_course,
+    update_course,
+)
 from app.main import app
 from app.models.models import (
     Archive,
     ArchiveType,
+    ArchiveUpdateCourse,
     Course,
     CourseCategory,
+    CourseCreate,
+    CourseUpdate,
     UserRoles,
 )
 from app.utils.auth import get_current_user
@@ -530,5 +547,419 @@ async def test_delete_archive_admin_success(
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
             await session.execute(delete(Archive).where(Archive.id == archive.id))
+            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_get_categorized_courses_direct(session_maker, make_user):
+    user = await make_user()
+    course_general = await _create_course(session_maker, category=CourseCategory.GENERAL)
+    course_graduate = await _create_course(session_maker, category=CourseCategory.GRADUATE)
+
+    try:
+        async with session_maker() as session:
+            result = await get_categorized_courses(
+                current_user=UserRoles(user_id=user.id, is_admin=False),
+                db=session,
+            )
+        payload = result.model_dump()
+        assert any(item["id"] == course_general.id for item in payload["general"])
+        assert any(item["id"] == course_graduate.id for item in payload["graduate"])
+    finally:
+        async with session_maker() as session:
+            await session.execute(delete(Course).where(Course.id.in_([course_general.id, course_graduate.id])))
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_get_course_archives_direct_errors_when_course_missing(
+    session_maker,
+    make_user,
+):
+    user = await make_user()
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await get_course_archives(
+                course_id=999999,
+                current_user=UserRoles(user_id=user.id, is_admin=False),
+                db=session,
+            )
+        assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_archive_preview_and_download_direct(
+    session_maker,
+    make_user,
+    monkeypatch,
+):
+    user = await make_user()
+    course = await _create_course(session_maker)
+    archive = await _create_archive(
+        session_maker, course_id=course.id, uploader_id=user.id
+    )
+
+    preview_url = "https://example.com/preview"
+    download_url = "https://example.com/download"
+
+    def fake_presigned(object_name: str, *, expires):
+        return preview_url if expires.total_seconds() == 1800 else download_url
+
+    monkeypatch.setattr(
+        "app.api.services.courses.presigned_get_url",
+        fake_presigned,
+    )
+
+    try:
+        async with session_maker() as session:
+            preview = await get_archive_preview_url(
+                course.id,
+                archive.id,
+                current_user=UserRoles(user_id=user.id, is_admin=False),
+                db=session,
+            )
+            download = await get_archive_download_url(
+                course.id,
+                archive.id,
+                current_user=UserRoles(user_id=user.id, is_admin=False),
+                db=session,
+            )
+            assert preview == {"url": preview_url}
+            assert download == {"url": download_url}
+
+        async with session_maker() as session:
+            refreshed = await session.get(Archive, archive.id)
+            assert refreshed.download_count == 1
+    finally:
+        async with session_maker() as session:
+            await session.execute(delete(Archive).where(Archive.id == archive.id))
+            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_direct_sets_fields(
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(session_maker)
+    archive = await _create_archive(
+        session_maker, course_id=course.id, uploader_id=admin.id
+    )
+
+    try:
+        async with session_maker() as session:
+            updated = await update_archive(
+                course_id=course.id,
+                archive_id=archive.id,
+                name="Flashcards",
+                professor="Prof. Direct",
+                archive_type=ArchiveType.QUIZ,
+                has_answers=True,
+                academic_year=2026,
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+            assert updated.name == "Flashcards"
+            assert updated.professor == "Prof. Direct"
+            assert updated.archive_type == ArchiveType.QUIZ
+            assert updated.has_answers is True
+            assert updated.academic_year == 2026
+    finally:
+        async with session_maker() as session:
+            await session.execute(delete(Archive).where(Archive.id == archive.id))
+            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_direct_404_when_missing(
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(session_maker)
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await update_archive(
+                course_id=course.id,
+                archive_id=9999,
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+        assert exc.value.status_code == 404
+
+    async with session_maker() as session:
+        await session.execute(delete(Course).where(Course.id == course.id))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_course_requires_admin(session_maker, make_user):
+    user = await make_user()
+    course = await _create_course(session_maker)
+    archive = await _create_archive(
+        session_maker, course_id=course.id, uploader_id=user.id
+    )
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await update_archive_course(
+                course_id=course.id,
+                archive_id=archive.id,
+                course_update=ArchiveUpdateCourse(course_id=course.id + 1),
+                current_user=UserRoles(user_id=user.id, is_admin=False),
+                db=session,
+            )
+        assert exc.value.status_code == 403
+
+    async with session_maker() as session:
+        await session.execute(delete(Archive).where(Archive.id == archive.id))
+        await session.execute(delete(Course).where(Course.id == course.id))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_course_missing_payload_raises(
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(session_maker)
+    archive = await _create_archive(
+        session_maker, course_id=course.id, uploader_id=admin.id
+    )
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await update_archive_course(
+                course_id=course.id,
+                archive_id=archive.id,
+                course_update=ArchiveUpdateCourse(),
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+        assert exc.value.status_code == 400
+
+    async with session_maker() as session:
+        await session.execute(delete(Archive).where(Archive.id == archive.id))
+        await session.execute(delete(Course).where(Course.id == course.id))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_course_target_course_missing(
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(session_maker)
+    archive = await _create_archive(
+        session_maker, course_id=course.id, uploader_id=admin.id
+    )
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await update_archive_course(
+                course_id=course.id,
+                archive_id=archive.id,
+                course_update=ArchiveUpdateCourse(course_id=999999),
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+        assert exc.value.status_code == 404
+
+    async with session_maker() as session:
+        await session.execute(delete(Archive).where(Archive.id == archive.id))
+        await session.execute(delete(Course).where(Course.id == course.id))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_course_same_course_by_name_rejected(
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(session_maker, name="OverlapCourse")
+    archive = await _create_archive(
+        session_maker, course_id=course.id, uploader_id=admin.id
+    )
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await update_archive_course(
+                course_id=course.id,
+                archive_id=archive.id,
+                course_update=ArchiveUpdateCourse(
+                    course_name=course.name,
+                    course_category=course.category,
+                ),
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+        assert exc.value.status_code == 400
+
+    async with session_maker() as session:
+        await session.execute(delete(Archive).where(Archive.id == archive.id))
+        await session.execute(delete(Course).where(Course.id == course.id))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_course_archive_missing(
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(session_maker)
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await update_archive_course(
+                course_id=course.id,
+                archive_id=123456,
+                course_update=ArchiveUpdateCourse(course_id=course.id),
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+        assert exc.value.status_code == 404
+
+    async with session_maker() as session:
+        await session.execute(delete(Course).where(Course.id == course.id))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_delete_archive_direct_forbidden_for_non_owner(
+    session_maker,
+    make_user,
+):
+    owner = await make_user()
+    other = await make_user()
+    course = await _create_course(session_maker)
+    archive = await _create_archive(
+        session_maker, course_id=course.id, uploader_id=owner.id
+    )
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await delete_archive(
+                course_id=course.id,
+                archive_id=archive.id,
+                current_user=UserRoles(user_id=other.id, is_admin=False),
+                db=session,
+            )
+        assert exc.value.status_code == 403
+
+    async with session_maker() as session:
+        await session.execute(delete(Archive).where(Archive.id == archive.id))
+        await session.execute(delete(Course).where(Course.id == course.id))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_create_course_duplicate_rejected(
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(
+        session_maker,
+        name="Duplicate Course",
+        category=CourseCategory.GENERAL,
+    )
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await create_course(
+                course_data=CourseCreate(
+                    name="Duplicate Course",
+                    category=CourseCategory.GENERAL,
+                ),
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+        assert exc.value.status_code == 400
+
+    async with session_maker() as session:
+        await session.execute(delete(Course).where(Course.id == course.id))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_course_duplicate_name_rejected(
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    original = await _create_course(session_maker, name="Original-Name")
+    other = await _create_course(session_maker, name="Existing-Name")
+
+    try:
+        async with session_maker() as session:
+            with pytest.raises(HTTPException) as exc:
+                await update_course(
+                    course_id=original.id,
+                    course_data=CourseUpdate(name="Existing-Name"),
+                    current_user=UserRoles(user_id=admin.id, is_admin=True),
+                    db=session,
+                )
+            assert exc.value.status_code == 400
+    finally:
+        async with session_maker() as session:
+            await session.execute(delete(Course).where(Course.id.in_([original.id, other.id])))
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_course_not_found_direct(session_maker, make_user):
+    admin = await make_user(is_admin=True)
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await update_course(
+                course_id=424242,
+                course_data=CourseUpdate(name="Missing"),
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+        assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_course_not_found_direct(session_maker, make_user):
+    admin = await make_user(is_admin=True)
+
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await delete_course(
+                course_id=123123,
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+        assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_all_courses_direct_returns_courses(
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(session_maker, name="Visible Course")
+
+    try:
+        async with session_maker() as session:
+            courses = await list_all_courses(
+                current_user=UserRoles(user_id=admin.id, is_admin=True),
+                db=session,
+            )
+            assert any(item.id == course.id for item in courses)
+    finally:
+        async with session_maker() as session:
             await session.execute(delete(Course).where(Course.id == course.id))
             await session.commit()

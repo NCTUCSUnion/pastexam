@@ -182,6 +182,31 @@ async def test_submit_generate_task_conflict_when_active_job(
 
 
 @pytest.mark.asyncio
+async def test_submit_generate_task_ignores_missing_metadata(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+    fake_redis.metadata[b"task_metadata:stale"] = None
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+
+    try:
+        response = await client.post(
+            "/ai-exam/generate",
+            json={"archive_ids": [1], "prompt": "Test"},
+        )
+        assert response.status_code == 200
+        assert response.json()["task_id"] == "job-1"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
 async def test_get_task_status_returns_result(
     client: AsyncClient,
     make_user,
@@ -225,6 +250,72 @@ async def test_get_task_status_returns_result(
             "success": True,
             "generated_content": "Example",
         }
+        assert body["completed_at"] is not None
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_get_task_status_reports_not_found_when_job_missing(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+    task_id = "job-missing"
+
+    await fake_redis.set(
+        f"task_metadata:{task_id}",
+        json.dumps({"user_id": user.id, "created_at": datetime.utcnow().isoformat()}),
+    )
+    fake_redis.job_statuses[task_id] = None
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+
+    try:
+        response = await client.get(f"/ai-exam/task/{task_id}")
+        assert response.status_code == 200
+        assert response.json()["status"] == "not_found"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_get_task_status_handles_result_error(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+    monkeypatch,
+):
+    user = await make_user()
+    task_id = "job-error"
+    created_at = datetime.utcnow().isoformat()
+
+    await fake_redis.set(
+        f"task_metadata:{task_id}",
+        json.dumps({"user_id": user.id, "created_at": created_at}),
+    )
+    fake_redis.job_statuses[task_id] = JobStatus.complete
+
+    async def failing_result(self):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(FakeJob, "result", failing_result, raising=False)
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+
+    try:
+        response = await client.get(f"/ai-exam/task/{task_id}")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "complete"
+        assert body["result"] is None
         assert body["completed_at"] is not None
     finally:
         app.dependency_overrides.pop(get_current_user, None)
@@ -328,6 +419,37 @@ async def test_list_user_tasks_returns_sorted_results(
         assert [task["task_id"] for task in tasks] == ["job-new", "job-old"]
         assert tasks[0]["status"] == "not_found"
         assert tasks[1]["status"] == "in_progress"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_list_user_tasks_filters_out_irrelevant_entries(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+    fake_redis.metadata[b"task_metadata:empty"] = None
+    await fake_redis.set(
+        "task_metadata:foreign",
+        {
+            "user_id": user.id + 1,
+            "archive_ids": [99],
+            "created_at": datetime.utcnow().isoformat(),
+        },
+    )
+    fake_redis.job_statuses["foreign"] = JobStatus.complete
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+
+    try:
+        response = await client.get("/ai-exam/tasks")
+        assert response.status_code == 200
+        assert response.json()["tasks"] == []
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
