@@ -20,6 +20,7 @@ dependencies = [
     "pydantic-settings>=2.9.1",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.20",
+    "pyyaml>=6.0.2",
     "redis>=6.2.0",
     "sqlmodel>=0.0.24",
     "uvicorn[standard]>=0.34.3",
@@ -28,4 +29,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "flake8>=7.3.0",
+    "httpx>=0.28.1",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
 ]

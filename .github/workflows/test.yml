@@ -21,5 +21,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Placeholder backend tests
-        run: echo "Backend tests (pytest) will be hooked up soon."
+      - name: Prepare backend env
+        run: |
+          cp backend/.env.example backend/.env
+          cat <<'EOF' >> backend/.env
+          SECRET_KEY=${{ secrets.BACKEND_SECRET_KEY }}
+          OAUTH_CLIENT_ID=${{ secrets.BACKEND_OAUTH_CLIENT_ID }}
+          OAUTH_CLIENT_SECRET=${{ secrets.BACKEND_OAUTH_CLIENT_SECRET }}
+          EOF
+
+      - name: Prepare docker env
+        run: cp docker/.env.example docker/.env
+
+      - name: Start core services
+        run: docker compose -f docker/docker-compose.dev.yml up -d db redis minio
+
+      - name: Run migrations
+        run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run alembic upgrade head
+
+      - name: Seed database
+        run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run python scripts/seed_db.py
+
+      - name: Run backend tests
+        run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run pytest
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker/docker-compose.dev.yml down --volumes
