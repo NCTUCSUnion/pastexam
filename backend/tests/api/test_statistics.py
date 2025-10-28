@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 import uuid
 
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.services.statistics import get_system_statistics
@@ -120,10 +121,22 @@ async def test_get_system_statistics_direct_success(session_maker):
 
         assert stats["success"] is True
         data = stats["data"]
-        assert data["totalUsers"] == base_data["totalUsers"] + 2
-        assert data["totalCourses"] == base_data["totalCourses"] + 1
-        assert data["totalArchives"] == base_data["totalArchives"] + 1
-        assert data["totalDownloads"] == base_data["totalDownloads"] + 7
+
+        total_users = await session.scalar(select(func.count(User.id)))
+        total_courses = await session.scalar(select(func.count(Course.id)))
+        total_archives = await session.scalar(
+            select(func.count(Archive.id)).where(Archive.deleted_at.is_(None))
+        )
+        total_downloads = await session.scalar(
+            select(func.coalesce(func.sum(Archive.download_count), 0)).where(
+                Archive.deleted_at.is_(None)
+            )
+        )
+
+        assert data["totalUsers"] == total_users
+        assert data["totalCourses"] == total_courses
+        assert data["totalArchives"] == total_archives
+        assert data["totalDownloads"] == total_downloads
         assert data["onlineUsers"] == base_data["onlineUsers"] + 1
         assert data["activeToday"] == base_data["activeToday"] + 1
 

@@ -10,7 +10,16 @@ from app.models.models import (
     Notification,
     NotificationCreate,
     NotificationSeverity,
+    NotificationUpdate,
     UserRoles,
+)
+from app.api.services.notifications import (
+    create_notification,
+    delete_notification,
+    get_active_notifications,
+    list_admin_notifications,
+    list_public_notifications,
+    update_notification,
 )
 from app.utils.auth import get_current_user
 
@@ -133,6 +142,39 @@ async def test_admin_can_crud_notifications(
 
 
 @pytest.mark.asyncio
+async def test_update_notification_not_found(client: AsyncClient, make_user):
+    admin = await make_user(is_admin=True)
+    app.dependency_overrides[get_current_user] = _override_user(
+        {"id": admin.id, "is_admin": True}
+    )
+
+    try:
+        response = await client.put(
+            "/notifications/admin/notifications/99999",
+            json={"title": "Missing"},
+        )
+        assert response.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_delete_notification_not_found(client: AsyncClient, make_user):
+    admin = await make_user(is_admin=True)
+    app.dependency_overrides[get_current_user] = _override_user(
+        {"id": admin.id, "is_admin": True}
+    )
+
+    try:
+        response = await client.delete(
+            "/notifications/admin/notifications/424242"
+        )
+        assert response.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
 async def test_admin_notifications_require_admin(
     client: AsyncClient,
     session_maker,
@@ -175,3 +217,99 @@ async def test_admin_notifications_require_admin(
         async with session_maker() as session:
             await session.execute(delete(Notification))
             await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_list_public_notifications_direct(session_maker):
+    async with session_maker() as session:
+        await session.execute(delete(Notification))
+        await session.commit()
+
+        visible = await _create_notification(session_maker)
+        await _create_notification(
+            session_maker,
+            starts_at=datetime.now(timezone.utc) + timedelta(days=1),
+        )
+
+    async with session_maker() as session:
+        results = await list_public_notifications(db=session)
+        assert [item.id for item in results] == [visible.id]
+
+    async with session_maker() as session:
+        await session.execute(delete(Notification))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_get_active_notifications_direct(session_maker):
+    async with session_maker() as session:
+        await session.execute(delete(Notification))
+        await session.commit()
+
+        active = await _create_notification(session_maker)
+        await _create_notification(
+            session_maker,
+            is_active=False,
+            ends_at=datetime.now(timezone.utc) - timedelta(days=1),
+        )
+
+    async with session_maker() as session:
+        results = await get_active_notifications(db=session)
+        assert [item.id for item in results] == [active.id]
+
+    async with session_maker() as session:
+        await session.execute(delete(Notification))
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_create_update_delete_notifications_direct(session_maker):
+    admin = UserRoles(user_id=1, is_admin=True)
+    async with session_maker() as session:
+        created = await create_notification(
+            notification_data=NotificationCreate(
+                title="Direct",
+                body="Body",
+                severity=NotificationSeverity.DANGER,
+                is_active=True,
+            ),
+            db=session,
+            current_user=admin,
+        )
+        assert created.title == "Direct"
+
+        updated = await update_notification(
+            notification_id=created.id,
+            notification_data=NotificationUpdate(title="Updated"),
+            db=session,
+            current_user=admin,
+        )
+        assert updated.title == "Updated"
+
+        await delete_notification(
+            notification_id=created.id,
+            db=session,
+            current_user=admin,
+        )
+        remaining = await session.get(Notification, created.id)
+        assert remaining is None
+
+
+@pytest.mark.asyncio
+async def test_list_admin_notifications_direct(session_maker):
+    async with session_maker() as session:
+        await session.execute(delete(Notification))
+        await session.commit()
+
+        note = await _create_notification(session_maker)
+
+    async with session_maker() as session:
+        results = await list_admin_notifications(
+            db=session,
+            current_user=UserRoles(user_id=1, is_admin=True),
+        )
+        assert [item.id for item in results] == [note.id]
+
+    async with session_maker() as session:
+        await session.execute(delete(Notification))
+        await session.commit()
