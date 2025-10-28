@@ -27,10 +27,10 @@ jobs:
         run: cp docker/.env.example docker/.env
 
       - name: Start core services
-        run: docker compose -f docker/docker-compose.dev.yml up -d db redis minio backend
+        run: docker compose -f docker/docker-compose.dev.yml up -d db redis minio
 
       - name: Run backend tests
-        run: docker compose -f docker/docker-compose.dev.yml exec -T backend uv run pytest
+        run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run pytest
 
       - name: Tear down
         if: always()
@@ -43,10 +43,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: pnpm install --frozen-lockfile
-
       - name: Placeholder frontend unit tests
         run: echo "Frontend unit tests are not configured yet."
 
@@ -57,10 +53,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: pnpm install --frozen-lockfile
 
       - name: Placeholder frontend E2E tests
         run: echo "Frontend E2E tests are not configured yet."
