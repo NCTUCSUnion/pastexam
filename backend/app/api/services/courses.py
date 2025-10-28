@@ -4,7 +4,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import List
 from datetime import datetime, timezone, timedelta
 
-from app.db.init_db import get_session
+from app.db.session import get_session
 from app.models.models import (
     User, Course, CourseInfo, CoursesByCategory, Archive, ArchiveRead,
     ArchiveType, CourseCreate, CourseUpdate, CourseRead, ArchiveUpdateCourse

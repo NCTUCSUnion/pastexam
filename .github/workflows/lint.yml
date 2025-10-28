@@ -57,5 +57,5 @@ jobs:
         working-directory: ./backend
 
       - name: Run flake8
-        run: uv run flake8 app
+        run: uv run flake8 app tests
         working-directory: ./backend

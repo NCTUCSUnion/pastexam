@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db.init_db import get_session
+from app.db.session import get_session
 from app.models.models import (
     Notification,
     NotificationCreate,

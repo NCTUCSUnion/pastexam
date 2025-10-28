@@ -77,7 +77,7 @@ services:
       - app_network
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-05-24T17-08-30Z
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: pastexam-dev-minio
     command: server /data --console-address ":9001"
     # ports:
@@ -108,7 +108,7 @@ services:
       - app_network
 
   nginx:
-    image: nginx:1.29.1-perl
+    image: nginx:1.29.2
     container_name: pastexam-dev-nginx
     ports:
       - "8080:8080"
