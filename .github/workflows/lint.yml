@@ -49,5 +49,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Backend lint placeholder
-        run: echo "Backend lint (flake8) will be added soon."
+      - name: Install uv
+        run: pip install uv
+
+      - name: Sync backend dependencies
+        run: uv sync --dev
+        working-directory: ./backend
+
+      - name: Run flake8
+        run: uv run flake8 app
+        working-directory: ./backend

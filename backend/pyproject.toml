@@ -24,3 +24,8 @@ dependencies = [
     "sqlmodel>=0.0.24",
     "uvicorn[standard]>=0.34.3",
 ]
+
+[dependency-groups]
+dev = [
+    "flake8>=7.3.0",
+]
