@@ -30,9 +30,16 @@ def event_loop() -> AsyncIterator[asyncio.AbstractEventLoop]:
 
 @pytest_asyncio.fixture(autouse=True)
 async def override_db_session(monkeypatch):
-    """Use a dedicated engine/sessionmaker for tests to avoid pool reuse issues."""
-    engine = create_async_engine(DATABASE_URL, poolclass=NullPool, future=True)
-    session_maker = async_sessionmaker(engine, expire_on_commit=False)
+    """Swap engine per run to dodge asyncpg loop clashes."""
+    engine = create_async_engine(
+        DATABASE_URL,
+        poolclass=NullPool,
+        future=True,
+    )
+    session_maker = async_sessionmaker(
+        engine,
+        expire_on_commit=False,
+    )
 
     monkeypatch.setattr("app.db.session.engine", engine)
     monkeypatch.setattr("app.db.session.AsyncSessionLocal", session_maker)
@@ -47,5 +54,8 @@ async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
     """Return an AsyncClient backed by the FastAPI app."""
     monkeypatch.setattr("app.main.init_db", AsyncMock())
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as async_client:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://testserver",
+    ) as async_client:
         yield async_client
