@@ -5,6 +5,9 @@ from types import SimpleNamespace
 import pytest
 from httpx import AsyncClient
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.dml import Update
+
 from app.main import app
 from app.models.models import User, UserRoles
 from app.utils.auth import get_current_user
@@ -150,6 +153,35 @@ async def test_submit_generate_task_enqueues_job(
 
 
 @pytest.mark.asyncio
+async def test_submit_generate_task_conflict_when_active_job(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+    await fake_redis.set(
+        "task_metadata:job-existing",
+        {"user_id": user.id, "status": "pending"},
+    )
+    fake_redis.job_statuses["job-existing"] = JobStatus.in_progress
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    try:
+        response = await client.post(
+            "/ai-exam/generate",
+            json={"archive_ids": [1], "prompt": "Test"},
+        )
+        assert response.status_code == 500
+        assert "active task" in response.json()["detail"]
+        assert "active task" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
 async def test_get_task_status_returns_result(
     client: AsyncClient,
     make_user,
@@ -249,5 +281,345 @@ async def test_update_api_key_persists_value(
         async with session_maker() as session:
             refreshed = await session.get(User, user.id)
             assert refreshed.gemini_api_key == new_key
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_list_user_tasks_returns_sorted_results(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+
+    try:
+        earlier = datetime.utcnow().isoformat()
+        later = datetime.utcnow().isoformat()
+
+        await fake_redis.set(
+            "task_metadata:job-old",
+            {
+                "user_id": user.id,
+                "archive_ids": [1],
+                "created_at": earlier,
+            },
+        )
+        await fake_redis.set(
+            "task_metadata:job-new",
+            {
+                "user_id": user.id,
+                "archive_ids": [2],
+                "created_at": later,
+            },
+        )
+        fake_redis.job_statuses["job-old"] = JobStatus.in_progress
+        fake_redis.job_statuses["job-new"] = None
+
+        response = await client.get("/ai-exam/tasks")
+        assert response.status_code == 200
+        body = response.json()
+        tasks = body["tasks"]
+        assert [task["task_id"] for task in tasks] == ["job-new", "job-old"]
+        assert tasks[0]["status"] == "not_found"
+        assert tasks[1]["status"] == "in_progress"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_delete_task_success(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+    task_id = "job-42"
+
+    await fake_redis.set(
+        f"task_metadata:{task_id}",
+        json.dumps({"user_id": user.id}),
+    )
+    fake_redis.results[f"arq:result:{task_id}"] = {"some": "data"}
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+
+    try:
+        response = await client.delete(f"/ai-exam/task/{task_id}")
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert f"task_metadata:{task_id}".encode("utf-8") not in fake_redis.metadata
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_delete_task_forbidden(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+    await fake_redis.set(
+        "task_metadata:job-owner",
+        json.dumps({"user_id": user.id + 1}),
+    )
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    try:
+        response = await client.delete("/ai-exam/task/job-owner")
+        assert response.status_code == 403
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_delete_task_not_found(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    try:
+        response = await client.delete("/ai-exam/task/unknown")
+        assert response.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_get_task_status_not_found(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    try:
+        response = await client.get("/ai-exam/task/missing")
+        assert response.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_get_task_status_forbidden(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+):
+    user = await make_user()
+    await fake_redis.set(
+        "task_metadata:job-secret",
+        json.dumps({"user_id": user.id + 99}),
+    )
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    try:
+        response = await client.get("/ai-exam/task/job-secret")
+        assert response.status_code == 403
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_get_task_status_handles_exception(monkeypatch, client, make_user):
+    user = await make_user()
+
+    async def raise_error():
+        raise RuntimeError("boom")
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    monkeypatch.setattr("app.worker.get_redis_pool", raise_error)
+
+    try:
+        response = await client.get("/ai-exam/task/any")
+        assert response.status_code == 500
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_list_user_tasks_handles_exception(monkeypatch, client, make_user):
+    user = await make_user()
+
+    async def raise_error():
+        raise RuntimeError("boom")
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    monkeypatch.setattr("app.worker.get_redis_pool", raise_error)
+
+    try:
+        response = await client.get("/ai-exam/tasks")
+        assert response.status_code == 500
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_delete_task_handles_exception(monkeypatch, client, make_user):
+    user = await make_user()
+
+    async def raise_error():
+        raise RuntimeError("boom")
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    monkeypatch.setattr("app.worker.get_redis_pool", raise_error)
+
+    try:
+        response = await client.delete("/ai-exam/task/any")
+        assert response.status_code == 500
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_get_api_key_status_with_key(
+    client: AsyncClient,
+    make_user,
+):
+    user = await make_user(gemini_api_key="secret-1234")
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    try:
+        response = await client.get("/ai-exam/api-key")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["has_api_key"] is True
+        assert body["api_key_masked"] == "****1234"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_get_api_key_status_user_missing(
+    client: AsyncClient,
+    make_user,
+    session_maker,
+):
+    user = await make_user()
+
+    async with session_maker() as session:
+        db_user = await session.get(User, user.id)
+        await session.delete(db_user)
+        await session.commit()
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    try:
+        response = await client.get("/ai-exam/api-key")
+        assert response.status_code == 200
+        body = response.json()
+        assert body == {"has_api_key": False, "api_key_masked": None}
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_update_api_key_invalid_key(
+    client: AsyncClient,
+    make_user,
+    monkeypatch,
+):
+    user = await make_user()
+
+    class ErrorClient:
+        def __init__(self, api_key):
+            self.api_key = api_key
+            self.models = self
+
+        def generate_content(self, **kwargs):
+            raise ValueError("API key invalid")
+
+    monkeypatch.setattr("google.genai.Client", ErrorClient)
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    try:
+        response = await client.put(
+            "/ai-exam/api-key",
+            json={"gemini_api_key": "bad-key"},
+        )
+        assert response.status_code == 400
+        assert "Invalid API Key" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_update_api_key_handles_other_errors(
+    client: AsyncClient,
+    make_user,
+    monkeypatch,
+):
+    user = await make_user()
+
+    class NoopClient:
+        def __init__(self, api_key):
+            self.api_key = api_key
+            self.models = self
+
+        def generate_content(self, **kwargs):
+            return SimpleNamespace(text="ok")
+
+    async def fake_get_current_user():
+        return UserRoles(user_id=user.id, is_admin=False)
+
+    original_execute = AsyncSession.execute
+
+    async def failing_execute(self, statement, *args, **kwargs):
+        if isinstance(statement, Update):
+            raise RuntimeError("db down")
+        return await original_execute(self, statement, *args, **kwargs)
+
+    app.dependency_overrides[get_current_user] = fake_get_current_user
+    monkeypatch.setattr("google.genai.Client", NoopClient)
+    monkeypatch.setattr(AsyncSession, "execute", failing_execute, raising=False)
+
+    try:
+        response = await client.put(
+            "/ai-exam/api-key",
+            json={"gemini_api_key": "123"},
+        )
+        assert response.status_code == 500
     finally:
         app.dependency_overrides.pop(get_current_user, None)

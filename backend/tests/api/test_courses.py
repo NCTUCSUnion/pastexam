@@ -389,3 +389,146 @@ async def test_admin_course_endpoints_require_admin(
                 delete(Course).where(Course.id == course.id)
             )
             await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_course_transfers_to_existing_course(
+    client: AsyncClient,
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course_a = await _create_course(session_maker, name="Course A")
+    course_b = await _create_course(session_maker, name="Course B")
+    archive = await _create_archive(
+        session_maker,
+        course_id=course_a.id,
+        uploader_id=admin.id,
+    )
+
+    app.dependency_overrides[get_current_user] = _override_user(admin)
+
+    try:
+        response = await client.patch(
+            f"/courses/{course_a.id}/archives/{archive.id}/course",
+            json={"course_id": course_b.id},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["new_course_id"] == course_b.id
+
+        async with session_maker() as session:
+            refreshed = await session.get(Archive, archive.id)
+            assert refreshed.course_id == course_b.id
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        async with session_maker() as session:
+            await session.execute(delete(Archive).where(Archive.id == archive.id))
+            await session.execute(delete(Course).where(Course.id.in_([course_a.id, course_b.id])))
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_course_creates_new_course_when_missing(
+    client: AsyncClient,
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    original = await _create_course(session_maker, name="Original Course")
+    archive = await _create_archive(
+        session_maker,
+        course_id=original.id,
+        uploader_id=admin.id,
+    )
+
+    app.dependency_overrides[get_current_user] = _override_user(admin)
+
+    try:
+        response = await client.patch(
+            f"/courses/{original.id}/archives/{archive.id}/course",
+            json={
+                "course_name": "New Course",
+                "course_category": CourseCategory.GENERAL.value,
+            },
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["message"].startswith("Archive moved to course")
+
+        async with session_maker() as session:
+            refreshed = await session.get(Archive, archive.id)
+            assert refreshed.course_id != original.id
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        async with session_maker() as session:
+            await session.execute(delete(Archive).where(Archive.id == archive.id))
+            await session.execute(
+                delete(Course).where(Course.name.in_(["Original Course", "New Course"]))
+            )
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_archive_course_rejects_same_course(
+    client: AsyncClient,
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(session_maker, name="SameCourse")
+    archive = await _create_archive(
+        session_maker,
+        course_id=course.id,
+        uploader_id=admin.id,
+    )
+
+    app.dependency_overrides[get_current_user] = _override_user(admin)
+
+    try:
+        response = await client.patch(
+            f"/courses/{course.id}/archives/{archive.id}/course",
+            json={"course_id": course.id},
+        )
+        assert response.status_code == 400
+        assert "same course" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        async with session_maker() as session:
+            await session.execute(delete(Archive).where(Archive.id == archive.id))
+            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_delete_archive_admin_success(
+    client: AsyncClient,
+    session_maker,
+    make_user,
+):
+    admin = await make_user(is_admin=True)
+    course = await _create_course(session_maker)
+    archive = await _create_archive(
+        session_maker,
+        course_id=course.id,
+        uploader_id=admin.id,
+    )
+
+    app.dependency_overrides[get_current_user] = _override_user(admin)
+
+    try:
+        response = await client.delete(
+            f"/courses/{course.id}/archives/{archive.id}"
+        )
+        assert response.status_code == 200
+        assert response.json()["message"] == "Archive deleted successfully"
+
+        async with session_maker() as session:
+            refreshed = await session.get(Archive, archive.id)
+            assert refreshed.deleted_at is not None
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        async with session_maker() as session:
+            await session.execute(delete(Archive).where(Archive.id == archive.id))
+            await session.execute(delete(Course).where(Course.id == course.id))
+            await session.commit()
