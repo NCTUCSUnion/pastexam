@@ -6,33 +6,19 @@ from httpx import AsyncClient
 from sqlalchemy import delete, select
 
 from app.main import app
-from app.models.models import Archive, Course, CourseCategory, User, UserRoles
-from app.utils.auth import get_password_hash, get_current_user
+from app.models.models import Archive, Course, CourseCategory, UserRoles
+from app.utils.auth import get_current_user
 
 
 @pytest.mark.asyncio
 async def test_upload_archive_creates_course_and_archive(
     client: AsyncClient,
     session_maker,
-    monkeypatch,
+    make_user,
 ):
     unique = uuid.uuid4().hex[:8]
-    username = f"uploader-{unique}"
-    email = f"{username}@example.com"
-    plaintext = "VeryStrongPassword123!"
-
-    async with session_maker() as session:
-        user = User(
-            name=username,
-            email=email,
-            password_hash=get_password_hash(plaintext),
-            is_local=True,
-            is_admin=False,
-        )
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
-        user_id = user.id
+    user = await make_user()
+    user_id = user.id
 
     async def fake_get_current_user():
         return UserRoles(user_id=user_id, is_admin=False)
@@ -86,29 +72,18 @@ async def test_upload_archive_creates_course_and_archive(
             await session.execute(
                 delete(Course).where(Course.name == unique_course)
             )
-            await session.execute(
-                delete(User).where(User.id == user_id)
-            )
             await session.commit()
 
 
 @pytest.mark.asyncio
-async def test_upload_archive_requires_pdf(client: AsyncClient, session_maker):
-    async with session_maker() as session:
-        user = User(
-            name="non-pdf-tester",
-            email=f"non-pdf-{uuid.uuid4().hex[:8]}@example.com",
-            password_hash=get_password_hash("StrongPass123!"),
-            is_local=True,
-            is_admin=False,
-        )
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
-        user_id = user.id
+async def test_upload_archive_requires_pdf(
+    client: AsyncClient,
+    make_user,
+):
+    user = await make_user()
 
     async def fake_get_current_user():
-        return UserRoles(user_id=user_id, is_admin=False)
+        return UserRoles(user_id=user.id, is_admin=False)
 
     app.dependency_overrides[get_current_user] = fake_get_current_user
 
@@ -130,6 +105,3 @@ async def test_upload_archive_requires_pdf(client: AsyncClient, session_maker):
         assert response.json()["detail"] == "Only PDF files are allowed"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
-        async with session_maker() as session:
-            await session.execute(delete(User).where(User.id == user_id))
-            await session.commit()

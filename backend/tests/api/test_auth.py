@@ -1,35 +1,20 @@
-import uuid
-
 import pytest
 from sqlalchemy import delete, select
 from urllib.parse import urlparse, parse_qs
 
 from app.models.models import User
-from app.utils.auth import get_password_hash
 
 
 @pytest.mark.asyncio
-async def test_local_login_success(client, session_maker):
-    plaintext = "StrongPass123!"
-    hashed = get_password_hash(plaintext)
-    unique = uuid.uuid4().hex[:8]
-    email = f"login-{unique}@example.com"
-    username = f"login-{unique}"
-
-    async with session_maker() as session:
-        user = User(
-            name=username,
-            email=email,
-            password_hash=hashed,
-            is_local=True,
-            is_admin=False,
-        )
-        session.add(user)
-        await session.commit()
+async def test_local_login_success(client, make_user):
+    user = await make_user()
 
     response = await client.post(
         "/auth/login",
-        data={"username": username, "password": plaintext},
+        data={
+            "username": user.name,
+            "password": user.password,
+        },
     )
     assert response.status_code == 200
     payload = response.json()
