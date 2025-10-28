@@ -137,6 +137,9 @@ async def test_get_course_archives_returns_active_archives(
         body = response.json()
         assert len(body) == 1
         assert body[0]["id"] == active_archive.id
+
+        missing_response = await client.get("/courses/999999/archives")
+        assert missing_response.status_code == 404
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
@@ -482,6 +485,8 @@ async def test_update_archive_course_creates_new_course_when_missing(
         async with session_maker() as session:
             refreshed = await session.get(Archive, archive.id)
             assert refreshed.course_id != original.id
+            new_course = await session.get(Course, body["new_course_id"])
+            assert new_course.name == "New Course"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
@@ -1079,147 +1084,3 @@ async def test_list_all_courses_direct_returns_courses(
         async with session_maker() as session:
             await session.execute(delete(Course).where(Course.id == course.id))
             await session.commit()
-
-
-@pytest.mark.asyncio
-async def test_get_course_archives_not_found_direct(
-    session_maker,
-    make_user,
-):
-    user = await make_user()
-    async with session_maker() as session:
-        with pytest.raises(HTTPException) as exc:
-            await get_course_archives(
-                course_id=999999,
-                current_user=UserRoles(user_id=user.id, is_admin=False),
-                db=session,
-            )
-        assert exc.value.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_get_archive_preview_url_not_found_direct(
-    session_maker,
-    make_user,
-):
-    user = await make_user()
-    async with session_maker() as session:
-        with pytest.raises(HTTPException) as exc:
-            await get_archive_preview_url(
-                course_id=1,
-                archive_id=2,
-                current_user=UserRoles(user_id=user.id, is_admin=False),
-                db=session,
-            )
-        assert exc.value.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_get_archive_download_url_not_found_direct(
-    session_maker,
-    make_user,
-):
-    user = await make_user()
-    async with session_maker() as session:
-        with pytest.raises(HTTPException) as exc:
-            await get_archive_download_url(
-                course_id=1,
-                archive_id=2,
-                current_user=UserRoles(user_id=user.id, is_admin=False),
-                db=session,
-            )
-        assert exc.value.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_update_archive_course_creates_new_course_direct(
-    session_maker,
-    make_user,
-):
-    admin = await make_user(is_admin=True)
-    course = await _create_course(session_maker, name="Direct Course")
-    archive = await _create_archive(
-        session_maker,
-        course_id=course.id,
-        uploader_id=admin.id,
-    )
-
-    async with session_maker() as session:
-        response = await update_archive_course(
-            course_id=course.id,
-            archive_id=archive.id,
-            course_update=ArchiveUpdateCourse(
-                course_name="Brand New Course",
-                course_category=CourseCategory.GRADUATE,
-            ),
-            current_user=UserRoles(user_id=admin.id, is_admin=True),
-            db=session,
-        )
-        new_course_id = response["new_course_id"]
-        new_course = await session.get(Course, new_course_id)
-        assert new_course.name == "Brand New Course"
-
-        await session.execute(delete(Archive).where(Archive.id == archive.id))
-        await session.execute(delete(Course).where(Course.id == course.id))
-        await session.execute(delete(Course).where(Course.id == new_course_id))
-        await session.commit()
-
-
-@pytest.mark.asyncio
-async def test_create_course_duplicate_direct(
-    session_maker,
-    make_user,
-):
-    admin = await make_user(is_admin=True)
-    course = await _create_course(
-        session_maker,
-        name="Duplicate Direct",
-        category=CourseCategory.GENERAL,
-    )
-
-    async with session_maker() as session:
-        with pytest.raises(HTTPException) as exc:
-            await create_course(
-                course_data=CourseCreate(
-                    name="Duplicate Direct",
-                    category=CourseCategory.GENERAL,
-                ),
-                current_user=UserRoles(user_id=admin.id, is_admin=True),
-                db=session,
-            )
-        assert exc.value.status_code == 400
-
-    async with session_maker() as session:
-        await session.execute(delete(Course).where(Course.id == course.id))
-        await session.commit()
-
-
-@pytest.mark.asyncio
-async def test_delete_course_soft_deletes_direct(
-    session_maker,
-    make_user,
-):
-    admin = await make_user(is_admin=True)
-    course = await _create_course(session_maker, name="Delete Direct")
-    archive = await _create_archive(
-        session_maker,
-        course_id=course.id,
-        uploader_id=admin.id,
-    )
-
-    async with session_maker() as session:
-        result = await delete_course(
-            course_id=course.id,
-            current_user=UserRoles(user_id=admin.id, is_admin=True),
-            db=session,
-        )
-        assert "associated archives" in result["message"]
-
-        refreshed_course = await session.get(Course, course.id)
-        refreshed_archive = await session.get(Archive, archive.id)
-        assert refreshed_course.deleted_at is not None
-        assert refreshed_archive.deleted_at is not None
-
-        await session.execute(delete(Archive).where(Archive.id == archive.id))
-        await session.execute(delete(Course).where(Course.id == course.id))
-        await session.commit()
