@@ -164,8 +164,13 @@ describe('AdminView', () => {
     await flushPromises()
 
     expect(getCoursesMock).toHaveBeenCalled()
-    expect(getUsersMock).toHaveBeenCalled()
+    expect(getUsersMock).not.toHaveBeenCalled()
     expect(wrapper.vm.filteredCourses.length).toBe(2)
+
+    await wrapper.vm.handleTabChange('1')
+    await flushPromises()
+
+    expect(getUsersMock).toHaveBeenCalled()
     expect(wrapper.vm.filteredUsers.length).toBe(2)
 
     wrapper.vm.openCreateDialog()
@@ -424,6 +429,9 @@ describe('AdminView', () => {
     await flushPromises()
 
     await wrapper.vm.loadNotifications()
+    await flushPromises()
+
+    await wrapper.vm.handleTabChange('1')
     await flushPromises()
 
     wrapper.vm.searchQuery = 'alg'
