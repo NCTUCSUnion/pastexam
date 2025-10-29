@@ -559,7 +559,7 @@ defineOptions({
   name: 'AdminView',
 })
 
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { getCurrentUser } from '../utils/auth'
@@ -1427,9 +1427,28 @@ const saveTabToStorage = (tabValue) => {
   }
 }
 
+const loadTabData = async (value) => {
+  const tab = String(value)
+
+  if (tab === '0') {
+    await loadCourses()
+    return
+  }
+
+  if (tab === '1') {
+    await loadUsers()
+    return
+  }
+
+  if (tab === '2') {
+    await loadNotifications()
+  }
+}
+
 const handleTabChange = (value) => {
-  currentTab.value = value
-  saveTabToStorage(value)
+  const tabValue = String(value)
+  currentTab.value = tabValue
+  saveTabToStorage(tabValue)
 
   const tabNames = {
     0: 'courses',
@@ -1438,24 +1457,17 @@ const handleTabChange = (value) => {
   }
 
   trackEvent(EVENTS.SWITCH_TAB, {
-    tab: tabNames[value] || value,
+    tab: tabNames[tabValue] || tabValue,
   })
 }
 
 watch(
   currentTab,
   async (value) => {
-    if (value === '2' && notifications.value.length === 0 && !notificationsLoading.value) {
-      await loadNotifications()
-    }
+    await loadTabData(value)
   },
   { immediate: true }
 )
-
-onMounted(() => {
-  loadCourses()
-  loadUsers()
-})
 </script>
 
 <style scoped>
