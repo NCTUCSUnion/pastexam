@@ -184,6 +184,69 @@ describe('UploadArchiveDialog', () => {
     wrapper.unmount()
   })
 
+  it('covers helper utilities, watchers, and error branches', async () => {
+    const wrapper = mountDialog()
+    const vm = wrapper.vm
+
+    expect(vm.getCategoryName('freshman')).toBe('大一課程')
+    expect(vm.getCategoryName('unknown')).toBe('unknown')
+    expect(vm.getTypeName('final')).toBe('期末考')
+    expect(vm.formatFileSize(0)).toBe('0 Bytes')
+    expect(vm.formatFileSize(2048)).toContain('KB')
+
+    courseServiceMock.getCourseArchives.mockRejectedValueOnce(new Error('fetch error'))
+    await vm.fetchProfessorsForSubject('c1')
+    expect(vm.uploadFormProfessors).toEqual([])
+    courseServiceMock.getCourseArchives.mockResolvedValue({ data: [] })
+
+    vm.uploadFormProfessors = [
+      { name: 'Prof. Lin', code: 'Prof. Lin' },
+      { name: 'Prof. Chen', code: 'Prof. Chen' },
+    ]
+    vm.searchProfessor({ query: 'lin' })
+    expect(vm.availableProfessors).toEqual([expect.objectContaining({ name: 'Prof. Lin' })])
+
+    vm.onProfessorSelect({ value: 'Prof. Hsu' })
+    expect(vm.form.professor).toBeNull()
+
+    vm.onProfessorSelect({ value: { name: 'Prof. Hsu' } })
+    expect(vm.form.professor).toBe('Prof. Hsu')
+
+    vm.handleUploadPreviewError()
+    expect(vm.uploadPreviewError).toBe(true)
+
+    const clearSpy = vi.fn()
+    vm.fileUpload = { clear: clearSpy }
+    const file = {
+      name: 'calc.pdf',
+      size: 100,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(4)),
+    }
+    vm.onFileSelect({ files: [file] })
+    await flushPromises()
+    expect(clearSpy).toHaveBeenCalled()
+    expect(vm.form.file).toEqual(file)
+
+    vm.form.category = 'freshman'
+    await flushPromises()
+    expect(vm.form.subject).toBeNull()
+
+    vm.form.subject = 'Calculus I'
+    vm.form.subjectId = 'c1'
+    await flushPromises()
+    vm.form.subject = null
+    await flushPromises()
+    expect(vm.uploadFormProfessors).toEqual([])
+
+    vm.fileUpload = { clear: vi.fn() }
+    await wrapper.setProps({ modelValue: false })
+    await flushPromises()
+    expect(vm.form.category).toBeNull()
+    expect(vm.uploadStep).toBe('1')
+
+    wrapper.unmount()
+  })
+
   it('handles upload failures and unauthorized responses', async () => {
     const wrapper = mountDialog()
     const vm = wrapper.vm

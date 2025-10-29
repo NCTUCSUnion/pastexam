@@ -524,4 +524,105 @@ describe('GenerateAIExamModal', () => {
     setIntervalSpy.mockRestore()
     clearIntervalSpy.mockRestore()
   })
+
+  it('covers clipboard errors and API key utilities', async () => {
+    const objectUrlSpy = vi.spyOn(URL, 'createObjectURL')
+    const wrapper = mountModal()
+    const vm = wrapper.vm
+
+    await wrapper.setProps({ visible: true })
+    await flushPromises()
+
+    // verify early return when no content for download
+    vm.result = null
+    vm.downloadResult()
+    expect(objectUrlSpy).not.toHaveBeenCalled()
+
+    vm.result = {
+      generated_content: 'content',
+    }
+    clipboardWriteMock.mockRejectedValueOnce(new Error('copy fail'))
+    toastAddMock.mockClear()
+    await vm.copyContent()
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ severity: 'error', summary: '複製失敗' })
+    )
+
+    // ensure saveApiKey trims and bails when empty
+    toastAddMock.mockClear()
+    aiExamServiceMock.updateApiKey.mockClear()
+    vm.apiKeyForm.key = '   '
+    await vm.saveApiKey()
+    expect(aiExamServiceMock.updateApiKey).not.toHaveBeenCalled()
+
+    // load api key status failure branch
+    aiExamServiceMock.getApiKeyStatus.mockRejectedValueOnce(new Error('status fail'))
+    await vm.loadApiKeyStatus()
+    aiExamServiceMock.getApiKeyStatus.mockResolvedValue({ data: { has_api_key: true } })
+
+    // handle modal close when API key already configured
+    vm.apiKeyStatus.has_api_key = true
+    const emittedBefore = wrapper.emitted('update:visible')?.length || 0
+    vm.handleApiKeyModalClose(false)
+    const emittedAfter = wrapper.emitted('update:visible')?.length || 0
+    expect(emittedAfter).toBe(emittedBefore)
+
+    // open API key modal fallback path
+    aiExamServiceMock.getApiKeyStatus.mockRejectedValueOnce(new Error('modal fail'))
+    await vm.openApiKeyModal()
+    expect(vm.showApiKeyModal).toBe(true)
+
+    objectUrlSpy.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('resets selection state helpers and closes modals correctly', async () => {
+    const wrapper = mountModal()
+    const vm = wrapper.vm
+
+    await wrapper.setProps({ visible: true })
+    await flushPromises()
+
+    vm.form.category = 'freshman'
+    vm.form.course_name = 'Calculus I'
+    vm.form.professor = 'Prof. Lin'
+    vm.availableArchives = [{ id: 'arch-1', archive_type: 'midterm' }]
+    vm.selectedArchiveIds = ['arch-1']
+    vm.archiveTypeFilter = 'midterm'
+
+    vm.goBackToProfessorSelection()
+    expect(vm.currentStep).toBe('selectProfessor')
+    expect(vm.selectedArchiveIds).toEqual([])
+    expect(vm.archiveTypeFilter).toBeNull()
+
+    vm.form.category = 'freshman'
+    vm.form.course_name = 'Calculus I'
+    vm.form.professor = 'Prof. Lin'
+    vm.availableArchives = [{ id: 'arch-1', archive_type: 'midterm' }]
+    vm.selectedArchiveIds = ['arch-1']
+
+    vm.onCategoryChange()
+    expect(vm.form.course_name).toBeNull()
+    expect(vm.form.professor).toBeNull()
+    expect(vm.availableArchives).toEqual([])
+    expect(vm.selectedArchiveIds).toEqual([])
+
+    vm.form.course_name = 'Calculus I'
+    vm.availableArchives = [{ id: 'arch-2', archive_type: 'final' }]
+    vm.selectedArchiveIds = ['arch-2']
+
+    vm.onProfessorChange()
+    expect(vm.availableArchives).toEqual([])
+    expect(vm.selectedArchiveIds).toEqual([])
+
+    vm.showApiKeyModal = true
+    vm.apiKeyStatus.has_api_key = false
+    const emittedBefore = wrapper.emitted('update:visible')?.length || 0
+    vm.handleApiKeyModalClose(false)
+    const emittedAfter = wrapper.emitted('update:visible')?.length || 0
+    expect(emittedAfter).toBe(emittedBefore + 1)
+    expect(vm.showApiKeyModal).toBe(false)
+
+    wrapper.unmount()
+  })
 })

@@ -386,4 +386,69 @@ describe('ArchiveView', () => {
 
     wrapper.unmount()
   })
+
+  it('covers edit helpers and mobile menu utilities', async () => {
+    const sidebarInjected = ref(true)
+
+    const wrapper = mount(ArchiveView, {
+      global: {
+        provide: {
+          toast: { add: toastAddMock },
+          confirm: { require: confirmRequireMock },
+          sidebarVisible: sidebarInjected,
+        },
+        stubs: componentStubs,
+      },
+    })
+
+    await flushPromises()
+
+    const vm = wrapper.vm
+
+    vm.uploadFormProfessors = [
+      { name: 'Prof. Chen', code: 'Prof. Chen' },
+      { name: 'Prof. Wang', code: 'Prof. Wang' },
+    ]
+
+    vm.searchEditProfessor({ query: 'chen' })
+    expect(vm.availableEditProfessors).toEqual([expect.objectContaining({ name: 'Prof. Chen' })])
+
+    vm.onEditProfessorSelect({ value: { name: 'Prof. Hsu' } })
+    expect(vm.editForm.professor).toBe('Prof. Hsu')
+
+    vm.editForm.targetCategory = 'freshman'
+    vm.selectedCourse = 'c1'
+    await nextTick()
+
+    vm.searchTargetCourse({ query: 'linear' })
+    expect(vm.availableCoursesForTransfer[0].label.toLowerCase()).toContain('linear')
+
+    vm.onTargetCourseSelect({ value: { label: 'Linear Algebra', id: 'c2' } })
+    expect(vm.editForm.targetCourseId).toBe('c2')
+
+    vm.onTargetCourseSelect({ value: 'New Course' })
+    expect(vm.editForm.targetCourse).toBe('New Course')
+    expect(vm.editForm.targetCourseId).toBeNull()
+
+    vm.editForm.targetCourse = 'Linear Algebra'
+    await nextTick()
+    expect(vm.editForm.targetCourseId).toBe('c2')
+
+    vm.editForm.targetCourse = 'Brand New'
+    await nextTick()
+    expect(vm.editForm.targetCourseId).toBeNull()
+
+    vm.closeEditDialog()
+    expect(vm.showEditDialog).toBe(false)
+    expect(vm.editForm.id).toBeNull()
+
+    vm.checkAuthentication()
+    expect(vm.isAuthenticatedRef).toBe(true)
+    expect(vm.userData?.id).toBe(10)
+
+    const mobileMenu = vm.mobileMenuItems
+    expect(Array.isArray(mobileMenu)).toBe(true)
+
+    wrapper.unmount()
+  })
 })
