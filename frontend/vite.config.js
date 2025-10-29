@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
@@ -9,6 +10,30 @@ import Sitemap from 'vite-plugin-sitemap'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: 'coverage',
+      reporter: ['text', 'lcov'],
+      include: ['src/**/*.{js,vue}'],
+      exclude: [
+        'src/main.*',
+        'src/App.vue',
+        'src/**/index.*',
+        'src/**/types/**',
+        'src/**/__mocks__/**',
+        '**/*.d.ts',
+        'tests/**',
+      ],
+    },
+  },
   server: {
     host: true,
     port: 80,

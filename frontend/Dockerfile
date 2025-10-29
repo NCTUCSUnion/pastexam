@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 RUN echo "VITE_API_BASE_URL=${VITE_API_BASE_URL}" > .env
-RUN pnpm run build
+RUN pnpm run build && pnpm prune --prod
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html

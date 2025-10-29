@@ -1,0 +1,10 @@
+[run]
+omit =
+    app/main.py
+    app/**/__init__.py
+    app/db/base_class.py
+    app/db/session.py
+    app/api/api.py
+    scripts/*
+    alembic/*
+    tests/*
