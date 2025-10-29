@@ -415,6 +415,11 @@ export default {
         return
       }
 
+      trackEvent(EVENTS.OPEN_MORE_ACTIONS_MENU, {
+        items: this.moreActions.length,
+        viewport: this.isDesktopView ? 'desktop' : 'mobile',
+      })
+
       if (this.$refs.moreActionsMenu?.toggle) {
         this.$refs.moreActionsMenu.toggle(event)
       }
@@ -760,6 +765,10 @@ export default {
   },
 
   computed: {
+    isDesktopView() {
+      return window?.innerWidth >= 768
+    },
+
     menuItems() {
       return []
     },

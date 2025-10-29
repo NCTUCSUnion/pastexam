@@ -77,4 +77,7 @@ export const EVENTS = {
 
   // Tab/Panel events
   SWITCH_TAB: 'switch-tab',
+
+  // Navbar events
+  OPEN_MORE_ACTIONS_MENU: 'open-more-actions-menu',
 }
