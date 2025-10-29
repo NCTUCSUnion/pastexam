@@ -21,6 +21,7 @@ const confirmRequireMock = vi.hoisted(() => vi.fn())
 let originalCreateObjectURL
 let originalRevokeObjectURL
 let originalFetch
+let consoleErrorSpy
 
 const sampleCourses = {
   freshman: [
@@ -150,6 +151,7 @@ const componentStubs = {
 
 describe('ArchiveView', () => {
   beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.useFakeTimers()
     trackEventMock.mockReset()
     isUnauthorizedErrorMock.mockReturnValue(false)
@@ -188,6 +190,7 @@ describe('ArchiveView', () => {
   })
 
   afterEach(() => {
+    consoleErrorSpy?.mockRestore()
     vi.useRealTimers()
     vi.clearAllMocks()
     globalThis.fetch = originalFetch

@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { nextTick } from 'vue'
+import { shallowMount } from '@vue/test-utils'
 import Navbar from '@/components/Navbar.vue'
 
 const localLoginMock = vi.hoisted(() => vi.fn())
@@ -18,10 +20,12 @@ const notificationStoreMock = vi.hoisted(() => ({
     all: [],
     active: [],
     initialized: false,
+    loadingAll: false,
   },
   initNotifications: vi.fn(),
   openCenter: vi.fn(),
   markNotificationAsSeen: vi.fn(),
+  latestUnseenNotification: null,
 }))
 
 let consoleErrorSpy
@@ -41,6 +45,28 @@ vi.mock('@/utils/auth.js', () => ({
   getCurrentUser: getCurrentUserMock,
   isAuthenticated: isAuthenticatedMock,
   setToken: setTokenMock,
+}))
+
+vi.mock('@/utils/useTheme', () => {
+  const themeState = { value: false }
+  return {
+    useTheme: () => ({
+      isDarkTheme: themeState,
+      toggleTheme: vi.fn(),
+    }),
+  }
+})
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}))
+
+vi.mock('primevue/usetoast', () => ({
+  useToast: () => ({
+    add: toastAddMock,
+  }),
 }))
 
 vi.mock('@/utils/analytics', () => ({
@@ -66,9 +92,26 @@ vi.mock('@/utils/http', () => ({
   isUnauthorizedError: isUnauthorizedErrorMock,
 }))
 
-vi.mock('@/components/GenerateAIExamModal.vue', () => ({ default: {} }))
-vi.mock('@/components/NotificationModal.vue', () => ({ default: {} }))
-vi.mock('@/components/NotificationCenterModal.vue', () => ({ default: {} }))
+vi.mock('@/components/GenerateAIExamModal.vue', () => ({
+  default: {
+    name: 'GenerateAIExamModal',
+    template: '<div class="ai-exam-modal"></div>',
+  },
+}))
+vi.mock('@/components/NotificationModal.vue', () => ({
+  default: {
+    name: 'NotificationModal',
+    props: ['visible', 'notification'],
+    template: '<div class="notification-modal"></div>',
+  },
+}))
+vi.mock('@/components/NotificationCenterModal.vue', () => ({
+  default: {
+    name: 'NotificationCenterModal',
+    props: ['visible', 'notifications'],
+    template: '<div class="notification-center"></div>',
+  },
+}))
 
 describe('Navbar methods', () => {
   beforeEach(() => {
@@ -83,9 +126,11 @@ describe('Navbar methods', () => {
     notificationStoreMock.state.all = []
     notificationStoreMock.state.active = []
     notificationStoreMock.state.initialized = false
+    notificationStoreMock.state.loadingAll = false
     notificationStoreMock.initNotifications.mockReset()
     notificationStoreMock.openCenter.mockReset()
     notificationStoreMock.markNotificationAsSeen.mockReset()
+    notificationStoreMock.latestUnseenNotification = null
     getCurrentUserMock.mockReset()
     isAuthenticatedMock.mockReset()
     setTokenMock.mockReset()
@@ -160,6 +205,17 @@ describe('Navbar methods', () => {
     expect(trackEventMock).toHaveBeenCalledWith('login-local', { success: false })
     expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ summary: '登入失敗' }))
     expect(ctx.loading).toBe(false)
+  })
+
+  it('opens login dialog and tracks dialog event', () => {
+    const ctx = {
+      loginVisible: false,
+    }
+
+    Navbar.methods.openLoginDialog.call(ctx)
+
+    expect(ctx.loginVisible).toBe(true)
+    expect(trackEventMock).toHaveBeenCalledWith('login', { type: 'dialog-open' })
   })
 
   it('handles logout flow and cleans storage', async () => {
@@ -276,6 +332,25 @@ describe('Navbar methods', () => {
     expect(ctx.userData.name).toBe('Alice')
   })
 
+  it('handles authentication fallback cases', () => {
+    const ctx = {
+      isAuthenticated: true,
+      userData: { name: 'Bob' },
+    }
+
+    isAuthenticatedMock.mockReturnValue(true)
+    getCurrentUserMock.mockReturnValueOnce(null)
+
+    Navbar.methods.checkAuthentication.call(ctx)
+    expect(ctx.isAuthenticated).toBe(false)
+    expect(ctx.userData).toBeNull()
+
+    isAuthenticatedMock.mockReturnValue(false)
+    Navbar.methods.checkAuthentication.call(ctx)
+    expect(ctx.isAuthenticated).toBe(false)
+    expect(ctx.userData).toBeNull()
+  })
+
   it('manages issue dialogs and navigation actions', () => {
     const routerPush = vi.fn()
     const ctx = {
@@ -307,6 +382,16 @@ describe('Navbar methods', () => {
 
     Navbar.methods.handleIssueReportDialogClose.call(ctx, false)
     expect(ctx.issueForm.description).toBe('')
+  })
+
+  it('skips archive navigation when not authenticated', () => {
+    const routerPush = vi.fn()
+    Navbar.methods.handleTitleClick.call({
+      isAuthenticated: false,
+      $router: { push: routerPush },
+    })
+
+    expect(routerPush).not.toHaveBeenCalled()
   })
 
   it('handles OAuth login shortcut', () => {
@@ -501,5 +586,127 @@ describe('Navbar methods', () => {
     expect(Navbar.computed.canSubmitIssue.call(canSubmitCtx)).toBeTruthy()
     canSubmitCtx.issueForm.title = ' '
     expect(Navbar.computed.canSubmitIssue.call(canSubmitCtx)).toBeFalsy()
+  })
+
+  it('returns empty menu actions when unauthenticated', () => {
+    const actionsCtx = {
+      isAuthenticated: false,
+    }
+
+    expect(Navbar.computed.moreActions.call(actionsCtx)).toEqual([])
+  })
+
+  it('reacts to authentication watcher changes', async () => {
+    const initSpy = vi.fn()
+    const ctx = {
+      notificationStore: notificationStoreMock,
+      initializeNotifications: initSpy,
+    }
+
+    notificationStoreMock.state.modalVisible = true
+    notificationStoreMock.state.centerVisible = true
+    notificationStoreMock.state.active = [1]
+    notificationStoreMock.state.all = [1, 2]
+    notificationStoreMock.state.initialized = true
+
+    await Navbar.watch.isAuthenticated.call(ctx, true)
+    expect(initSpy).toHaveBeenCalled()
+
+    await Navbar.watch.isAuthenticated.call(ctx, false)
+    expect(notificationStoreMock.state.modalVisible).toBe(false)
+    expect(notificationStoreMock.state.centerVisible).toBe(false)
+    expect(notificationStoreMock.state.active).toEqual([])
+    expect(notificationStoreMock.state.all).toEqual([])
+    expect(notificationStoreMock.state.initialized).toBe(false)
+  })
+
+  it('renders template states for authentication transitions', async () => {
+    const setIntervalSpy = vi.spyOn(window, 'setInterval').mockImplementation(() => 1)
+    const baseData = Navbar.data ? Navbar.data.call({}) : {}
+    const globalConfig = {
+      stubs: {
+        Menubar: {
+          name: 'MenubarStub',
+          template:
+            '<div class="menubar"><slot name="start"></slot><slot></slot><slot name="end"></slot></div>',
+        },
+        Button: {
+          name: 'ButtonStub',
+          props: ['icon', 'label', 'ariaLabel'],
+          template:
+            '<button :data-icon="icon" :data-label="label" :data-testid="ariaLabel || icon" @click="$emit(\'click\', $event)"><slot /></button>',
+        },
+        Dialog: {
+          name: 'DialogStub',
+          props: ['visible'],
+          emits: ['update:visible'],
+          template: '<div v-if="visible" class="dialog"><slot /></div>',
+        },
+        Menu: {
+          name: 'MenuStub',
+          props: ['model', 'popup'],
+          template: '<div data-testid="menu"></div>',
+        },
+        NotificationModal: false,
+        NotificationCenterModal: false,
+        GenerateAIExamModal: false,
+        Select: { name: 'SelectStub', template: '<select><slot /></select>' },
+        InputText: { name: 'InputTextStub', template: '<input />' },
+        Textarea: { name: 'TextareaStub', template: '<textarea></textarea>' },
+        FloatLabel: {
+          name: 'FloatLabelStub',
+          template: '<div><slot /><slot name="label" /></div>',
+        },
+        Password: { name: 'PasswordStub', template: '<input type="password" />' },
+        Divider: { name: 'DividerStub', template: '<div class="divider"><slot /></div>' },
+      },
+      mocks: {
+        $route: { path: '/archive' },
+        $router: { push: vi.fn() },
+      },
+    }
+
+    const unauthWrapper = shallowMount(Navbar, {
+      global: globalConfig,
+      data() {
+        return { ...baseData }
+      },
+    })
+
+    await nextTick()
+
+    expect(unauthWrapper.find('[data-icon="pi pi-sign-in"]').exists()).toBe(true)
+    expect(unauthWrapper.find('[data-icon="pi pi-sign-out"]').exists()).toBe(false)
+
+    unauthWrapper.unmount()
+
+    notificationStoreMock.latestUnseenNotification = { value: { id: 1 } }
+    notificationStoreMock.state.modalVisible = true
+    notificationStoreMock.state.centerVisible = true
+
+    isAuthenticatedMock.mockReturnValue(true)
+    getCurrentUserMock.mockReturnValue({ name: 'Alice', is_admin: true })
+
+    const authWrapper = shallowMount(Navbar, {
+      global: globalConfig,
+      data() {
+        return { ...baseData }
+      },
+    })
+
+    await nextTick()
+
+    expect(authWrapper.find('[data-icon="pi pi-sign-in"]').exists()).toBe(false)
+    expect(authWrapper.find('[data-icon="pi pi-sign-out"]').exists()).toBe(true)
+    expect(authWrapper.find('.notification-modal').exists()).toBe(true)
+    expect(authWrapper.find('.notification-center').exists()).toBe(true)
+
+    const menuProps = authWrapper.getComponent({ name: 'MenuStub' }).props('model')
+    expect(Array.isArray(menuProps)).toBe(true)
+    expect(menuProps.length).toBeGreaterThan(0)
+
+    authWrapper.unmount()
+    notificationStoreMock.latestUnseenNotification = null
+    setIntervalSpy.mockRestore()
   })
 })

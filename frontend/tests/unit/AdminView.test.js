@@ -121,8 +121,11 @@ function createWrapper() {
   return shallowMount(AdminView)
 }
 
+let consoleErrorSpy
+
 describe('AdminView', () => {
   beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.useFakeTimers()
     vi.setSystemTime(now)
     getCoursesMock.mockResolvedValue({ data: sampleCourses })
@@ -150,6 +153,7 @@ describe('AdminView', () => {
   })
 
   afterEach(() => {
+    consoleErrorSpy?.mockRestore()
     vi.useRealTimers()
     vi.resetModules()
   })
@@ -410,6 +414,89 @@ describe('AdminView', () => {
     await wrapper.vm.handleTabChange('1')
     expect(localStorage.getItem('adminCurrentTab')).toBe('1')
     expect(trackEventMock).toHaveBeenCalledWith('switch-tab', { tab: 'users' })
+
+    wrapper.unmount()
+  })
+
+  it('covers filtering utilities and helper branches', async () => {
+    const wrapper = createWrapper()
+
+    await flushPromises()
+
+    await wrapper.vm.loadNotifications()
+    await flushPromises()
+
+    wrapper.vm.searchQuery = 'alg'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.filteredCourses).toEqual([sampleCourses[0]])
+
+    wrapper.vm.searchQuery = ''
+    await wrapper.vm.$nextTick()
+    wrapper.vm.filterCategory = 'freshman'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.filteredCourses).toEqual([sampleCourses[1]])
+
+    wrapper.vm.userSearchQuery = 'bob'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.filteredUsers).toEqual([sampleUsers[1]])
+
+    wrapper.vm.userSearchQuery = ''
+    await wrapper.vm.$nextTick()
+    wrapper.vm.filterUserType = true
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.filteredUsers).toEqual([sampleUsers[0]])
+
+    wrapper.vm.notificationSearchQuery = '維護'
+    wrapper.vm.notificationStatusFilter = true
+    wrapper.vm.notificationSeverityFilter = 'info'
+    wrapper.vm.notificationEffectiveFilter = true
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.filteredNotifications).toHaveLength(1)
+
+    wrapper.vm.notificationSearchQuery = ''
+    wrapper.vm.notificationSeverityFilter = 'danger'
+    wrapper.vm.notificationEffectiveFilter = false
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.filteredNotifications).toHaveLength(1)
+
+    const originalSetItem = localStorage.setItem
+    localStorage.setItem = vi.fn(() => {
+      throw new Error('storage disabled')
+    })
+    expect(() => wrapper.vm.saveTabToStorage('0')).not.toThrow()
+    localStorage.setItem = originalSetItem
+
+    expect(wrapper.vm.toDate('invalid')).toBeNull()
+    expect(wrapper.vm.toDate(now.toISOString())).toBeInstanceOf(Date)
+
+    updateUserMock.mockClear()
+    wrapper.vm.openEditUserDialog(sampleUsers[0])
+    wrapper.vm.userForm.password = 'new-secret'
+    await wrapper.vm.saveUser()
+    expect(updateUserMock).toHaveBeenLastCalledWith(
+      sampleUsers[0].id,
+      expect.objectContaining({ password: 'new-secret' })
+    )
+
+    toastAddMock.mockClear()
+    deleteUserMock.mockRejectedValueOnce(new Error('forbidden'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(true)
+    await wrapper.vm.deleteUserAction(sampleUsers[0])
+    expect(toastAddMock).not.toHaveBeenCalled()
+
+    toastAddMock.mockClear()
+    notificationRemoveMock.mockRejectedValueOnce(new Error('unauthorized'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(true)
+    await wrapper.vm.deleteNotificationAction(sampleNotifications[0])
+    expect(toastAddMock).not.toHaveBeenCalled()
+
+    toastAddMock.mockClear()
+    wrapper.vm.closeCourseDialog()
+    wrapper.vm.closeUserDialog()
+    wrapper.vm.closeNotificationDialog()
+    expect(wrapper.vm.showCourseDialog).toBe(false)
+    expect(wrapper.vm.showUserDialog).toBe(false)
+    expect(wrapper.vm.showNotificationDialog).toBe(false)
 
     wrapper.unmount()
   })
