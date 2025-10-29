@@ -291,4 +291,96 @@ describe('ArchiveView', () => {
 
     wrapper.unmount()
   })
+
+  it('handles error and unauthorized branches gracefully', async () => {
+    const sidebarInjected = ref(true)
+
+    const wrapper = mount(ArchiveView, {
+      global: {
+        provide: {
+          toast: { add: toastAddMock },
+          confirm: { require: confirmRequireMock },
+          sidebarVisible: sidebarInjected,
+        },
+        stubs: componentStubs,
+      },
+    })
+
+    await flushPromises()
+
+    toastAddMock.mockClear()
+    listCoursesMock.mockReset()
+    listCoursesMock.mockRejectedValueOnce(new Error('unauthorized'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(true)
+    await wrapper.vm.fetchCourses()
+    expect(toastAddMock).not.toHaveBeenCalled()
+
+    toastAddMock.mockClear()
+    listCoursesMock.mockRejectedValueOnce(new Error('fail'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    await wrapper.vm.fetchCourses()
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: '無法載入課程資料' })
+    )
+
+    listCoursesMock.mockReset()
+    listCoursesMock.mockResolvedValue({ data: sampleCourses })
+
+    wrapper.vm.selectedCourse = 'c1'
+    wrapper.vm.selectedSubject = 'Calculus I'
+
+    toastAddMock.mockClear()
+    getCourseArchivesMock.mockReset()
+    getCourseArchivesMock.mockRejectedValueOnce(new Error('archives'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    await wrapper.vm.fetchArchives()
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: '無法載入考古題資料' })
+    )
+
+    toastAddMock.mockClear()
+    getArchiveDownloadUrlMock.mockRejectedValueOnce(new Error('unauthorized'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(true)
+    await wrapper.vm.downloadArchive(baseArchives[0])
+    expect(toastAddMock).not.toHaveBeenCalled()
+    expect(wrapper.vm.downloadingId).toBeNull()
+
+    toastAddMock.mockClear()
+    getArchiveDownloadUrlMock.mockRejectedValueOnce(new Error('download'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    await wrapper.vm.downloadArchive(baseArchives[0])
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: '無法取得下載連結' })
+    )
+
+    toastAddMock.mockClear()
+    getArchivePreviewUrlMock.mockRejectedValueOnce(new Error('preview'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    await wrapper.vm.previewArchive(baseArchives[0])
+    expect(wrapper.vm.previewError).toBe(true)
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: '無法取得預覽連結' })
+    )
+
+    toastAddMock.mockClear()
+    deleteArchiveMock.mockRejectedValueOnce(new Error('delete'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    await wrapper.vm.deleteArchive({ ...baseArchives[0], id: baseArchives[0].id, year: '2023' })
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: '發生錯誤，請稍後再試' })
+    )
+
+    toastAddMock.mockClear()
+    getArchiveDownloadUrlMock.mockRejectedValueOnce(new Error('preview-download'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    wrapper.vm.selectedArchive = { ...baseArchives[0], id: baseArchives[0].id }
+    wrapper.vm.selectedCourse = 'c1'
+    wrapper.vm.selectedSubject = 'Calculus I'
+    await wrapper.vm.handlePreviewDownload(() => {})
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: '無法取得下載連結' })
+    )
+
+    wrapper.unmount()
+  })
 })

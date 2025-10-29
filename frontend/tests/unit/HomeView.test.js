@@ -38,6 +38,12 @@ vi.mock('highlight.js', () => ({
 describe('HomeView', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    memeServiceMock.getRandomMeme.mockReset()
+    memeServiceMock.getRandomMeme.mockResolvedValue({ data: memeResponse })
+    statisticsServiceMock.getSystemStatistics.mockReset()
+    statisticsServiceMock.getSystemStatistics.mockResolvedValue({
+      data: { data: statisticsPayload },
+    })
   })
 
   afterEach(() => {
@@ -62,5 +68,56 @@ describe('HomeView', () => {
     expect(statCards.length).toBe(6)
     expect(statCards[0].text()).toContain('總用戶數')
     expect(statCards[0].text()).toContain(String(statisticsPayload.totalUsers))
+  })
+
+  it('falls back to default meme when API returns invalid payload', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    memeServiceMock.getRandomMeme.mockResolvedValueOnce({ data: { content: null } })
+
+    const wrapper = mount(HomeView)
+    await flushPromises()
+    vi.runAllTimers()
+    await flushPromises()
+
+    expect(wrapper.vm.selectedMeme.code).toContain('API connection failed')
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Invalid API response format:', { content: null })
+
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('handles meme fetch failures gracefully', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    memeServiceMock.getRandomMeme.mockRejectedValueOnce(new Error('network'))
+
+    const wrapper = mount(HomeView)
+    await flushPromises()
+    vi.runAllTimers()
+    await flushPromises()
+
+    expect(wrapper.vm.selectedMeme.code).toContain('API connection failed')
+    expect(wrapper.vm.selectedMeme.language).toBe('javascript')
+    expect(consoleErrorSpy).toHaveBeenLastCalledWith('Error fetching meme:', expect.any(Error))
+
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('uses NaN placeholders when statistics fetching fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    statisticsServiceMock.getSystemStatistics.mockRejectedValueOnce(new Error('stats'))
+
+    const wrapper = mount(HomeView)
+    await flushPromises()
+    vi.runAllTimers()
+    await flushPromises()
+
+    expect(wrapper.vm.animatedValues.totalUsers).toBe('NaN')
+    expect(wrapper.vm.statisticsData.totalDownloads).toBeNaN()
+    expect(wrapper.vm.statsLoaded).toBe(true)
+    expect(consoleErrorSpy).toHaveBeenLastCalledWith(
+      'Error fetching statistics:',
+      expect.any(Error)
+    )
+
+    consoleErrorSpy.mockRestore()
   })
 })

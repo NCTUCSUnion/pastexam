@@ -23,6 +23,15 @@ export default defineConfig({
       reportsDirectory: 'coverage',
       reporter: ['text', 'lcov'],
       include: ['src/**/*.{js,vue}'],
+      exclude: [
+        'src/main.*',
+        'src/App.vue',
+        'src/**/index.*',
+        'src/**/types/**',
+        'src/**/__mocks__/**',
+        '**/*.d.ts',
+        'tests/**',
+      ],
     },
   },
   server: {

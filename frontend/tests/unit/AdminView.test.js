@@ -90,6 +90,7 @@ vi.mock('@/utils/analytics', () => ({
     CREATE_NOTIFICATION: 'create-notification',
     UPDATE_NOTIFICATION: 'update-notification',
     DELETE_NOTIFICATION: 'delete-notification',
+    SWITCH_TAB: 'switch-tab',
   },
 }))
 
@@ -239,6 +240,176 @@ describe('AdminView', () => {
     expect(wrapper.vm.isNotificationEffective(sampleNotifications[1])).toBe(false)
     expect(wrapper.vm.formatNotificationDate('invalid')).toBe('invalid')
     expect(wrapper.vm.formatNotificationDate(now.toISOString())).not.toBe('—')
+
+    wrapper.unmount()
+  })
+
+  it('validates forms and handles failure branches', async () => {
+    const wrapper = createWrapper()
+
+    await flushPromises()
+
+    createCourseMock.mockClear()
+    createUserMock.mockClear()
+    notificationCreateMock.mockClear()
+    toastAddMock.mockClear()
+
+    wrapper.vm.openCreateDialog()
+    wrapper.vm.courseForm.name = '   '
+    wrapper.vm.courseForm.category = ''
+    await wrapper.vm.saveCourse()
+    expect(createCourseMock).not.toHaveBeenCalled()
+    expect(wrapper.vm.courseFormErrors).toMatchObject({
+      name: '課程名稱是必填欄位',
+      category: '分類是必填欄位',
+    })
+
+    wrapper.vm.openCreateUserDialog()
+    wrapper.vm.userForm.name = ' '
+    wrapper.vm.userForm.email = 'invalid-email'
+    wrapper.vm.userForm.password = ''
+    await wrapper.vm.saveUser()
+    expect(createUserMock).not.toHaveBeenCalled()
+    expect(wrapper.vm.userFormErrors).toMatchObject({
+      name: '使用者名稱是必填欄位',
+      email: '電子郵件格式不正確',
+      password: '密碼是必填欄位',
+    })
+
+    wrapper.vm.openNotificationCreateDialog()
+    wrapper.vm.notificationForm.title = ' '
+    wrapper.vm.notificationForm.body = ''
+    wrapper.vm.notificationForm.starts_at = new Date(now.getTime() + 10_000)
+    wrapper.vm.notificationForm.ends_at = new Date(now.getTime() - 10_000)
+    await wrapper.vm.saveNotification()
+    expect(notificationCreateMock).not.toHaveBeenCalled()
+    expect(wrapper.vm.notificationFormErrors).toMatchObject({
+      title: '公告標題是必填欄位',
+      body: '公告內容是必填欄位',
+      ends_at: '結束時間需晚於生效時間',
+    })
+
+    toastAddMock.mockClear()
+    isUnauthorizedErrorMock.mockReturnValueOnce(true)
+    getCoursesMock.mockRejectedValueOnce(new Error('unauthorized'))
+    await wrapper.vm.loadCourses()
+    expect(toastAddMock).not.toHaveBeenCalled()
+
+    toastAddMock.mockClear()
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    getUsersMock.mockRejectedValueOnce(new Error('boom'))
+    await wrapper.vm.loadUsers()
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ detail: '載入使用者失敗' }))
+
+    toastAddMock.mockClear()
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    notificationGetAllMock.mockRejectedValueOnce(new Error('fail'))
+    await wrapper.vm.loadNotifications()
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ detail: '載入公告失敗' }))
+
+    expect(wrapper.vm.formatNotificationDate(null)).toBe('—')
+    expect(wrapper.vm.formatDateTime(null)).toBe('從未登入')
+    expect(wrapper.vm.formatDateTime(new Date(now.getTime() - 30_000).toISOString())).toBe('剛剛')
+    expect(wrapper.vm.formatDateTime(new Date(now.getTime() - 10 * 60_000).toISOString())).toBe(
+      '10 分鐘前'
+    )
+    expect(wrapper.vm.formatDateTime(new Date(now.getTime() - 2 * 60 * 60_000).toISOString())).toBe(
+      '2 小時前'
+    )
+    expect(
+      wrapper.vm.formatDateTime(new Date(now.getTime() - 24 * 60 * 60_000).toISOString())
+    ).toBe('昨天')
+    expect(
+      wrapper.vm.formatDateTime(new Date(now.getTime() - 3 * 24 * 60 * 60_000).toISOString())
+    ).toBe('3 天前')
+    expect(
+      wrapper.vm.formatDateTime(new Date(now.getTime() - 10 * 24 * 60 * 60_000).toISOString())
+    ).toMatch(/\d{4}\//)
+
+    notificationGetAllMock.mockReset()
+    notificationGetAllMock.mockResolvedValue({ data: sampleNotifications })
+    refreshActiveMock.mockClear()
+    trackEventMock.mockClear()
+
+    wrapper.vm.notifications = []
+    await wrapper.vm.handleTabChange('2')
+
+    expect(localStorage.getItem('adminCurrentTab')).toBe('2')
+    expect(trackEventMock).toHaveBeenCalledWith(
+      'switch-tab',
+      expect.objectContaining({ tab: 'notifications' })
+    )
+
+    await flushPromises()
+    expect(notificationGetAllMock).toHaveBeenCalledTimes(1)
+    expect(refreshActiveMock).toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
+  it('handles create and delete error branches with unauthorized checks', async () => {
+    const wrapper = createWrapper()
+
+    await flushPromises()
+
+    toastAddMock.mockClear()
+
+    wrapper.vm.openCreateDialog()
+    wrapper.vm.courseForm.name = 'Linear Algebra'
+    wrapper.vm.courseForm.category = 'freshman'
+    createCourseMock.mockRejectedValueOnce(new Error('create-fail'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    await wrapper.vm.saveCourse()
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ detail: '課程新增失敗' }))
+
+    toastAddMock.mockClear()
+    createCourseMock.mockRejectedValueOnce(new Error('unauthorized'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(true)
+    await wrapper.vm.saveCourse()
+    expect(toastAddMock).not.toHaveBeenCalled()
+
+    wrapper.vm.openCreateUserDialog()
+    wrapper.vm.userForm.name = 'Dave'
+    wrapper.vm.userForm.email = 'dave@example.com'
+    wrapper.vm.userForm.password = 'secret'
+    createUserMock.mockRejectedValueOnce(new Error('user-fail'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    await wrapper.vm.saveUser()
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ detail: '使用者新增失敗' }))
+
+    toastAddMock.mockClear()
+    createUserMock.mockRejectedValueOnce(new Error('unauthorized'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(true)
+    await wrapper.vm.saveUser()
+    expect(toastAddMock).not.toHaveBeenCalled()
+
+    wrapper.vm.openNotificationCreateDialog()
+    wrapper.vm.notificationForm.title = 'System Notice'
+    wrapper.vm.notificationForm.body = 'Content'
+    notificationCreateMock.mockRejectedValueOnce(new Error('notify-fail'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    await wrapper.vm.saveNotification()
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ detail: '公告新增失敗' }))
+
+    toastAddMock.mockClear()
+    notificationCreateMock.mockRejectedValueOnce(new Error('unauthorized'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(true)
+    wrapper.vm.notificationForm.title = 'System Notice'
+    wrapper.vm.notificationForm.body = 'Content'
+    await wrapper.vm.saveNotification()
+    expect(toastAddMock).not.toHaveBeenCalled()
+
+    toastAddMock.mockClear()
+    deleteCourseMock.mockRejectedValueOnce(new Error('delete-fail'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(false)
+    await wrapper.vm.deleteCourseAction({ id: 3, name: 'Course', category: 'junior' })
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ detail: '課程刪除失敗' }))
+
+    trackEventMock.mockClear()
+    localStorage.clear()
+    await wrapper.vm.handleTabChange('1')
+    expect(localStorage.getItem('adminCurrentTab')).toBe('1')
+    expect(trackEventMock).toHaveBeenCalledWith('switch-tab', { tab: 'users' })
 
     wrapper.unmount()
   })

@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 describe('utils/http', () => {
@@ -95,5 +96,94 @@ describe('utils/analytics', () => {
     analyticsModule.trackPageView('home')
 
     expect(trackSpy).toHaveBeenCalledWith('pageview', { page: 'home' })
+  })
+})
+
+describe('utils/auth', () => {
+  let originalAtob
+
+  const createToken = (payload) => {
+    const header = { alg: 'HS256', typ: 'JWT' }
+    const base64UrlEncode = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url')
+    return `${base64UrlEncode(header)}.${base64UrlEncode(payload)}.signature`
+  }
+
+  const importModule = async () => await import('@/utils/auth.js')
+
+  beforeEach(() => {
+    sessionStorage.clear()
+    originalAtob = globalThis.atob
+    globalThis.atob = (base64) => Buffer.from(base64, 'base64').toString('binary')
+  })
+
+  afterEach(() => {
+    if (originalAtob) {
+      globalThis.atob = originalAtob
+    } else {
+      delete globalThis.atob
+    }
+  })
+
+  it('decodes valid tokens and reports authentication state', async () => {
+    const payload = {
+      uid: 42,
+      email: 'user@example.com',
+      name: 'User',
+      is_admin: true,
+      avatar_url: 'https://avatar',
+      realm_roles: { admin: true },
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    }
+    const token = createToken(payload)
+
+    sessionStorage.setItem('authToken', token)
+
+    const { decodeToken, getCurrentUser, isAuthenticated } = await importModule()
+
+    expect(decodeToken(token)).toEqual(payload)
+    expect(getCurrentUser()).toEqual({
+      id: 42,
+      email: 'user@example.com',
+      name: 'User',
+      is_admin: true,
+      avatar: 'https://avatar',
+      roles: { admin: true },
+    })
+    expect(isAuthenticated()).toBe(true)
+  })
+
+  it('handles invalid tokens gracefully', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    sessionStorage.setItem('authToken', 'invalid-token')
+
+    const pastPayload = {
+      uid: 1,
+      email: 'old@example.com',
+      name: 'Past',
+      is_admin: false,
+      exp: Math.floor(Date.now() / 1000) - 120,
+    }
+    const expiredToken = createToken(pastPayload)
+
+    const { decodeToken, getCurrentUser, isAuthenticated } = await importModule()
+
+    expect(decodeToken('not-a-token')).toBeNull()
+    expect(getCurrentUser()).toBeNull()
+    expect(consoleErrorSpy).toHaveBeenCalled()
+
+    sessionStorage.setItem('authToken', expiredToken)
+    expect(isAuthenticated()).toBe(false)
+
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('persists tokens via helpers', async () => {
+    const { setToken, getToken, removeToken } = await importModule()
+
+    setToken('stored-token')
+    expect(getToken()).toBe('stored-token')
+
+    removeToken()
+    expect(getToken()).toBeNull()
   })
 })

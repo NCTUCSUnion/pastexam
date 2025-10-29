@@ -140,6 +140,28 @@ describe('Navbar methods', () => {
     )
   })
 
+  it('handles local login rejection with error toast', async () => {
+    const routerPush = vi.fn()
+    const ctx = {
+      username: 'user',
+      password: 'pass',
+      toast: { add: toastAddMock },
+      router: { push: routerPush },
+      loginVisible: true,
+      loading: false,
+      checkAuthentication: vi.fn(),
+    }
+
+    toastAddMock.mockClear()
+    localLoginMock.mockRejectedValueOnce(new Error('fail'))
+
+    await Navbar.methods.handleLocalLogin.call(ctx)
+
+    expect(trackEventMock).toHaveBeenCalledWith('login-local', { success: false })
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ summary: '登入失敗' }))
+    expect(ctx.loading).toBe(false)
+  })
+
   it('handles logout flow and cleans storage', async () => {
     const routerPush = vi.fn()
     const ctx = {
@@ -158,6 +180,25 @@ describe('Navbar methods', () => {
     expect(sessionStorage.getItem('authToken')).toBeNull()
     expect(localStorage.getItem('selectedSubject')).toBeNull()
     expect(routerPush).toHaveBeenCalledWith('/')
+  })
+
+  it('tracks logout failure when API errors', async () => {
+    const routerPush = vi.fn()
+    const ctx = {
+      toast: { add: toastAddMock },
+      notificationStore: notificationStoreMock,
+      $router: { push: routerPush },
+      isAuthenticated: true,
+      userData: { name: 'Alice' },
+    }
+
+    logoutMock.mockRejectedValueOnce(new Error('fail'))
+
+    await Navbar.methods.handleLogout.call(ctx)
+
+    expect(trackEventMock).toHaveBeenCalledWith('logout', { success: false })
+    expect(routerPush).toHaveBeenCalledWith('/')
+    expect(sessionStorage.getItem('authToken')).toBeNull()
   })
 
   it('opens notification center with auth guard', async () => {
@@ -211,6 +252,14 @@ describe('Navbar methods', () => {
     Navbar.methods.invokeMenuAction.call(ctx, actionSpy)
     expect(hideSpy).toHaveBeenCalled()
     expect(actionSpy).toHaveBeenCalled()
+
+    toggleSpy.mockClear()
+    Navbar.methods.toggleMoreActions.call({ moreActions: [], $refs: ctx.$refs })
+    expect(toggleSpy).not.toHaveBeenCalled()
+
+    hideSpy.mockClear()
+    Navbar.methods.invokeMenuAction.call(ctx, 'not-a-function')
+    expect(hideSpy).toHaveBeenCalled()
   })
 
   it('checks authentication and updates user data', () => {
@@ -304,6 +353,17 @@ describe('Navbar methods', () => {
     courseServiceListMock.mockRejectedValueOnce(new Error('unauthorized'))
     await Navbar.methods.openAIExamDialog.call(unauthorizedCtx)
     expect(toastAddMock).not.toHaveBeenCalled()
+
+    const cachedCtx = {
+      aiExamDialogVisible: false,
+      coursesList: { freshman: [{ id: 1, name: 'Calc' }] },
+      toast: { add: toastAddMock },
+    }
+    toastAddMock.mockClear()
+    courseServiceListMock.mockClear()
+    await Navbar.methods.openAIExamDialog.call(cachedCtx)
+    expect(courseServiceListMock).not.toHaveBeenCalled()
+    expect(cachedCtx.aiExamDialogVisible).toBe(true)
   })
 
   it('formats issue body with system information', () => {
@@ -361,6 +421,20 @@ describe('Navbar methods', () => {
       'iOS 16.4'
     )
     expect(Navbar.methods.getOSInfo.call({}, 'Other', 'Unknown')).toBe('Other')
+  })
+
+  it('collects system info and formats timestamps', () => {
+    const info = Navbar.methods.getSystemInfo.call({})
+    expect(info).toMatchObject({
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      url: window.location.href,
+    })
+    expect(typeof info.timestamp).toBe('string')
+
+    const formatted = Navbar.methods.formatTimestamp.call({}, '2024-01-01T00:00:00Z')
+    expect(formatted).toContain('(UTC+8)')
   })
 
   it('submits issue report through GitHub redirect', () => {
