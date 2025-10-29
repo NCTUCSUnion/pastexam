@@ -81,6 +81,7 @@ vi.mock('@/utils/analytics', () => ({
     OPEN_NOTIFICATION_CENTER: 'open-notification-center',
     OPEN_ISSUE_REPORT: 'open-issue-report',
     SUBMIT_ISSUE_REPORT: 'submit-issue-report',
+    OPEN_MORE_ACTIONS_MENU: 'open-more-actions-menu',
   },
 }))
 
@@ -301,17 +302,28 @@ describe('Navbar methods', () => {
           hide: hideSpy,
         },
       },
+      isDesktopView: true,
     }
     Navbar.methods.toggleMoreActions.call(ctx, {})
     expect(toggleSpy).toHaveBeenCalled()
+    expect(trackEventMock).toHaveBeenCalledWith('open-more-actions-menu', {
+      items: 1,
+      viewport: 'desktop',
+    })
 
     Navbar.methods.invokeMenuAction.call(ctx, actionSpy)
     expect(hideSpy).toHaveBeenCalled()
     expect(actionSpy).toHaveBeenCalled()
 
     toggleSpy.mockClear()
-    Navbar.methods.toggleMoreActions.call({ moreActions: [], $refs: ctx.$refs })
+    trackEventMock.mockClear()
+    Navbar.methods.toggleMoreActions.call({
+      moreActions: [],
+      $refs: ctx.$refs,
+      isDesktopView: false,
+    })
     expect(toggleSpy).not.toHaveBeenCalled()
+    expect(trackEventMock).not.toHaveBeenCalled()
 
     hideSpy.mockClear()
     Navbar.methods.invokeMenuAction.call(ctx, 'not-a-function')
