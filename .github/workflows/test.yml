@@ -66,8 +66,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install frontend dependencies
         working-directory: ./frontend
@@ -99,16 +99,62 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: pnpm install --frozen-lockfile
 
-      # - name: Run frontend E2E tests
-      #   working-directory: ./frontend
-      #   run: pnpm test:e2e
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: pnpm exec playwright install --with-deps
 
-      - name: Placeholder frontend E2E tests
-        run: echo "Frontend E2E tests are not configured yet."
+      - name: Prepare backend env
+        run: |
+          cp backend/.env.example backend/.env
+          cat <<'EOF' >> backend/.env
+          SECRET_KEY=${{ secrets.BACKEND_SECRET_KEY }}
+          OAUTH_CLIENT_ID=${{ secrets.BACKEND_OAUTH_CLIENT_ID }}
+          OAUTH_CLIENT_SECRET=${{ secrets.BACKEND_OAUTH_CLIENT_SECRET }}
+          EOF
+
+      - name: Prepare frontend env
+        run: cp frontend/.env.example frontend/.env
+
+      - name: Prepare docker env
+        run: cp docker/.env.example docker/.env
+
+      - name: Start application stack
+        run: docker compose -f docker/docker-compose.dev.yml up -d
+
+      - name: Wait for API readiness
+        run: |
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:8080/api/statistics > /dev/null; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "API did not become ready in time" >&2
+          docker compose -f docker/docker-compose.dev.yml logs backend
+          docker compose -f docker/docker-compose.dev.yml logs nginx
+          exit 1
+
+      - name: Run frontend E2E tests
+        working-directory: ./frontend
+        env:
+          PLAYWRIGHT_START_SERVER: "false"
+        run: pnpm exec playwright test
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          if-no-files-found: warn
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker/docker-compose.dev.yml down --volumes --remove-orphans

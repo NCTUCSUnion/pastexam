@@ -139,3 +139,12 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Ignore Playwright
+/tests-examples/
+/playwright-report/
+/playwright-results/
+/playwright/.cache/
+/.local-browsers
+/allure-results/
+/.allure/
