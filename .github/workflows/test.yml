@@ -41,6 +41,7 @@ jobs:
             uv run pytest --cov=app --cov-report=term-missing --cov-report=html
 
       - name: Upload backend coverage report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
@@ -79,9 +80,11 @@ jobs:
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: frontend-unit-coverage
           path: frontend/coverage
+          if-no-files-found: warn
 
   frontend-e2e:
     runs-on: ubuntu-latest
