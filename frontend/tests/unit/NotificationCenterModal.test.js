@@ -112,4 +112,46 @@ describe('NotificationCenterModal', () => {
 
     wrapper.unmount()
   })
+
+  it('renders list markdown correctly', async () => {
+    vi.resetModules()
+    vi.doUnmock('@/utils/markdown')
+    const { renderMarkdown } = await import('@/utils/markdown')
+
+    const listNotification = {
+      id: 3,
+      title: '列表測試',
+      body: '- 項目一\n- 項目二\n- 項目三',
+      severity: 'info',
+      created_at: '2025-01-01T00:00:00Z',
+    }
+
+    const wrapper = mount(NotificationCenterModal, {
+      props: {
+        visible: true,
+        notifications: [listNotification],
+        loading: false,
+      },
+      global: {
+        stubs: {
+          Dialog: stubComponent,
+          DataTable: stubComponent,
+          Column: { template: '<template />' },
+          Tag: stubComponent,
+          Button: stubComponent,
+          ProgressSpinner: stubComponent,
+        },
+      },
+    })
+
+    const vm = wrapper.vm
+    vm.openDetail(listNotification)
+    await wrapper.vm.$nextTick()
+
+    const rendered = renderMarkdown(listNotification.body)
+    expect(rendered).toContain('<ul>')
+    expect(rendered).toContain('<li>')
+
+    wrapper.unmount()
+  })
 })

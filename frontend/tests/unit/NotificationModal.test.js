@@ -97,4 +97,38 @@ describe('NotificationModal', () => {
 
     wrapper.unmount()
   })
+
+  it('renders list markdown correctly', async () => {
+    vi.resetModules()
+    vi.doUnmock('@/utils/markdown')
+    const { renderMarkdown } = await import('@/utils/markdown')
+
+    const listNotification = {
+      id: 14,
+      title: '列表測試',
+      body: '1. 第一項\n2. 第二項\n3. 第三項',
+      severity: 'info',
+      created_at: '2025-01-01T00:00:00Z',
+    }
+
+    const wrapper = mount(NotificationModal, {
+      props: {
+        visible: true,
+        notification: listNotification,
+      },
+      global: {
+        stubs: {
+          Dialog: stubComponent,
+          Button: stubComponent,
+          Tag: stubComponent,
+        },
+      },
+    })
+
+    const rendered = renderMarkdown(listNotification.body)
+    expect(rendered).toContain('<ol>')
+    expect(rendered).toContain('<li>')
+
+    wrapper.unmount()
+  })
 })
