@@ -285,16 +285,33 @@ const formatTimestamp = (value) => {
 }
 
 .markdown-content :deep(blockquote) {
-  border-left: 4px solid var(--surface-300);
+  border-left: 4px solid rgba(0, 0, 0, 0.1);
   padding-left: 1rem;
   margin: 0.75rem 0;
-  color: var(--text-color-secondary);
+  color: rgba(0, 0, 0, 0.65);
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown-content :deep(blockquote) {
+    border-left-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.65);
+  }
+}
+
+.markdown-content :deep(blockquote p) {
+  margin: 0;
 }
 
 .markdown-content :deep(hr) {
   border: none;
-  border-top: 1px solid var(--surface-300);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
   margin: 1rem 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown-content :deep(hr) {
+    border-top-color: rgba(255, 255, 255, 0.15);
+  }
 }
 
 .markdown-content :deep(table) {
@@ -305,9 +322,16 @@ const formatTimestamp = (value) => {
 
 .markdown-content :deep(th),
 .markdown-content :deep(td) {
-  border: 1px solid var(--surface-300);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   padding: 0.5rem;
   text-align: left;
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown-content :deep(th),
+  .markdown-content :deep(td) {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
 }
 
 .markdown-content :deep(th) {
