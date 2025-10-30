@@ -290,7 +290,7 @@ const formatTimestamp = (value) => {
 }
 
 .markdown-content :deep(pre code) {
-  background-color: transparent;
+  background-color: transparent !important;
   padding: 0;
 }
 
