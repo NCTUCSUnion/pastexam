@@ -210,24 +210,6 @@
                     showClear
                     class="w-full md:w-12rem"
                   />
-                  <Select
-                    v-model="notificationStatusFilter"
-                    :options="notificationStatusOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="篩選啟用狀態"
-                    showClear
-                    class="w-full md:w-12rem"
-                  />
-                  <Select
-                    v-model="notificationEffectiveFilter"
-                    :options="notificationEffectiveFilterOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="篩選是否生效"
-                    showClear
-                    class="w-full md:w-12rem"
-                  />
                 </div>
                 <Button
                   label="新增公告"
@@ -576,11 +558,9 @@ import {
   notificationService,
 } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
-import { useNotifications } from '../utils/useNotifications'
 
 const confirm = useConfirm()
 const toast = useToast()
-const notificationStore = useNotifications()
 
 const courses = ref([])
 const coursesLoading = ref(false)
@@ -628,9 +608,7 @@ const userFormErrors = ref({})
 const notifications = ref([])
 const notificationsLoading = ref(false)
 const notificationSearchQuery = ref('')
-const notificationStatusFilter = ref(null)
 const notificationSeverityFilter = ref(null)
-const notificationEffectiveFilter = ref(null)
 
 const notificationSortMeta = ref([
   { field: 'is_active', order: -1 },
@@ -838,24 +816,9 @@ const filteredNotifications = computed(() => {
     )
   }
 
-  if (notificationStatusFilter.value !== null && notificationStatusFilter.value !== undefined) {
-    filtered = filtered.filter(
-      (notification) => notification.is_active === notificationStatusFilter.value
-    )
-  }
-
   if (notificationSeverityFilter.value) {
     filtered = filtered.filter(
       (notification) => notification.severity === notificationSeverityFilter.value
-    )
-  }
-
-  if (
-    notificationEffectiveFilter.value !== null &&
-    notificationEffectiveFilter.value !== undefined
-  ) {
-    filtered = filtered.filter(
-      (notification) => isNotificationEffective(notification) === notificationEffectiveFilter.value
     )
   }
 
@@ -915,7 +878,6 @@ const loadNotifications = async () => {
   try {
     const { data } = await notificationService.getAllAdmin()
     notifications.value = Array.isArray(data) ? data : []
-    await notificationStore.refreshActive()
   } catch (error) {
     console.error('載入公告失敗:', error)
     if (isUnauthorizedError(error)) {
