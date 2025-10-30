@@ -148,8 +148,17 @@ const formatTimestamp = (value) => {
   padding-left: 1.5rem;
 }
 
+.markdown-content :deep(ul) {
+  list-style-type: disc;
+}
+
+.markdown-content :deep(ol) {
+  list-style-type: decimal;
+}
+
 .markdown-content :deep(li) {
   margin: 0.25rem 0;
+  display: list-item;
 }
 
 .markdown-content :deep(code) {
