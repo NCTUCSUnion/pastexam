@@ -86,4 +86,26 @@ describe('markdown utility', () => {
     expect(result).toContain('href="https://example.com?foo=bar&amp;baz=qux"')
     expect(result).toContain('target="_blank"')
   })
+
+  it('renders markdown tables', () => {
+    const table = `| Header 1 | Header 2 |
+| -------- | -------- |
+| Cell 1   | Cell 2   |
+| Cell 3   | Cell 4   |`
+    const result = renderMarkdown(table)
+    expect(result).toContain('<table>')
+    expect(result).toContain('<thead>')
+    expect(result).toContain('<th>')
+    expect(result).toContain('<tbody>')
+    expect(result).toContain('<td>')
+    expect(result).toContain('Header 1')
+    expect(result).toContain('Cell 1')
+  })
+
+  it('renders horizontal rules', () => {
+    const result = renderMarkdown('Content above\n\n---\n\nContent below')
+    expect(result).toContain('<hr')
+    expect(result).toContain('Content above')
+    expect(result).toContain('Content below')
+  })
 })
