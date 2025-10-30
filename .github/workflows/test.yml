@@ -85,7 +85,7 @@ jobs:
 
   frontend-e2e:
     runs-on: ubuntu-latest
-    needs: backend
+    needs: [backend, frontend-unit]
 
     steps:
       - name: Checkout repository

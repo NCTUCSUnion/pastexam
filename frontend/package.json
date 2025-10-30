@@ -7,13 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "lint": "eslint --ext .js,.ts,.vue src tests",
+    "format": "prettier --write .",
+    "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "prepare": "cd .. && husky frontend/.husky",
-    "lint": "pnpm exec eslint --ext .js,.ts,.vue src tests",
-    "format": "pnpm exec prettier --write ."
+    "prepare": "cd .. && husky frontend/.husky"
   },
   "dependencies": {
     "@primeuix/themes": "^1.1.1",
