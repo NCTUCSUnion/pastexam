@@ -44,10 +44,10 @@ test.describe('Home page', () => {
     await expect(page.getByRole('heading', { name: '交大資工考古題系統' })).toBeVisible()
 
     await page.evaluate(() => {
-      const globalWindow = window as typeof window & {
-        __pastexam?: { openLoginModal?: () => void }
+      const pastexam = window.__pastexam
+      if (pastexam && typeof pastexam.openLoginModal === 'function') {
+        pastexam.openLoginModal()
       }
-      globalWindow.__pastexam?.openLoginModal?.()
     })
     const loginDialog = page.getByRole('dialog', { name: '登入' })
     await expect(loginDialog).toBeVisible()
