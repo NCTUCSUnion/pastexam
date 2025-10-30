@@ -16,9 +16,15 @@ importers:
       axios:
         specifier: ^1.9.0
         version: 1.12.2
+      dompurify:
+        specifier: ^3.3.0
+        version: 3.3.0
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
+      marked:
+        specifier: ^16.4.1
+        version: 16.4.1
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
@@ -1406,6 +1412,12 @@ packages:
         integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==,
       }
 
+  '@types/trusted-types@2.0.7':
+    resolution:
+      {
+        integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==,
+      }
+
   '@typescript-eslint/eslint-plugin@8.46.2':
     resolution:
       {
@@ -2107,6 +2119,12 @@ packages:
         integrity: sha512-ecqj/sy1jcK1uWrwpR67UhYrIFQ+5WlGxth34WquCbamhFA6hkkwiu37o6J5xCHdo1oixJRfVRw+ywV+Hq/0Aw==,
       }
     engines: { node: '>=8' }
+
+  dompurify@3.3.0:
+    resolution:
+      {
+        integrity: sha512-r+f6MYR1gGN1eJv0TVQbhA7if/U7P87cdPl3HN5rikqaBSBxLiCb/b9O+2eG0cxz0ghyU+mU1QkbsOwERMYlWQ==,
+      }
 
   dunder-proto@1.0.1:
     resolution:
@@ -3133,6 +3151,14 @@ packages:
         integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==,
       }
     engines: { node: '>=10' }
+
+  marked@16.4.1:
+    resolution:
+      {
+        integrity: sha512-ntROs7RaN3EvWfy3EZi14H4YxmT6A5YvywfhO+0pm+cH/dnSQRmdAmoFIc3B9aiwTehyk7pESH4ofyBY+V5hZg==,
+      }
+    engines: { node: '>= 20' }
+    hasBin: true
 
   math-intrinsics@1.1.0:
     resolution:
@@ -5066,6 +5092,9 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
+  '@types/trusted-types@2.0.7':
+    optional: true
+
   '@typescript-eslint/eslint-plugin@8.46.2(@typescript-eslint/parser@8.46.2(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.1
@@ -5553,6 +5582,10 @@ snapshots:
   delayed-stream@1.0.0: {}
 
   detect-libc@2.1.1: {}
+
+  dompurify@3.3.0:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
 
   dunder-proto@1.0.1:
     dependencies:
@@ -6170,6 +6203,8 @@ snapshots:
   make-dir@4.0.0:
     dependencies:
       semver: 7.7.2
+
+  marked@16.4.1: {}
 
   math-intrinsics@1.1.0: {}
 

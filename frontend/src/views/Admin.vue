@@ -193,7 +193,7 @@
                 class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center mb-4 gap-3"
               >
                 <div class="flex flex-column md:flex-row gap-3 w-full md:w-auto">
-                  <div class="relative w-full md:w-20rem">
+                  <div class="relative w-full md:w-auto">
                     <i class="pi pi-search search-icon"></i>
                     <InputText
                       v-model="notificationSearchQuery"
@@ -638,22 +638,12 @@ const notificationSortMeta = ref([
   { field: 'id', order: -1 },
 ])
 
-const notificationStatusOptions = [
-  { label: '啟用中', value: true },
-  { label: '已停用', value: false },
-]
-
 const notificationSeverityOptions = [
   { label: '一般', value: 'info' },
   { label: '重要', value: 'danger' },
 ]
 
 const notificationSeverityFilterOptions = notificationSeverityOptions
-
-const notificationEffectiveFilterOptions = [
-  { label: '生效中', value: true },
-  { label: '未生效', value: false },
-]
 
 const showNotificationDialog = ref(false)
 const editingNotification = ref(null)
