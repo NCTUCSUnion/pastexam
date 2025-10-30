@@ -27,7 +27,7 @@ jobs:
         working-directory: ./frontend
 
       - name: Run lint
-        run: pnpm run lint
+        run: pnpm lint
         working-directory: ./frontend
 
   backend:
