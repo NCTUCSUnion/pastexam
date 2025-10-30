@@ -10,13 +10,13 @@ test.beforeEach(async ({ page }) => {
     if (token) {
       window.sessionStorage.setItem('authToken', token)
     }
+    window.localStorage.setItem('pastexam_notification_last_seen', '999999')
   })
 })
 
 test.describe('Archive page', () => {
   test('allows admin to search courses and open upload dialog', async ({ page }) => {
     await page.goto('/archive')
-
     await expect(page).toHaveURL(/\/archive$/)
 
     const uploadButton = page.getByRole('button', { name: '上傳考古題' })

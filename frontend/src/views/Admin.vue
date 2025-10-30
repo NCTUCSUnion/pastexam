@@ -193,7 +193,7 @@
                 class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center mb-4 gap-3"
               >
                 <div class="flex flex-column md:flex-row gap-3 w-full md:w-auto">
-                  <div class="relative w-full md:w-20rem">
+                  <div class="relative w-full md:w-auto">
                     <i class="pi pi-search search-icon"></i>
                     <InputText
                       v-model="notificationSearchQuery"
@@ -208,25 +208,7 @@
                     optionValue="value"
                     placeholder="篩選重要程度"
                     showClear
-                    class="w-full md:w-12rem"
-                  />
-                  <Select
-                    v-model="notificationStatusFilter"
-                    :options="notificationStatusOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="篩選啟用狀態"
-                    showClear
-                    class="w-full md:w-12rem"
-                  />
-                  <Select
-                    v-model="notificationEffectiveFilter"
-                    :options="notificationEffectiveFilterOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="篩選是否生效"
-                    showClear
-                    class="w-full md:w-12rem"
+                    class="w-full md:w-14rem"
                   />
                 </div>
                 <Button
@@ -576,11 +558,9 @@ import {
   notificationService,
 } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
-import { useNotifications } from '../utils/useNotifications'
 
 const confirm = useConfirm()
 const toast = useToast()
-const notificationStore = useNotifications()
 
 const courses = ref([])
 const coursesLoading = ref(false)
@@ -628,9 +608,7 @@ const userFormErrors = ref({})
 const notifications = ref([])
 const notificationsLoading = ref(false)
 const notificationSearchQuery = ref('')
-const notificationStatusFilter = ref(null)
 const notificationSeverityFilter = ref(null)
-const notificationEffectiveFilter = ref(null)
 
 const notificationSortMeta = ref([
   { field: 'is_active', order: -1 },
@@ -638,22 +616,12 @@ const notificationSortMeta = ref([
   { field: 'id', order: -1 },
 ])
 
-const notificationStatusOptions = [
-  { label: '啟用中', value: true },
-  { label: '已停用', value: false },
-]
-
 const notificationSeverityOptions = [
   { label: '一般', value: 'info' },
   { label: '重要', value: 'danger' },
 ]
 
 const notificationSeverityFilterOptions = notificationSeverityOptions
-
-const notificationEffectiveFilterOptions = [
-  { label: '生效中', value: true },
-  { label: '未生效', value: false },
-]
 
 const showNotificationDialog = ref(false)
 const editingNotification = ref(null)
@@ -848,24 +816,9 @@ const filteredNotifications = computed(() => {
     )
   }
 
-  if (notificationStatusFilter.value !== null && notificationStatusFilter.value !== undefined) {
-    filtered = filtered.filter(
-      (notification) => notification.is_active === notificationStatusFilter.value
-    )
-  }
-
   if (notificationSeverityFilter.value) {
     filtered = filtered.filter(
       (notification) => notification.severity === notificationSeverityFilter.value
-    )
-  }
-
-  if (
-    notificationEffectiveFilter.value !== null &&
-    notificationEffectiveFilter.value !== undefined
-  ) {
-    filtered = filtered.filter(
-      (notification) => isNotificationEffective(notification) === notificationEffectiveFilter.value
     )
   }
 
@@ -925,7 +878,6 @@ const loadNotifications = async () => {
   try {
     const { data } = await notificationService.getAllAdmin()
     notifications.value = Array.isArray(data) ? data : []
-    await notificationStore.refreshActive()
   } catch (error) {
     console.error('載入公告失敗:', error)
     if (isUnauthorizedError(error)) {
