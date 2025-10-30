@@ -35,8 +35,8 @@ const config: PlaywrightTestConfig = {
   use: {
     baseURL,
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    screenshot: env.CI ? 'only-on-failure' : 'on',
+    video: env.CI ? 'retain-on-failure' : 'on',
   },
   projects: [
     {
