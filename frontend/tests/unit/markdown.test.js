@@ -63,18 +63,15 @@ describe('markdown utility', () => {
     expect(renderMarkdown(undefined)).toBe('')
   })
 
-  it('renders complex markdown example', () => {
-    const markdown =
-      '近期有同學反映新版考古題系統中部分資料有遺漏或缺失的情況。\n\n若你發現資料遺漏、檔案缺失、或與舊版不符，請前往以下連結開立 Issue 進行回報：\n[回報問題](https://github.com/nctucsunion/pastexam/issues/new?template=missing-exam.yml)\n\n感謝您的協助！'
-
-    const result = renderMarkdown(markdown)
-
-    expect(result).toContain('<br>')
-    expect(result).toContain(
-      'href="https://github.com/nctucsunion/pastexam/issues/new?template=missing-exam.yml"'
+  it('renders complex markdown with multiple elements', () => {
+    const result = renderMarkdown(
+      'This is **bold** and *italic* text with a [link](https://example.com)'
     )
+
+    expect(result).toContain('<strong>bold</strong>')
+    expect(result).toContain('<em>italic</em>')
+    expect(result).toContain('href="https://example.com"')
     expect(result).toContain('target="_blank"')
-    expect(result).toContain('回報問題')
   })
 
   it('handles markdown with special characters', () => {
