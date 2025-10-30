@@ -1,6 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import NotificationCenterModal from '@/components/NotificationCenterModal.vue'
+
+vi.mock('@/utils/markdown', () => ({
+  renderMarkdown: vi.fn((text) => `<p>${text}</p>`),
+}))
 
 const notifications = [
   {
@@ -9,6 +13,14 @@ const notifications = [
     body: '內容一',
     severity: 'info',
     created_at: '2025-01-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    title: 'Markdown 公告',
+    body: '這是 **粗體** 和 [連結](https://example.com)',
+    severity: 'danger',
+    created_at: '2025-01-02T00:00:00Z',
+    updated_at: '2025-01-03T00:00:00Z',
   },
 ]
 
@@ -56,6 +68,47 @@ describe('NotificationCenterModal', () => {
 
     vm.handleVisibility(false)
     expect(wrapper.emitted('update:visible')).toBeTruthy()
+
+    wrapper.unmount()
+  })
+
+  it('renders markdown content in notification body', async () => {
+    const { renderMarkdown } = await import('@/utils/markdown')
+
+    const wrapper = mount(NotificationCenterModal, {
+      props: {
+        visible: true,
+        notifications,
+        loading: false,
+      },
+      global: {
+        stubs: {
+          Dialog: stubComponent,
+          DataTable: stubComponent,
+          Column: { template: '<template />' },
+          Tag: stubComponent,
+          Button: stubComponent,
+          ProgressSpinner: stubComponent,
+        },
+      },
+    })
+
+    const vm = wrapper.vm
+
+    // Open detail with markdown content
+    vm.openDetail(notifications[1])
+    await wrapper.vm.$nextTick()
+
+    expect(vm.selectedNotification).toEqual(notifications[1])
+    expect(vm.renderedBody).toBeTruthy()
+    expect(renderMarkdown).toHaveBeenCalledWith(notifications[1].body)
+
+    // Test with empty body
+    const emptyNotification = { ...notifications[0], body: '' }
+    vm.openDetail(emptyNotification)
+    await wrapper.vm.$nextTick()
+
+    expect(renderMarkdown).toHaveBeenCalledWith('')
 
     wrapper.unmount()
   })

@@ -52,7 +52,6 @@ const notificationUpdateMock = vi.hoisted(() => vi.fn())
 const notificationRemoveMock = vi.hoisted(() => vi.fn())
 
 const trackEventMock = vi.hoisted(() => vi.fn())
-const refreshActiveMock = vi.hoisted(() => vi.fn())
 const isUnauthorizedErrorMock = vi.hoisted(() => vi.fn(() => false))
 
 const confirmRequireMock = vi.hoisted(() => vi.fn((options) => options.accept && options.accept()))
@@ -92,12 +91,6 @@ vi.mock('@/utils/analytics', () => ({
     DELETE_NOTIFICATION: 'delete-notification',
     SWITCH_TAB: 'switch-tab',
   },
-}))
-
-vi.mock('@/utils/useNotifications', () => ({
-  useNotifications: () => ({
-    refreshActive: refreshActiveMock,
-  }),
 }))
 
 vi.mock('@/api', () => ({
@@ -143,7 +136,6 @@ describe('AdminView', () => {
     notificationUpdateMock.mockResolvedValue()
     notificationRemoveMock.mockResolvedValue()
 
-    refreshActiveMock.mockResolvedValue()
     trackEventMock.mockReset()
     toastAddMock.mockReset()
     confirmRequireMock.mockClear()
@@ -239,7 +231,6 @@ describe('AdminView', () => {
     wrapper.vm.confirmDeleteNotification(sampleNotifications[0])
     expect(notificationRemoveMock).toHaveBeenCalledWith(sampleNotifications[0].id)
     expect(notificationGetAllMock).toHaveBeenCalled()
-    expect(refreshActiveMock).toHaveBeenCalled()
 
     expect(wrapper.vm.getCategoryName('freshman')).toBe('大一課程')
     expect(wrapper.vm.getCategorySeverity('graduate')).toBe('contrast')
@@ -337,7 +328,6 @@ describe('AdminView', () => {
 
     notificationGetAllMock.mockReset()
     notificationGetAllMock.mockResolvedValue({ data: sampleNotifications })
-    refreshActiveMock.mockClear()
     trackEventMock.mockClear()
 
     wrapper.vm.notifications = []
@@ -351,7 +341,6 @@ describe('AdminView', () => {
 
     await flushPromises()
     expect(notificationGetAllMock).toHaveBeenCalledTimes(1)
-    expect(refreshActiveMock).toHaveBeenCalled()
 
     wrapper.unmount()
   })
@@ -455,15 +444,12 @@ describe('AdminView', () => {
     expect(wrapper.vm.filteredUsers).toEqual([sampleUsers[0]])
 
     wrapper.vm.notificationSearchQuery = '維護'
-    wrapper.vm.notificationStatusFilter = true
     wrapper.vm.notificationSeverityFilter = 'info'
-    wrapper.vm.notificationEffectiveFilter = true
     await wrapper.vm.$nextTick()
     expect(wrapper.vm.filteredNotifications).toHaveLength(1)
 
     wrapper.vm.notificationSearchQuery = ''
     wrapper.vm.notificationSeverityFilter = 'danger'
-    wrapper.vm.notificationEffectiveFilter = false
     await wrapper.vm.$nextTick()
     expect(wrapper.vm.filteredNotifications).toHaveLength(1)
 
