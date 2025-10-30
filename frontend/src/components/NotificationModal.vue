@@ -162,19 +162,29 @@ const formatTimestamp = (value) => {
 }
 
 .markdown-content :deep(code) {
-  background-color: var(--surface-100);
+  background-color: rgba(0, 0, 0, 0.08);
   padding: 0.125rem 0.25rem;
   border-radius: 3px;
   font-family: monospace;
   font-size: 0.9em;
+  color: inherit;
+}
+
+:global(.dark) .markdown-content :deep(code) {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .markdown-content :deep(pre) {
-  background-color: var(--surface-100);
+  background-color: rgba(0, 0, 0, 0.08);
   padding: 0.75rem;
   border-radius: 6px;
   overflow-x: auto;
   margin: 0.75rem 0;
+  color: inherit;
+}
+
+:global(.dark) .markdown-content :deep(pre) {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .markdown-content :deep(pre code) {
@@ -183,17 +193,15 @@ const formatTimestamp = (value) => {
 }
 
 .markdown-content :deep(blockquote) {
-  border-left: 4px solid rgba(0, 0, 0, 0.1);
+  border-left: 4px solid rgba(0, 0, 0, 0.15);
   padding-left: 1rem;
   margin: 0.75rem 0;
-  color: rgba(0, 0, 0, 0.65);
+  color: inherit;
+  opacity: 0.8;
 }
 
-@media (prefers-color-scheme: dark) {
-  .markdown-content :deep(blockquote) {
-    border-left-color: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.65);
-  }
+:global(.dark) .markdown-content :deep(blockquote) {
+  border-left-color: rgba(255, 255, 255, 0.2);
 }
 
 .markdown-content :deep(blockquote p) {
@@ -202,14 +210,12 @@ const formatTimestamp = (value) => {
 
 .markdown-content :deep(hr) {
   border: none;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
   margin: 1rem 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  .markdown-content :deep(hr) {
-    border-top-color: rgba(255, 255, 255, 0.15);
-  }
+:global(.dark) .markdown-content :deep(hr) {
+  border-top-color: rgba(255, 255, 255, 0.2);
 }
 
 .markdown-content :deep(table) {
@@ -220,21 +226,23 @@ const formatTimestamp = (value) => {
 
 .markdown-content :deep(th),
 .markdown-content :deep(td) {
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   padding: 0.5rem;
   text-align: left;
 }
 
-@media (prefers-color-scheme: dark) {
-  .markdown-content :deep(th),
-  .markdown-content :deep(td) {
-    border-color: rgba(255, 255, 255, 0.15);
-  }
+:global(.dark) .markdown-content :deep(th),
+:global(.dark) .markdown-content :deep(td) {
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .markdown-content :deep(th) {
-  background-color: var(--surface-50);
+  background-color: rgba(0, 0, 0, 0.05);
   font-weight: 600;
+}
+
+:global(.dark) .markdown-content :deep(th) {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .markdown-content :deep(img) {
@@ -242,5 +250,33 @@ const formatTimestamp = (value) => {
   height: auto;
   border-radius: 6px;
   margin: 0.5rem 0;
+}
+</style>
+
+<style>
+/* Dark mode styles - must be in non-scoped style block */
+.dark .markdown-content code {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .markdown-content pre {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .markdown-content blockquote {
+  border-left-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark .markdown-content hr {
+  border-top-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark .markdown-content th,
+.dark .markdown-content td {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark .markdown-content th {
+  background-color: rgba(255, 255, 255, 0.05) !important;
 }
 </style>
