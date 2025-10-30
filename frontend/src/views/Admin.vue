@@ -208,7 +208,7 @@
                     optionValue="value"
                     placeholder="篩選重要程度"
                     showClear
-                    class="w-full md:w-12rem"
+                    class="w-full md:w-14rem"
                   />
                 </div>
                 <Button
