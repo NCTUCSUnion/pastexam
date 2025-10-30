@@ -1,16 +1,44 @@
 import js from '@eslint/js'
 import globals from 'globals'
-import pluginVue from 'eslint-plugin-vue'
+import vue from 'eslint-plugin-vue'
+import vueParser from 'vue-eslint-parser'
 import json from '@eslint/json'
-import { defineConfig } from 'eslint/config'
+import tseslint from 'typescript-eslint'
 
-export default defineConfig([
+export default [
+  { languageOptions: { globals: globals.browser } },
+
+  js.configs.recommended,
+
+  ...vue.configs['flat/essential'],
+
+  ...tseslint.configs.recommended,
+
+  json.configs.recommended,
+
   {
-    files: ['**/*.{js,mjs,cjs,vue}'],
-    plugins: { js },
-    extends: ['js/recommended'],
-    languageOptions: { globals: globals.browser },
+    files: ['**/*.vue'],
+    languageOptions: {
+      parser: vueParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        parser: tseslint.parser,
+        extraFileExtensions: ['.vue'],
+      },
+    },
+    plugins: { '@typescript-eslint': tseslint.plugin },
   },
-  pluginVue.configs['flat/essential'],
-  { files: ['**/*.json'], plugins: { json }, language: 'json/json', extends: ['json/recommended'] },
-])
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        project: false,
+      },
+    },
+    plugins: { '@typescript-eslint': tseslint.plugin },
+  },
+]
