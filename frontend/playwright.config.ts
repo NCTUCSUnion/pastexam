@@ -21,6 +21,8 @@ const webServer = shouldStartServer
     }
   : undefined
 
+const AUTH_FILE = 'playwright/.auth/admin.json'
+
 const config: PlaywrightTestConfig = {
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -38,19 +40,32 @@ const config: PlaywrightTestConfig = {
   },
   projects: [
     {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+    {
       name: 'chromium',
+      dependencies: ['setup'],
+      testMatch: /.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'firefox',
+      dependencies: ['setup'],
+      testMatch: /.*\.spec\.ts/,
       use: { ...devices['Desktop Firefox'] },
     },
     {
       name: 'webkit',
+      dependencies: ['setup'],
+      testMatch: /.*\.spec\.ts/,
       use: { ...devices['Desktop Safari'] },
     },
   ],
   ...(webServer ? { webServer } : {}),
+  metadata: {
+    authFile: AUTH_FILE,
+  },
 }
 
 export default defineConfig(config)
