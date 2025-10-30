@@ -25,7 +25,7 @@ body:
     id: readable_filename
     attributes:
       label: 檔名 Readable Filename
-      description: 請依據舊版考古題資料的 `readable_filename` 欄位填寫缺失的檔案名稱。若有多個檔案，請分行列出。
+      description: 請依據舊版考古題系統資料中的 `readable_filename` 欄位填寫缺失的檔案名稱。若有多個檔案，請分行列出。
       placeholder: 例如：2979__微積分(一)__王夏聲__2018__other__Calculus-王夏聲-Autumn2018.zip
     validations:
       required: true
