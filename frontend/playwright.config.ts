@@ -34,7 +34,7 @@ const config: PlaywrightTestConfig = {
   outputDir: './playwright-results/',
   use: {
     baseURL,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
     screenshot: env.CI ? 'only-on-failure' : 'on',
     video: env.CI ? 'retain-on-failure' : 'on',
   },

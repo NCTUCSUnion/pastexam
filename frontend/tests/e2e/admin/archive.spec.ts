@@ -1,21 +1,18 @@
-import { test, expect } from '@playwright/test'
+import { adminTest as test, expect } from '../support/adminTest'
+import { JSON_HEADERS } from '../support/constants'
 
-const AUTH_FILE = 'playwright/.auth/admin.json'
-
-test.use({ storageState: AUTH_FILE })
-
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    const token = window.localStorage.getItem('authToken')
-    if (token) {
-      window.sessionStorage.setItem('authToken', token)
-    }
-    window.localStorage.setItem('pastexam_notification_last_seen', '999999')
+test.describe('Admin › Archive management', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/notifications/active', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: JSON_HEADERS,
+        body: JSON.stringify([]),
+      })
+    })
   })
-})
 
-test.describe('Archive page', () => {
-  test('allows admin to search courses and open upload dialog', async ({ page }) => {
+  test('allows searching courses and opening upload dialog', async ({ page }) => {
     await page.goto('/archive')
     await expect(page).toHaveURL(/\/archive$/)
 

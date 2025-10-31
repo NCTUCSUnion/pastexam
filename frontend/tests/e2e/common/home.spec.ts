@@ -27,7 +27,7 @@ test.describe('Home page', () => {
 
     const navbar = page.locator('.navbar')
     await expect(navbar).toBeVisible()
-    await expect(page.locator('img[alt="favicon"]')).toBeVisible()
+    await expect(page.locator('img[alt="favicon"]').first()).toBeVisible()
     const loginButton = page.getByRole('button', { name: 'Login' })
     await expect(loginButton).toBeVisible({ timeout: 15000 })
 
@@ -44,7 +44,12 @@ test.describe('Home page', () => {
     await expect(page.getByRole('heading', { name: '交大資工考古題系統' })).toBeVisible()
 
     await page.evaluate(() => {
-      const pastexam = window.__pastexam
+      const globalWindow = window as typeof window & {
+        __pastexam?: {
+          openLoginModal?: () => void
+        }
+      }
+      const pastexam = globalWindow.__pastexam
       if (pastexam && typeof pastexam.openLoginModal === 'function') {
         pastexam.openLoginModal()
       }
