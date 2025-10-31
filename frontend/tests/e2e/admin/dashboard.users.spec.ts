@@ -17,7 +17,7 @@ test.describe('Admin Dashboard › Users', () => {
     await mockAdminCourseEndpoints(page)
     const { createPayloads, updatePayloads, deleteIds } = await mockAdminUserEndpoints(page)
 
-    await page.goto('/admin', { waitUntil: 'domcontentloaded' })
+    await page.goto('/admin', { waitUntil: 'networkidle' })
     await expect(page).toHaveURL(/\/admin$/)
 
     const tabs = page.getByRole('tab')
