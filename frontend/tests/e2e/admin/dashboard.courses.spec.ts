@@ -16,7 +16,7 @@ test.describe('Admin Dashboard › Courses', () => {
   test('allows creating, editing, and deleting courses', async ({ page }) => {
     const { createPayloads, updatePayloads, deleteIds } = await mockAdminCourseEndpoints(page)
 
-    await page.goto('/admin', { waitUntil: 'networkidle' })
+    await page.goto('/admin', { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(/\/admin$/)
 
     const tabs = page.getByRole('tab')
