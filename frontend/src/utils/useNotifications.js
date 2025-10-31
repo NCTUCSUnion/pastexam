@@ -2,7 +2,7 @@ import { reactive, ref, computed } from 'vue'
 import { notificationService } from '../api'
 import { isUnauthorizedError } from './http'
 
-const STORAGE_KEY = 'pastexam_notification_last_seen'
+const STORAGE_KEY = 'notification_last_seen'
 
 const state = reactive({
   active: [],
@@ -20,25 +20,31 @@ const errors = reactive({
   all: null,
 })
 
-const lastSeenId = ref(loadLastSeenId())
+const lastSeenTimestamp = ref(loadLastSeenTimestamp())
 
 const latestUnseenNotification = computed(() => {
   if (!state.active.length) {
     return null
   }
 
-  const unseen = state.active.filter((notification) => notification.id > (lastSeenId.value || 0))
+  const unseen = state.active.filter((notification) => {
+    const notificationTime = new Date(notification.updated_at || notification.created_at).getTime()
+    return notificationTime > (lastSeenTimestamp.value || 0)
+  })
+
   if (!unseen.length) {
     return null
   }
 
   return unseen.reduce((latest, candidate) => {
     if (!latest) return candidate
-    return candidate.id > latest.id ? candidate : latest
+    const latestTime = new Date(latest.updated_at || latest.created_at).getTime()
+    const candidateTime = new Date(candidate.updated_at || candidate.created_at).getTime()
+    return candidateTime > latestTime ? candidate : latest
   }, unseen[0])
 })
 
-function loadLastSeenId() {
+function loadLastSeenTimestamp() {
   if (typeof window === 'undefined') return 0
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -46,26 +52,26 @@ function loadLastSeenId() {
     const parsed = parseInt(raw, 10)
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
   } catch (error) {
-    console.warn('Failed to read notification last seen id:', error)
+    console.warn('Failed to read notification last seen timestamp:', error)
     return 0
   }
 }
 
-function persistLastSeenId(id) {
-  lastSeenId.value = id
+function persistLastSeenTimestamp(timestamp) {
+  lastSeenTimestamp.value = timestamp
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(STORAGE_KEY, String(id))
+    localStorage.setItem(STORAGE_KEY, String(timestamp))
   } catch (error) {
-    console.error('Failed to persist notification last seen id:', error)
+    console.error('Failed to persist notification last seen timestamp:', error)
   }
 }
 
 function markNotificationAsSeen(notification) {
-  if (!notification?.id) return
-  const id = notification.id
-  if (id > (lastSeenId.value || 0)) {
-    persistLastSeenId(id)
+  if (!notification) return
+  const notificationTime = new Date(notification.updated_at || notification.created_at).getTime()
+  if (notificationTime > (lastSeenTimestamp.value || 0)) {
+    persistLastSeenTimestamp(notificationTime)
   }
   state.modalVisible = false
 }
@@ -75,7 +81,13 @@ async function refreshActive() {
   errors.active = null
   try {
     const { data } = await notificationService.getActive()
-    state.active = Array.isArray(data) ? [...data].sort((a, b) => (b.id || 0) - (a.id || 0)) : []
+    state.active = Array.isArray(data)
+      ? [...data].sort((a, b) => {
+          const aTime = new Date(a.updated_at || a.created_at).getTime()
+          const bTime = new Date(b.updated_at || b.created_at).getTime()
+          return bTime - aTime
+        })
+      : []
     const latest = latestUnseenNotification.value
     state.modalVisible = !!latest
   } catch (error) {
@@ -94,7 +106,13 @@ async function refreshAll() {
   errors.all = null
   try {
     const { data } = await notificationService.getAll()
-    state.all = Array.isArray(data) ? [...data].sort((a, b) => (b.id || 0) - (a.id || 0)) : []
+    state.all = Array.isArray(data)
+      ? [...data].sort((a, b) => {
+          const aTime = new Date(a.updated_at || a.created_at).getTime()
+          const bTime = new Date(b.updated_at || b.created_at).getTime()
+          return bTime - aTime
+        })
+      : []
   } catch (error) {
     errors.all = error
     if (!isUnauthorizedError(error)) {
@@ -147,6 +165,6 @@ export function useNotifications() {
     openCenter,
     closeCenter,
     markNotificationAsSeen,
-    lastSeenId,
+    lastSeenTimestamp,
   }
 }
