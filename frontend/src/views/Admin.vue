@@ -267,15 +267,15 @@
                   </template>
                 </Column>
                 <Column
-                  field="created_at"
-                  sortField="id"
-                  header="建立時間"
+                  field="updated_at"
+                  sortField="updated_at"
+                  header="最近更新"
                   sortable
                   style="width: 18%"
                 >
                   <template #body="{ data }">
                     <span class="text-sm text-700">
-                      {{ formatNotificationDate(data.created_at) }}
+                      {{ formatNotificationDate(data.updated_at || data.created_at) }}
                     </span>
                   </template>
                 </Column>
@@ -613,7 +613,7 @@ const notificationSeverityFilter = ref(null)
 const notificationSortMeta = ref([
   { field: 'is_active', order: -1 },
   { field: 'effectiveOrder', order: -1 },
-  { field: 'id', order: -1 },
+  { field: 'updated_at', order: -1 },
 ])
 
 const notificationSeverityOptions = [

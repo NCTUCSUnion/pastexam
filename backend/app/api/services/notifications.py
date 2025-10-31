@@ -37,7 +37,7 @@ def _apply_time_filters(statement):
 async def get_active_notifications(
     db: AsyncSession = Depends(get_session),
 ):
-    query = select(Notification).order_by(Notification.created_at.desc())
+    query = select(Notification).order_by(Notification.updated_at.desc())
     query = _apply_time_filters(query)
     result = await db.execute(query)
     notifications = result.scalars().all()
@@ -51,7 +51,7 @@ async def get_active_notifications(
 async def list_public_notifications(
     db: AsyncSession = Depends(get_session),
 ):
-    query = select(Notification).order_by(Notification.created_at.desc())
+    query = select(Notification).order_by(Notification.updated_at.desc())
     query = _apply_time_filters(query)
     result = await db.execute(query)
     notifications = result.scalars().all()
@@ -72,7 +72,7 @@ async def list_admin_notifications(
             detail="Admin access required"
         )
 
-    query = select(Notification).order_by(Notification.created_at.desc())
+    query = select(Notification).order_by(Notification.updated_at.desc())
     result = await db.execute(query)
     notifications = result.scalars().all()
     return [

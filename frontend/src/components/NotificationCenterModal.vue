@@ -41,10 +41,10 @@
               </Tag>
             </template>
           </Column>
-          <Column field="created_at" header="建立日期" style="width: 140px">
+          <Column field="updated_at" header="最近更新" style="width: 140px">
             <template #body="{ data }">
               <span class="text-sm text-500">
-                {{ formatDate(data.created_at) }}
+                {{ formatDate(data.updated_at || data.created_at) }}
               </span>
             </template>
           </Column>

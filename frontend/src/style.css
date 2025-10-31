@@ -61,6 +61,11 @@ body {
   color: var(--text-primary);
 }
 
+.pi:before {
+  -webkit-backface-visibility: visible !important;
+  backface-visibility: visible !important;
+}
+
 .code-background {
   position: relative;
   background-position: 0 0;

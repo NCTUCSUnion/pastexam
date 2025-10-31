@@ -1,13 +1,23 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 const activeNotifications = vi.hoisted(() => [
-  { id: 2, title: 'Old' },
-  { id: 5, title: 'New' },
+  { id: 2, title: 'Old', created_at: '2025-10-01T10:00:00Z', updated_at: '2025-10-01T10:00:00Z' },
+  { id: 5, title: 'New', created_at: '2025-11-01T10:00:00Z', updated_at: '2025-11-01T10:00:00Z' },
 ])
 
 const allNotifications = vi.hoisted(() => [
-  { id: 1, title: 'Archived' },
-  { id: 3, title: 'Another' },
+  {
+    id: 1,
+    title: 'Archived',
+    created_at: '2025-09-01T10:00:00Z',
+    updated_at: '2025-09-01T10:00:00Z',
+  },
+  {
+    id: 3,
+    title: 'Another',
+    created_at: '2025-10-15T10:00:00Z',
+    updated_at: '2025-10-15T10:00:00Z',
+  },
 ])
 
 const getActiveMock = vi.hoisted(() =>
@@ -71,20 +81,27 @@ describe('useNotifications composable', () => {
     await composable.initNotifications()
 
     expect(getActiveMock).toHaveBeenCalledTimes(1)
+    // Sort by updated_at descending
     expect(composable.state.active.map((n) => n.id)).toEqual([5, 2])
     expect(composable.state.modalVisible).toBe(true)
     expect(composable.latestUnseenNotification.value?.id).toBe(5)
   })
 
-  it('marks notification as seen and persists last seen id', async () => {
+  it('marks notification as seen and persists last seen timestamp', async () => {
     const composable = await importComposable()
     await composable.initNotifications()
 
-    composable.markNotificationAsSeen({ id: 5 })
+    const notification = {
+      id: 5,
+      created_at: '2025-11-01T10:00:00Z',
+      updated_at: '2025-11-01T10:00:00Z',
+    }
+    composable.markNotificationAsSeen(notification)
 
     expect(composable.state.modalVisible).toBe(false)
-    expect(composable.lastSeenId.value).toBe(5)
-    expect(localStorage.getItem('pastexam_notification_last_seen')).toBe('5')
+    const expectedTimestamp = new Date('2025-11-01T10:00:00Z').getTime()
+    expect(composable.lastSeenTimestamp.value).toBe(expectedTimestamp)
+    expect(localStorage.getItem('notification_last_seen')).toBe(String(expectedTimestamp))
   })
 
   it('loads all notifications when opening center', async () => {
@@ -94,10 +111,11 @@ describe('useNotifications composable', () => {
 
     expect(getAllMock).toHaveBeenCalledTimes(1)
     expect(composable.state.centerVisible).toBe(true)
+    // Sort by updated_at descending
     expect(composable.state.all.map((n) => n.id)).toEqual([3, 1])
   })
 
-  it('logs warning when reading stored last seen id fails', async () => {
+  it('logs warning when reading stored last seen timestamp fails', async () => {
     const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('read fail')
     })
@@ -105,10 +123,10 @@ describe('useNotifications composable', () => {
     const composable = await importComposable()
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to read notification last seen id:'),
+      expect.stringContaining('Failed to read notification last seen timestamp:'),
       expect.any(Error)
     )
-    expect(composable.lastSeenId.value).toBe(0)
+    expect(composable.lastSeenTimestamp.value).toBe(0)
 
     getItemSpy.mockRestore()
   })
@@ -153,7 +171,7 @@ describe('useNotifications composable', () => {
     expect(getAllMock).not.toHaveBeenCalled()
   })
 
-  it('logs errors when persisting last seen id fails', async () => {
+  it('logs errors when persisting last seen timestamp fails', async () => {
     const composable = await importComposable()
     await composable.initNotifications()
 
@@ -162,11 +180,17 @@ describe('useNotifications composable', () => {
     })
 
     consoleErrorSpy.mockClear()
-    composable.markNotificationAsSeen({ id: 10 })
+    const notification = {
+      id: 10,
+      created_at: '2025-11-02T10:00:00Z',
+      updated_at: '2025-11-02T10:00:00Z',
+    }
+    composable.markNotificationAsSeen(notification)
 
-    expect(composable.lastSeenId.value).toBe(10)
+    const expectedTimestamp = new Date('2025-11-02T10:00:00Z').getTime()
+    expect(composable.lastSeenTimestamp.value).toBe(expectedTimestamp)
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to persist notification last seen id:',
+      'Failed to persist notification last seen timestamp:',
       expect.any(Error)
     )
 
