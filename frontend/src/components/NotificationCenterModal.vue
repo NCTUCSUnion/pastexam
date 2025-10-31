@@ -204,6 +204,22 @@ const formatTimestamp = (value) => {
 
 .notification-body {
   min-height: 120px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+:deep(.notification-table) {
+  font-size: 0.875rem;
+  overflow-x: auto;
+}
+
+:deep(.notification-table .p-datatable-wrapper) {
+  overflow-x: auto;
+}
+
+:deep(.notification-table .p-datatable-table) {
+  min-width: 640px;
 }
 
 .notification-body :deep(a) {
