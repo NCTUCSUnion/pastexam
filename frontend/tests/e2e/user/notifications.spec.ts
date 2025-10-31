@@ -54,11 +54,12 @@ test.describe('User › Notifications', () => {
 
     await expect(modal).toBeHidden({ timeout: 5000 })
 
+    const expectedTimestamp = new Date(ACTIVE_NOTIFICATION.updated_at).getTime()
     await expect
       .poll(async () => {
-        return page.evaluate(() => window.localStorage.getItem('pastexam_notification_last_seen'))
+        return page.evaluate(() => window.localStorage.getItem('notification_last_seen'))
       })
-      .toBe(String(ACTIVE_NOTIFICATION.id))
+      .toBe(String(expectedTimestamp))
   })
 
   test('opens notification center and shows detail content', async ({ page }) => {
@@ -119,10 +120,11 @@ test.describe('User › Notifications', () => {
     await expect(detailDialog.getByText('系統維護公告')).toBeVisible()
     await expect(detailDialog.getByText('23:00-23:30')).toBeVisible()
 
+    const expectedTimestamp = new Date(ACTIVE_NOTIFICATION.updated_at).getTime()
     await expect
       .poll(async () => {
-        return page.evaluate(() => window.localStorage.getItem('pastexam_notification_last_seen'))
+        return page.evaluate(() => window.localStorage.getItem('notification_last_seen'))
       })
-      .toBe(String(ACTIVE_NOTIFICATION.id))
+      .toBe(String(expectedTimestamp))
   })
 })
