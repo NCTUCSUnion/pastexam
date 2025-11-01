@@ -79,15 +79,6 @@
               aria-label="More actions"
             />
             <Button
-              v-if="isAuthenticated"
-              icon="pi pi-sign-out"
-              @click="handleLogout"
-              severity="secondary"
-              size="small"
-              outlined
-              aria-label="Logout"
-            />
-            <Button
               v-else
               icon="pi pi-sign-in"
               @click="handleOAuthLogin"
@@ -804,11 +795,19 @@ export default {
       ]
 
       if (this.userData?.is_admin) {
-        items.push({ separator: true })
         items.push({
           label: '系統管理',
           icon: 'pi pi-cog',
           command: () => this.invokeMenuAction(() => this.handleNavigateAdmin()),
+        })
+      }
+
+      if (this.isAuthenticated && !this.isDesktopView) {
+        items.push({ separator: true })
+        items.push({
+          label: '登出',
+          icon: 'pi pi-sign-out',
+          command: () => this.invokeMenuAction(() => this.handleLogout()),
         })
       }
 
