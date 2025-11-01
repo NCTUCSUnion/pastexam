@@ -577,20 +577,38 @@ describe('Navbar methods', () => {
     pendingCtx.notificationStore.latestUnseenNotification = null
     expect(Navbar.computed.pendingNotification.call(pendingCtx)).toBeNull()
 
-    const actionsCtx = {
+    const actionsCtxDesktop = {
       isAuthenticated: true,
       userData: { is_admin: true },
+      isDesktopView: true,
       invokeMenuAction: vi.fn((handler) => handler()),
       openAIExamDialog: vi.fn(),
       openNotificationCenter: vi.fn(),
       openIssueReportDialog: vi.fn(),
       handleNavigateAdmin: vi.fn(),
+      handleLogout: vi.fn(),
     }
-    const actions = Navbar.computed.moreActions.call(actionsCtx)
-    expect(actions).toHaveLength(5)
-    actions[0].command()
-    expect(actionsCtx.invokeMenuAction).toHaveBeenCalled()
-    expect(actionsCtx.openAIExamDialog).toHaveBeenCalled()
+    const actionsDesktop = Navbar.computed.moreActions.call(actionsCtxDesktop)
+    expect(actionsDesktop).toHaveLength(4)
+    actionsDesktop[0].command()
+    expect(actionsCtxDesktop.invokeMenuAction).toHaveBeenCalled()
+    expect(actionsCtxDesktop.openAIExamDialog).toHaveBeenCalled()
+
+    const actionsCtxMobile = {
+      isAuthenticated: true,
+      userData: { is_admin: true },
+      isDesktopView: false,
+      invokeMenuAction: vi.fn((handler) => handler()),
+      openAIExamDialog: vi.fn(),
+      openNotificationCenter: vi.fn(),
+      openIssueReportDialog: vi.fn(),
+      handleNavigateAdmin: vi.fn(),
+      handleLogout: vi.fn(),
+    }
+    const actionsMobile = Navbar.computed.moreActions.call(actionsCtxMobile)
+    expect(actionsMobile).toHaveLength(6)
+    expect(actionsMobile[4]).toHaveProperty('separator')
+    expect(actionsMobile[5].label).toBe('登出')
 
     const canSubmitCtx = {
       issueForm: { type: 'bug', title: 'Title', description: 'Desc' },
