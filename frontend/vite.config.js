@@ -7,6 +7,7 @@ import Components from 'unplugin-vue-components/vite'
 import { PrimeVueResolver } from '@primevue/auto-import-resolver'
 import eslintPlugin from 'vite-plugin-eslint'
 import Sitemap from 'vite-plugin-sitemap'
+import viteCompression from 'vite-plugin-compression'
 
 export default defineConfig(({ mode }) => ({
   resolve: {
@@ -17,6 +18,33 @@ export default defineConfig(({ mode }) => ({
     port: 80,
     strictPort: true,
     hmr: { port: 24678, clientPort: 24678 },
+  },
+  build: {
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 600,
+    sourcemap: true,
+    minify: 'esbuild',
+    esbuildOptions: {
+      drop: mode === 'production' ? ['debugger'] : [],
+      pure: mode === 'production' ? ['console.log', 'console.debug'] : [],
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router'],
+          'primevue-core': ['primevue'],
+          'pdf-vendor': ['vue-pdf-embed', 'pdf-lib'],
+          'markdown-vendor': ['marked', 'dompurify', 'highlight.js'],
+          utils: ['axios'],
+        },
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
+    },
+  },
+  optimizeDeps: {
+    include: ['vue', 'vue-router', 'axios', 'primevue', '@primeuix/themes'],
   },
   plugins: [
     vue(),
@@ -33,6 +61,13 @@ export default defineConfig(({ mode }) => ({
         lastmod: new Date(),
         exclude: ['/login/callback', '/admin'],
         readable: true,
+      }),
+    mode === 'production' &&
+      viteCompression({
+        algorithm: 'gzip',
+        ext: '.gz',
+        threshold: 10240,
+        deleteOriginFile: false,
       }),
   ].filter(Boolean),
 }))

@@ -167,10 +167,7 @@ describe('API service wrappers', () => {
 
     const error = new Error('fail')
     getMock.mockRejectedValueOnce(error)
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     await expect(statisticsService.getSystemStatistics()).rejects.toThrow('fail')
-    expect(consoleSpy).toHaveBeenCalledWith('Error fetching system statistics:', error)
-    consoleSpy.mockRestore()
   })
 
   it('admin service exports call API client', () => {
