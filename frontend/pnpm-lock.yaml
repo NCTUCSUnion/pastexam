@@ -104,6 +104,9 @@ importers:
       vite:
         specifier: ^6.3.5
         version: 6.3.6(jiti@2.6.1)(lightningcss@1.30.1)(yaml@2.8.1)
+      vite-plugin-compression:
+        specifier: ^0.5.1
+        version: 0.5.1(vite@6.3.6(jiti@2.6.1)(lightningcss@1.30.1)(yaml@2.8.1))
       vite-plugin-eslint:
         specifier: ^1.8.1
         version: 1.8.1(eslint@9.37.0(jiti@2.6.1))(vite@6.3.6(jiti@2.6.1)(lightningcss@1.30.1)(yaml@2.8.1))
@@ -2495,6 +2498,13 @@ packages:
       }
     engines: { node: '>= 6' }
 
+  fs-extra@10.1.0:
+    resolution:
+      {
+        integrity: sha512-oRXApq54ETRj4eMiFzGnHWGy+zo5raudjuxN0b8H7s/RU2oW0Wvsx9O0ACRN/kRq9E8Vu/ReskGB5o3ji+FzHQ==,
+      }
+    engines: { node: '>=12' }
+
   fsevents@2.3.2:
     resolution:
       {
@@ -2955,6 +2965,12 @@ packages:
       }
     engines: { node: '>=6' }
     hasBin: true
+
+  jsonfile@6.2.0:
+    resolution:
+      {
+        integrity: sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg==,
+      }
 
   keyv@4.5.4:
     resolution:
@@ -3992,6 +4008,13 @@ packages:
       }
     engines: { node: '>=18' }
 
+  universalify@2.0.1:
+    resolution:
+      {
+        integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==,
+      }
+    engines: { node: '>= 10.0.0' }
+
   unplugin-utils@0.2.5:
     resolution:
       {
@@ -4065,6 +4088,14 @@ packages:
       }
     peerDependencies:
       vite: ^2.6.0 || ^3.0.0 || ^4.0.0 || ^5.0.0-0 || ^6.0.0-0 || ^7.0.0-0
+
+  vite-plugin-compression@0.5.1:
+    resolution:
+      {
+        integrity: sha512-5QJKBDc+gNYVqL/skgFAP81Yuzo9R+EAf19d+EtsMF/i8kFUpNi3J/H01QD3Oo8zBQn+NzoCIFkpPLynoOzaJg==,
+      }
+    peerDependencies:
+      vite: '>=2.0.0'
 
   vite-plugin-eslint@1.8.1:
     resolution:
@@ -5843,6 +5874,12 @@ snapshots:
       hasown: 2.0.2
       mime-types: 2.1.35
 
+  fs-extra@10.1.0:
+    dependencies:
+      graceful-fs: 4.2.11
+      jsonfile: 6.2.0
+      universalify: 2.0.1
+
   fsevents@2.3.2:
     optional: true
 
@@ -6086,6 +6123,12 @@ snapshots:
   json-stable-stringify-without-jsonify@1.0.1: {}
 
   json5@2.2.3: {}
+
+  jsonfile@6.2.0:
+    dependencies:
+      universalify: 2.0.1
+    optionalDependencies:
+      graceful-fs: 4.2.11
 
   keyv@4.5.4:
     dependencies:
@@ -6635,6 +6678,8 @@ snapshots:
 
   unicorn-magic@0.3.0: {}
 
+  universalify@2.0.1: {}
+
   unplugin-utils@0.2.5:
     dependencies:
       pathe: 2.0.3
@@ -6689,6 +6734,15 @@ snapshots:
   vite-hot-client@2.1.0(vite@6.3.6(jiti@2.6.1)(lightningcss@1.30.1)(yaml@2.8.1)):
     dependencies:
       vite: 6.3.6(jiti@2.6.1)(lightningcss@1.30.1)(yaml@2.8.1)
+
+  vite-plugin-compression@0.5.1(vite@6.3.6(jiti@2.6.1)(lightningcss@1.30.1)(yaml@2.8.1)):
+    dependencies:
+      chalk: 4.1.2
+      debug: 4.4.3
+      fs-extra: 10.1.0
+      vite: 6.3.6(jiti@2.6.1)(lightningcss@1.30.1)(yaml@2.8.1)
+    transitivePeerDependencies:
+      - supports-color
 
   vite-plugin-eslint@1.8.1(eslint@9.37.0(jiti@2.6.1))(vite@6.3.6(jiti@2.6.1)(lightningcss@1.30.1)(yaml@2.8.1)):
     dependencies:

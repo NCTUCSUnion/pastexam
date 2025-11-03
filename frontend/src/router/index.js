@@ -5,25 +5,25 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('../views/Home.vue'),
+    component: () => import(/* webpackChunkName: "home" */ '../views/Home.vue'),
     meta: { requiresGuest: true },
   },
   {
     path: '/archive',
     name: 'Archive',
-    component: () => import('../views/Archive.vue'),
+    component: () => import(/* webpackChunkName: "archive" */ '../views/Archive.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/admin',
     name: 'Admin',
-    component: () => import('../views/Admin.vue'),
+    component: () => import(/* webpackChunkName: "admin" */ '../views/Admin.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
     path: '/login/callback',
     name: 'LoginCallback',
-    component: () => import('../views/LoginCallback.vue'),
+    component: () => import(/* webpackChunkName: "login-callback" */ '../views/LoginCallback.vue'),
     meta: { requiresGuest: true },
   },
 ]
