@@ -33,6 +33,8 @@ jobs:
             ghcr.io/nctucsunion/pastexam:frontend-${{ github.sha }}
           build-args: |
             VITE_API_BASE_URL=${{ secrets.FRONTEND_API_BASE_URL }}
+            VITE_SITE_HOSTNAME=${{ secrets.FRONTEND_SITE_HOSTNAME }}
+            VITE_UMAMI_WEBSITE_ID=${{ secrets.FRONTEND_UMAMI_WEBSITE_ID }}
           cache-from: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache
           cache-to: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache,mode=max
 
