@@ -308,7 +308,7 @@ memes:
     language: javascript
   - content: |-
       fn main() {
-          let code_quality = 100;
+          let mut code_quality = 100;
           let deadline = true;
       
           if deadline {
