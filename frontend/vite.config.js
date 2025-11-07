@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
@@ -9,65 +9,72 @@ import eslintPlugin from 'vite-plugin-eslint'
 import Sitemap from 'vite-plugin-sitemap'
 import viteCompression from 'vite-plugin-compression'
 
-export default defineConfig(({ mode }) => ({
-  resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
-  },
-  server: {
-    host: true,
-    port: 80,
-    strictPort: true,
-    hmr: { port: 24678, clientPort: 24678 },
-  },
-  build: {
-    cssCodeSplit: true,
-    chunkSizeWarningLimit: 600,
-    sourcemap: true,
-    minify: 'esbuild',
-    esbuildOptions: {
-      drop: mode === 'production' ? ['debugger'] : [],
-      pure: mode === 'production' ? ['console.log', 'console.debug'] : [],
+export default defineConfig(({ mode }) => {
+  const root = fileURLToPath(new URL('.', import.meta.url))
+  const env = loadEnv(mode, root, '')
+  const siteHostname = env.VITE_SITE_HOSTNAME?.trim()
+
+  return {
+    resolve: {
+      alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'vue-vendor': ['vue', 'vue-router'],
-          'primevue-core': ['primevue'],
-          'pdf-vendor': ['vue-pdf-embed', 'pdf-lib'],
-          'markdown-vendor': ['marked', 'dompurify', 'highlight.js'],
-          utils: ['axios'],
+    server: {
+      host: true,
+      port: 80,
+      strictPort: true,
+      hmr: { port: 24678, clientPort: 24678 },
+    },
+    build: {
+      cssCodeSplit: true,
+      chunkSizeWarningLimit: 600,
+      sourcemap: true,
+      minify: 'esbuild',
+      esbuildOptions: {
+        drop: mode === 'production' ? ['debugger'] : [],
+        pure: mode === 'production' ? ['console.log', 'console.debug'] : [],
+      },
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vue-vendor': ['vue', 'vue-router'],
+            'primevue-core': ['primevue'],
+            'pdf-vendor': ['vue-pdf-embed', 'pdf-lib'],
+            'markdown-vendor': ['marked', 'dompurify', 'highlight.js'],
+            utils: ['axios'],
+          },
+          chunkFileNames: 'assets/[name]-[hash].js',
+          entryFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash].[ext]',
         },
-        chunkFileNames: 'assets/[name]-[hash].js',
-        entryFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
-  },
-  optimizeDeps: {
-    include: ['vue', 'vue-router', 'axios', 'primevue', '@primeuix/themes'],
-  },
-  plugins: [
-    vue(),
-    mode === 'development' && vueDevTools({ launchEditor: 'cursor' }),
-    mode !== 'test' && eslintPlugin({ include: ['src/**/*.vue', 'src/**/*.js', 'src/**/*.ts'] }),
-    tailwindcss(),
-    Components({ resolvers: [PrimeVueResolver()] }),
-    mode === 'production' &&
-      Sitemap({
-        hostname: 'https://pastexam.nctucsunion.me',
-        dynamicRoutes: ['/archive', '/admin', '/login/callback'],
-        changefreq: 'weekly',
-        priority: 0.8,
-        lastmod: new Date(),
-        exclude: ['/login/callback', '/admin'],
-        readable: true,
-      }),
-    mode === 'production' &&
-      viteCompression({
-        algorithm: 'gzip',
-        ext: '.gz',
-        threshold: 10240,
-        deleteOriginFile: false,
-      }),
-  ].filter(Boolean),
-}))
+    optimizeDeps: {
+      include: ['vue', 'vue-router', 'axios', 'primevue', '@primeuix/themes'],
+    },
+    plugins: [
+      vue(),
+      mode === 'development' && vueDevTools({ launchEditor: 'cursor' }),
+      mode !== 'test' && eslintPlugin({ include: ['src/**/*.vue', 'src/**/*.js', 'src/**/*.ts'] }),
+      tailwindcss(),
+      Components({ resolvers: [PrimeVueResolver()] }),
+      mode === 'production' &&
+        siteHostname &&
+        Sitemap({
+          hostname: siteHostname,
+          dynamicRoutes: ['/archive', '/admin', '/login/callback'],
+          changefreq: 'weekly',
+          priority: 0.8,
+          lastmod: new Date(),
+          exclude: ['/login/callback', '/admin'],
+          readable: true,
+        }),
+      mode === 'production' &&
+        viteCompression({
+          algorithm: 'gzip',
+          ext: '.gz',
+          threshold: 10240,
+          deleteOriginFile: false,
+        }),
+    ].filter(Boolean),
+  }
+})
