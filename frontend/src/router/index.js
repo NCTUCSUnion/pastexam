@@ -26,6 +26,11 @@ const routes = [
     component: () => import(/* webpackChunkName: "login-callback" */ '../views/LoginCallback.vue'),
     meta: { requiresGuest: true },
   },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import(/* webpackChunkName: "not-found" */ '../views/NotFound.vue'),
+  },
 ]
 
 const router = createRouter({
