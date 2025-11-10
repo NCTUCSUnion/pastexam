@@ -5,6 +5,7 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile.dev
+    image: pastexam-frontend-dev:latest
     container_name: pastexam-dev-frontend
     ports:
       # - "5173:80"
@@ -21,6 +22,7 @@ services:
     build: 
       context: ../backend
       dockerfile: Dockerfile.dev
+    image: pastexam-backend-dev:latest
     container_name: pastexam-dev-backend
     depends_on:
       db:
@@ -40,9 +42,7 @@ services:
       - app_network
 
   worker:
-    build: 
-      context: ../backend
-      dockerfile: Dockerfile.dev
+    image: pastexam-backend-dev:latest
     container_name: pastexam-dev-worker
     command: arq app.worker.WorkerSettings
     depends_on:
@@ -93,7 +93,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
     networks:
       - app_network
 
