@@ -18,7 +18,7 @@ async def oauth_callback(
             status_code=400, detail="Invalid state parameter"
         )
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             token_resp = await client.post(
                 settings.OAUTH_TOKEN_URL,
                 data={
@@ -44,7 +44,7 @@ async def oauth_callback(
     access_token = token_data["access_token"]
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             profile_resp = await client.get(
                 settings.OAUTH_USERINFO_URL,
                 headers={"Authorization": f"Bearer {access_token}"}
