@@ -13,7 +13,7 @@ async def oauth_callback(code: str, state: str = None, stored_state: str = None)
     if not state or not stored_state or not hmac.compare_digest(state, stored_state):
         raise HTTPException(status_code=400, detail="Invalid state parameter")
     try:
-        async with httpx.AsyncClient(verify=False) as client:
+        async with httpx.AsyncClient() as client:
             token_resp = await client.post(
                 settings.OAUTH_TOKEN_URL,
                 data={
@@ -37,7 +37,7 @@ async def oauth_callback(code: str, state: str = None, stored_state: str = None)
     access_token = token_data["access_token"]
 
     try:
-        async with httpx.AsyncClient(verify=False) as client:
+        async with httpx.AsyncClient() as client:
             profile_resp = await client.get(
                 settings.OAUTH_USERINFO_URL,
                 headers={"Authorization": f"Bearer {access_token}"},
