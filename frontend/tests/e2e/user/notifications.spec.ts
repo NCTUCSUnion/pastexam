@@ -1,5 +1,6 @@
 import { userTest as test, expect } from '../support/userTest'
 import { JSON_HEADERS } from '../support/constants'
+import { clickWhenVisible } from '../support/ui'
 
 const COURSES_FIXTURE = {
   freshman: [
@@ -50,7 +51,7 @@ test.describe('User › Notifications', () => {
     await expect(modal.getByText('系統維護公告')).toBeVisible()
     await expect(modal.getByText('重要')).toBeVisible()
 
-    await modal.getByRole('button', { name: '不再顯示' }).click()
+    await clickWhenVisible(modal.getByRole('button', { name: '不再顯示' }))
 
     await expect(modal).toBeHidden({ timeout: 5000 })
 
@@ -105,7 +106,7 @@ test.describe('User › Notifications', () => {
     const modal = page.getByRole('dialog', { name: '系統公告' })
     await expect(modal).toBeVisible()
 
-    await modal.getByRole('button', { name: '顯示全部' }).click()
+    await clickWhenVisible(modal.getByRole('button', { name: '顯示全部' }))
 
     const centerDialog = page.getByRole('dialog', { name: '公告中心' })
     await expect(centerDialog).toBeVisible({ timeout: 10000 })
@@ -113,7 +114,7 @@ test.describe('User › Notifications', () => {
     await expect(centerDialog.getByText('系統維護公告')).toBeVisible()
     await expect(centerDialog.getByText('版本更新通知')).toBeVisible()
 
-    await centerDialog.getByRole('button', { name: '檢視' }).first().click()
+    await clickWhenVisible(centerDialog.getByRole('button', { name: '檢視' }).first())
 
     const detailDialog = page.getByRole('dialog', { name: '公告內容' })
     await expect(detailDialog).toBeVisible({ timeout: 5000 })

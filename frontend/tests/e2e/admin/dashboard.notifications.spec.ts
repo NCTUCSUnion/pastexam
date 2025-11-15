@@ -1,6 +1,7 @@
 import { adminTest as test, expect } from '../support/adminTest'
 import { mockAdminCourseEndpoints, mockAdminNotificationEndpoints } from '../support/adminFixtures'
 import { JSON_HEADERS } from '../support/constants'
+import { clickWhenVisible } from '../support/ui'
 
 test.describe('Admin Dashboard › Notifications', () => {
   test.beforeEach(async ({ page }) => {
@@ -22,13 +23,13 @@ test.describe('Admin Dashboard › Notifications', () => {
 
     const tabs = page.getByRole('tab')
     await expect(tabs).toHaveCount(3)
-    await tabs.nth(2).click()
+    await clickWhenVisible(tabs.nth(2))
 
     const maintenanceRow = page.getByRole('row', { name: /系統維護公告/ })
     await expect(maintenanceRow).toBeVisible()
     await expect(maintenanceRow).toContainText('啟用中')
 
-    await page.getByRole('button', { name: '新增公告' }).click()
+    await clickWhenVisible(page.getByRole('button', { name: '新增公告' }))
 
     const createDialog = page.getByRole('dialog', { name: '新增公告' })
     await expect(createDialog).toBeVisible()
@@ -39,10 +40,10 @@ test.describe('Admin Dashboard › Notifications', () => {
     const severitySelect = createDialog
       .locator('label', { hasText: '重要程度' })
       .locator('xpath=following-sibling::*[1]')
-    await severitySelect.click()
-    await page.getByRole('option', { name: '重要' }).click()
+    await clickWhenVisible(severitySelect)
+    await clickWhenVisible(page.getByRole('option', { name: '重要' }))
 
-    await createDialog.locator('.p-toggleswitch').click()
+    await clickWhenVisible(createDialog.locator('.p-toggleswitch'))
 
     await Promise.all([
       page.waitForResponse(
@@ -55,7 +56,7 @@ test.describe('Admin Dashboard › Notifications', () => {
           response.url().includes('/api/notifications/admin/notifications') &&
           response.request().method() === 'GET'
       ),
-      createDialog.getByRole('button', { name: '新增' }).click(),
+      clickWhenVisible(createDialog.getByRole('button', { name: '新增' })),
     ])
 
     const newNotificationRow = page.getByRole('row', { name: /版本更新公告/ })
@@ -67,7 +68,7 @@ test.describe('Admin Dashboard › Notifications', () => {
       is_active: false,
     })
 
-    await maintenanceRow.getByRole('button', { name: '編輯' }).click()
+    await clickWhenVisible(maintenanceRow.getByRole('button', { name: '編輯' }))
 
     const editDialog = page.getByRole('dialog', { name: '編輯公告' })
     await expect(editDialog).toBeVisible()
@@ -77,10 +78,10 @@ test.describe('Admin Dashboard › Notifications', () => {
     const editSeveritySelect = editDialog
       .locator('label', { hasText: '重要程度' })
       .locator('xpath=following-sibling::*[1]')
-    await editSeveritySelect.click()
-    await page.getByRole('option', { name: '一般' }).click()
+    await clickWhenVisible(editSeveritySelect)
+    await clickWhenVisible(page.getByRole('option', { name: '一般' }))
 
-    await editDialog.locator('.p-toggleswitch').click()
+    await clickWhenVisible(editDialog.locator('.p-toggleswitch'))
 
     await Promise.all([
       page.waitForResponse(
@@ -93,7 +94,7 @@ test.describe('Admin Dashboard › Notifications', () => {
           response.url().includes('/api/notifications/admin/notifications') &&
           response.request().method() === 'GET'
       ),
-      editDialog.getByRole('button', { name: '更新' }).click(),
+      clickWhenVisible(editDialog.getByRole('button', { name: '更新' })),
     ])
 
     expect(updatePayloads.at(-1)).toMatchObject({
@@ -107,7 +108,7 @@ test.describe('Admin Dashboard › Notifications', () => {
     await expect(updatedMaintenanceRow).toContainText('一般')
     await expect(updatedMaintenanceRow).toContainText('未生效')
 
-    await newNotificationRow.getByRole('button', { name: '刪除' }).click()
+    await clickWhenVisible(newNotificationRow.getByRole('button', { name: '刪除' }))
 
     const dialog = page.getByRole('alertdialog', { name: '刪除確認' })
     await expect(dialog).toBeVisible()
@@ -123,7 +124,7 @@ test.describe('Admin Dashboard › Notifications', () => {
           response.url().includes('/api/notifications/admin/notifications') &&
           response.request().method() === 'GET'
       ),
-      dialog.getByLabel('刪除').click(),
+      clickWhenVisible(dialog.getByLabel('刪除')),
     ])
 
     expect(deleteIds.length).toBeGreaterThan(0)

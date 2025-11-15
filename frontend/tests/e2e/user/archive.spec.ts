@@ -1,6 +1,7 @@
 import { userTest as test, expect } from '../support/userTest'
 import { JSON_HEADERS } from '../support/constants'
 import { fromBase64ToBinaryString } from '../support/jwt'
+import { clickWhenVisible } from '../support/ui'
 
 test.describe('User › Archive browsing', () => {
   test('restricts admin area and supports archive browsing', async ({ page }) => {
@@ -112,7 +113,7 @@ test.describe('User › Archive browsing', () => {
     const searchInput = page.getByPlaceholder('搜尋課程')
     await searchInput.fill('資料')
 
-    await page.getByRole('button', { name: '資料結構' }).first().click()
+    await clickWhenVisible(page.getByRole('button', { name: '資料結構' }).first())
 
     await expect(page.locator('.p-datatable')).toBeVisible()
     await expect(page.getByRole('row', { name: /期末考/ })).toBeVisible()
@@ -121,16 +122,16 @@ test.describe('User › Archive browsing', () => {
     await expect(archiveRow.getByRole('button', { name: '編輯' })).toHaveCount(0)
     await expect(archiveRow.getByRole('button', { name: '刪除' })).toHaveCount(0)
 
-    await archiveRow.getByRole('button', { name: '預覽' }).click()
+    await clickWhenVisible(archiveRow.getByRole('button', { name: '預覽' }))
 
     const previewDialog = page.getByRole('dialog').first()
     await expect(previewDialog).toBeVisible()
     await expect(previewDialog).toContainText('期末考')
-    await previewDialog.getByRole('button', { name: '下載' }).click()
+    await clickWhenVisible(previewDialog.getByRole('button', { name: '下載' }))
 
     await expect.poll(() => downloadEndpointCalled).toBeTruthy()
 
-    await previewDialog.getByRole('button', { name: 'Close' }).click()
+    await clickWhenVisible(previewDialog.getByRole('button', { name: 'Close' }))
     await expect(previewDialog).toBeHidden()
 
     const downloadCell = archiveRow.locator('td').nth(4)

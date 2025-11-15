@@ -1,5 +1,6 @@
 import { adminTest as test, expect } from '../support/adminTest'
 import { JSON_HEADERS } from '../support/constants'
+import { clickWhenVisible } from '../support/ui'
 
 test.describe('Admin › Archive management', () => {
   test.beforeEach(async ({ page }) => {
@@ -33,7 +34,7 @@ test.describe('Admin › Archive management', () => {
           response.request().method() === 'GET'
         )
       }),
-      courseButton.click(),
+      clickWhenVisible(courseButton),
     ])
 
     const selectedSubject = page.locator('span.font-medium', {
@@ -41,7 +42,7 @@ test.describe('Admin › Archive management', () => {
     })
     await expect(selectedSubject).toBeVisible({ timeout: 15000 })
 
-    await uploadButton.click()
+    await clickWhenVisible(uploadButton)
 
     const uploadDialog = page.getByRole('dialog', { name: '上傳考古題' })
     await expect(uploadDialog).toBeVisible({ timeout: 10000 })
@@ -64,7 +65,7 @@ test.describe('Admin › Archive management', () => {
           response.request().method() === 'GET'
         )
       }),
-      courseButton.click(),
+      clickWhenVisible(courseButton),
     ])
 
     const selectionTag = page.locator('span.font-medium', { hasText: '演算法概論' })

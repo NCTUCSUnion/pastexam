@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { clickWhenVisible } from '../support/ui'
 
 const STAT_LABELS = ['總用戶數', '總下載次數', '在線用戶', '考古題總數', '課程總數', '今日活躍']
 
@@ -17,7 +18,10 @@ test.describe('Home page', () => {
     const loginButton = page.getByRole('button', { name: 'Login' })
     await expect(loginButton).toBeVisible({ timeout: 15000 })
 
-    await Promise.all([page.waitForURL('**/api/auth/oauth/login'), loginButton.click()])
+    await Promise.all([
+      page.waitForURL('**/api/auth/oauth/login'),
+      clickWhenVisible(loginButton),
+    ])
 
     await expect(page).toHaveURL(/\/api\/auth\/oauth\/login$/)
   })
@@ -36,7 +40,7 @@ test.describe('Home page', () => {
     const initialTheme = await page.evaluate(() =>
       document.documentElement.classList.contains('dark')
     )
-    await themeToggle.click()
+    await clickWhenVisible(themeToggle)
     await expect
       .poll(async () => page.evaluate(() => document.documentElement.classList.contains('dark')))
       .not.toBe(initialTheme)
@@ -58,11 +62,11 @@ test.describe('Home page', () => {
     await expect(loginDialog).toBeVisible()
     const closeButton = page.getByRole('button', { name: 'Close' })
     await expect(closeButton).toBeVisible()
-    await closeButton.click()
+    await clickWhenVisible(closeButton)
     await expect(loginDialog).toBeHidden({ timeout: 5000 })
 
     const loader = page.getByText('Initializing source...', { exact: false })
-    await loader.waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {})
+    await expect(loader).toBeHidden({ timeout: 15000 })
 
     const codeBlock = page.locator('.code-container code')
     await expect(codeBlock).toHaveText(/\S/, { timeout: 15000 })
