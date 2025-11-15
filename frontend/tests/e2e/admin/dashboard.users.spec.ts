@@ -39,18 +39,11 @@ test.describe('Admin Dashboard › Users', () => {
     await createDialog.getByPlaceholder('輸入密碼').fill('Passw0rd!')
     await clickWhenVisible(createDialog.locator('.p-checkbox').first())
 
-    await Promise.all([
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/users/admin/users') &&
-          response.request().method() === 'POST'
-      ),
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/users/admin/users') && response.request().method() === 'GET'
-      ),
-      clickWhenVisible(createDialog.getByRole('button', { name: '新增' })),
-    ])
+    const previousCreateCount = createPayloads.length
+    await clickWhenVisible(createDialog.getByRole('button', { name: '新增' }))
+    await expect
+      .poll(() => createPayloads.length, { message: '等待建立 API 完成' })
+      .toBe(previousCreateCount + 1)
 
     expect(createPayloads.at(-1)).toMatchObject({
       name: '新用戶',
@@ -68,17 +61,11 @@ test.describe('Admin Dashboard › Users', () => {
     await editDialog.getByPlaceholder('輸入使用者名稱').fill('一般使用者 (更新)')
     await clickWhenVisible(editDialog.locator('.p-checkbox').first())
 
-    await Promise.all([
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/users/admin/users') && response.request().method() === 'PUT'
-      ),
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/users/admin/users') && response.request().method() === 'GET'
-      ),
-      clickWhenVisible(editDialog.getByRole('button', { name: '更新' })),
-    ])
+    const previousUpdateCount = updatePayloads.length
+    await clickWhenVisible(editDialog.getByRole('button', { name: '更新' }))
+    await expect
+      .poll(() => updatePayloads.length, { message: '等待更新 API 完成' })
+      .toBe(previousUpdateCount + 1)
 
     expect(updatePayloads.at(-1)).toMatchObject({
       payload: {
@@ -97,18 +84,11 @@ test.describe('Admin Dashboard › Users', () => {
     const dialog = page.getByRole('alertdialog', { name: '刪除確認' })
     await expect(dialog).toBeVisible()
 
-    await Promise.all([
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/users/admin/users') &&
-          response.request().method() === 'DELETE'
-      ),
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/users/admin/users') && response.request().method() === 'GET'
-      ),
-      clickWhenVisible(dialog.getByLabel('刪除')),
-    ])
+    const previousDeleteCount = deleteIds.length
+    await clickWhenVisible(dialog.getByLabel('刪除'))
+    await expect
+      .poll(() => deleteIds.length, { message: '等待刪除 API 完成' })
+      .toBe(previousDeleteCount + 1)
 
     expect(deleteIds.length).toBeGreaterThan(0)
     await expect(page.getByRole('row', { name: /新用戶/ })).toHaveCount(0)

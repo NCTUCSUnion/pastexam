@@ -45,19 +45,11 @@ test.describe('Admin Dashboard › Notifications', () => {
 
     await clickWhenVisible(createDialog.locator('.p-toggleswitch'))
 
-    await Promise.all([
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/notifications/admin/notifications') &&
-          response.request().method() === 'POST'
-      ),
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/notifications/admin/notifications') &&
-          response.request().method() === 'GET'
-      ),
-      clickWhenVisible(createDialog.getByRole('button', { name: '新增' })),
-    ])
+    const previousCreateCount = createPayloads.length
+    await clickWhenVisible(createDialog.getByRole('button', { name: '新增' }))
+    await expect
+      .poll(() => createPayloads.length, { message: '等待新增 API 完成' })
+      .toBe(previousCreateCount + 1)
 
     const newNotificationRow = page.getByRole('row', { name: /版本更新公告/ })
     await expect(newNotificationRow).toBeVisible()
@@ -73,7 +65,9 @@ test.describe('Admin Dashboard › Notifications', () => {
     const editDialog = page.getByRole('dialog', { name: '編輯公告' })
     await expect(editDialog).toBeVisible()
 
-    await editDialog.getByPlaceholder('輸入公告內容').fill('維護作業提前結束。')
+    const bodyInput = editDialog.getByPlaceholder('輸入公告內容')
+    await expect(bodyInput).toHaveValue('系統將於週末進行維護')
+    await bodyInput.fill('維護作業提前結束。')
 
     const editSeveritySelect = editDialog
       .locator('label', { hasText: '重要程度' })
@@ -83,19 +77,11 @@ test.describe('Admin Dashboard › Notifications', () => {
 
     await clickWhenVisible(editDialog.locator('.p-toggleswitch'))
 
-    await Promise.all([
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/notifications/admin/notifications') &&
-          response.request().method() === 'PUT'
-      ),
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/notifications/admin/notifications') &&
-          response.request().method() === 'GET'
-      ),
-      clickWhenVisible(editDialog.getByRole('button', { name: '更新' })),
-    ])
+    const previousUpdateCount = updatePayloads.length
+    await clickWhenVisible(editDialog.getByRole('button', { name: '更新' }))
+    await expect
+      .poll(() => updatePayloads.length, { message: '等待更新 API 完成' })
+      .toBe(previousUpdateCount + 1)
 
     expect(updatePayloads.at(-1)).toMatchObject({
       payload: {
@@ -113,19 +99,11 @@ test.describe('Admin Dashboard › Notifications', () => {
     const dialog = page.getByRole('alertdialog', { name: '刪除確認' })
     await expect(dialog).toBeVisible()
 
-    await Promise.all([
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/notifications/admin/notifications') &&
-          response.request().method() === 'DELETE'
-      ),
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/notifications/admin/notifications') &&
-          response.request().method() === 'GET'
-      ),
-      clickWhenVisible(dialog.getByLabel('刪除')),
-    ])
+    const previousDeleteCount = deleteIds.length
+    await clickWhenVisible(dialog.getByLabel('刪除'))
+    await expect
+      .poll(() => deleteIds.length, { message: '等待刪除 API 完成' })
+      .toBe(previousDeleteCount + 1)
 
     expect(deleteIds.length).toBeGreaterThan(0)
     await expect(page.getByRole('row', { name: /版本更新公告/ })).toHaveCount(0)
