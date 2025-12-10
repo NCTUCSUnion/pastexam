@@ -18,10 +18,7 @@ test.describe('Home page', () => {
     const loginButton = page.getByRole('button', { name: 'Login' })
     await expect(loginButton).toBeVisible({ timeout: 15000 })
 
-    await Promise.all([
-      page.waitForURL('**/api/auth/oauth/login'),
-      clickWhenVisible(loginButton),
-    ])
+    await Promise.all([page.waitForURL('**/api/auth/oauth/login'), clickWhenVisible(loginButton)])
 
     await expect(page).toHaveURL(/\/api\/auth\/oauth\/login$/)
   })

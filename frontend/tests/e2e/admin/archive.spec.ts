@@ -71,9 +71,12 @@ test.describe('Admin › Archive management', () => {
         return
       }
 
-      const courseIdMatch = route.request().url().match(/courses\/(\d+)\/archives/)
+      const courseIdMatch = route
+        .request()
+        .url()
+        .match(/courses\/(\d+)\/archives/)
       const courseId = courseIdMatch ? Number(courseIdMatch[1]) : null
-      const responseBody = courseId ? ARCHIVES_FIXTURE[courseId] ?? [] : []
+      const responseBody = courseId ? (ARCHIVES_FIXTURE[courseId] ?? []) : []
 
       await route.fulfill({
         status: 200,
