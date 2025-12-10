@@ -21,19 +21,19 @@
 
     <div class="w-full h-full flex flex-column">
       <div
-        v-if="loading || pdfLoading"
-        class="flex-1 flex align-items-center justify-content-center"
-      >
-        <ProgressSpinner strokeWidth="4" />
-      </div>
-
-      <div
-        v-else-if="error || pdfError"
+        v-if="error || pdfError"
         class="flex-1 flex flex-column align-items-center justify-content-center gap-4"
       >
         <i class="pi pi-exclamation-circle text-6xl text-red-500" />
         <div class="text-xl">無法載入預覽</div>
         <div class="text-sm text-gray-600">請嘗試下載檔案查看</div>
+      </div>
+
+      <div
+        v-else-if="loading || pdfLoading"
+        class="flex-1 flex align-items-center justify-content-center"
+      >
+        <ProgressSpinner strokeWidth="4" />
       </div>
 
       <div v-else-if="pdf" class="flex-1 pdf-container">
@@ -48,6 +48,10 @@
             @loaded="handlePdfLoaded"
           />
         </div>
+      </div>
+
+      <div v-else class="flex-1 flex align-items-center justify-content-center">
+        <ProgressSpinner strokeWidth="4" />
       </div>
     </div>
 
@@ -111,27 +115,61 @@ const localVisible = computed({
 const downloading = ref(false)
 const pdfLoading = ref(false)
 const pdfError = ref(false)
+let activeLoadId = 0
 
 const currentPdf = computed(() => props.previewUrl || '')
-const { pdf, pages, isLoading: pdfIsLoading, error: pdfLoadError } = usePDF(currentPdf)
-
-watch(pdfIsLoading, (val) => {
-  pdfLoading.value = val
+const { pdf, pages } = usePDF(currentPdf, {
+  onError: handlePdfError,
 })
 
-watch(pdfLoadError, (err) => {
-  if (err) {
-    console.error('PDF loading failed:', err)
-    pdfError.value = true
-    pdfLoading.value = false
-    emit('error')
-  }
-})
+watch(
+  currentPdf,
+  (val) => {
+    pdfError.value = false
+    pdfLoading.value = !!val
+  },
+  { immediate: true }
+)
+
+watch(
+  pdf,
+  async (task) => {
+    if (!task) {
+      pdfLoading.value = false
+      return
+    }
+
+    const loadId = ++activeLoadId
+    pdfLoading.value = true
+    pdfError.value = false
+
+    try {
+      if (task.promise) {
+        await task.promise
+      }
+      if (loadId === activeLoadId) {
+        pdfLoading.value = false
+      }
+    } catch (err) {
+      if (loadId === activeLoadId) {
+        handlePdfError(err)
+      }
+    }
+  },
+  { immediate: true }
+)
 
 function onHide() {
   pdfLoading.value = false
   pdfError.value = false
   emit('hide')
+}
+
+function handlePdfError(err) {
+  console.error('PDF loading failed:', err)
+  pdfError.value = true
+  pdfLoading.value = false
+  emit('error')
 }
 
 function handlePdfLoaded() {
