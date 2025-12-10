@@ -33,27 +33,10 @@ export default defineConfig(({ mode }) => {
         drop: mode === 'production' ? ['debugger'] : [],
         pure: mode === 'production' ? ['console.log', 'console.debug'] : [],
       },
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'vue-vendor': ['vue', 'vue-router'],
-            'primevue-core': ['primevue'],
-            'pdf-vendor': ['vue-pdf-embed', 'pdf-lib'],
-            'markdown-vendor': ['marked', 'dompurify', 'highlight.js'],
-            utils: ['axios'],
-          },
-          chunkFileNames: 'assets/[name]-[hash].js',
-          entryFileNames: 'assets/[name]-[hash].js',
-          assetFileNames: 'assets/[name]-[hash].[ext]',
-        },
-      },
-    },
-    optimizeDeps: {
-      include: ['vue', 'vue-router', 'axios', 'primevue', '@primeuix/themes'],
     },
     plugins: [
       vue(),
-      mode === 'development' && vueDevTools({ launchEditor: 'cursor' }),
+      mode === 'development' && vueDevTools({ launchEditor: 'zed' }),
       mode !== 'test' && eslintPlugin({ include: ['src/**/*.vue', 'src/**/*.js', 'src/**/*.ts'] }),
       tailwindcss(),
       Components({ resolvers: [PrimeVueResolver()] }),
