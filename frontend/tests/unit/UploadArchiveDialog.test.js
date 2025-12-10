@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import UploadArchiveDialog from '@/components/UploadArchiveDialog.vue'
 
 const courseServiceMock = vi.hoisted(() => ({
   getCourseArchives: vi.fn(),
@@ -16,6 +15,36 @@ const isUnauthorizedErrorMock = vi.hoisted(() => vi.fn(() => false))
 
 let originalURL
 let consoleErrorSpy
+let UploadArchiveDialog
+
+const ensureDomMatrix = vi.hoisted(() => () => {
+  if (typeof globalThis.DOMMatrix === 'undefined') {
+    class DOMMatrixPolyfill {
+      constructor() {
+        this.a = 1
+        this.b = 0
+        this.c = 0
+        this.d = 1
+        this.e = 0
+        this.f = 0
+      }
+      multiplySelf() {
+        return this
+      }
+      translateSelf() {
+        return this
+      }
+      scaleSelf() {
+        return this
+      }
+      rotateSelf() {
+        return this
+      }
+    }
+    globalThis.DOMMatrix = DOMMatrixPolyfill
+    globalThis.DOMMatrixReadOnly = DOMMatrixPolyfill
+  }
+})
 
 const pdfLoadMock = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -106,6 +135,11 @@ function mountDialog() {
 }
 
 describe('UploadArchiveDialog', () => {
+  beforeAll(async () => {
+    ensureDomMatrix()
+    UploadArchiveDialog = (await import('@/components/UploadArchiveDialog.vue')).default
+  })
+
   beforeEach(() => {
     trackEventMock.mockReset()
     toastAddMock.mockReset()
