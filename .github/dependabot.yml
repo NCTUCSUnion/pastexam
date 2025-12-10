@@ -10,6 +10,11 @@ updates:
       timezone: "Asia/Taipei"
     commit-message:
       prefix: "chore"
+    groups:
+      github-actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -21,6 +26,11 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore"
+    groups:
+      npm-root-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -32,6 +42,11 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore"
+    groups:
+      npm-frontend-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -42,3 +57,8 @@ updates:
       timezone: "Asia/Taipei"
     commit-message:
       prefix: "chore"
+    groups:
+      docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
