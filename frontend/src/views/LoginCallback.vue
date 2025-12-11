@@ -65,7 +65,7 @@ export default {
       }
 
       sessionStorage.setItem('authToken', token)
-      this.$router.push('/archive')
+      this.$router.replace('/archive')
     } catch (error) {
       console.error('Login callback error:', error)
       this.errorMessage = '驗證失敗，請重試或聯絡管理員。'

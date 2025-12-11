@@ -5,6 +5,13 @@ import ArchiveView from '@/views/Archive.vue'
 
 const trackEventMock = vi.hoisted(() => vi.fn())
 const isUnauthorizedErrorMock = vi.hoisted(() => vi.fn())
+const getCurrentUserMock = vi.hoisted(() =>
+  vi.fn(() => ({
+    id: 10,
+    is_admin: true,
+  }))
+)
+const isAuthenticatedMock = vi.hoisted(() => vi.fn(() => true))
 
 const listCoursesMock = vi.hoisted(() => vi.fn())
 const getCourseArchivesMock = vi.hoisted(() => vi.fn())
@@ -96,8 +103,8 @@ vi.mock('@/components/UploadArchiveDialog.vue', () => ({
 }))
 
 vi.mock('@/utils/auth', () => ({
-  getCurrentUser: vi.fn(() => ({ id: 10, is_admin: true })),
-  isAuthenticated: vi.fn(() => true),
+  getCurrentUser: getCurrentUserMock,
+  isAuthenticated: isAuthenticatedMock,
 }))
 
 vi.mock('@/utils/useTheme', () => ({
@@ -448,6 +455,57 @@ describe('ArchiveView', () => {
 
     const mobileMenu = vm.mobileMenuItems
     expect(Array.isArray(mobileMenu)).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('covers remaining utility branches', async () => {
+    const sidebarInjected = ref(true)
+
+    const wrapper = mount(ArchiveView, {
+      global: {
+        provide: {
+          toast: { add: toastAddMock },
+          confirm: { require: confirmRequireMock },
+          sidebarVisible: sidebarInjected,
+        },
+        stubs: componentStubs,
+      },
+    })
+
+    await flushPromises()
+
+    // getCurrentCategory fallback when no course selected
+    wrapper.vm.selectedCourse = null
+    expect(wrapper.vm.getCurrentCategory).toBe('')
+
+    // Unauthorized preview download branch
+    wrapper.vm.selectedCourse = 'c1'
+    wrapper.vm.selectedSubject = 'Calculus I'
+    wrapper.vm.selectedArchive = { id: 'a1', year: '2023', professor: 'Prof', name: 'Midterm' }
+    getArchiveDownloadUrlMock.mockRejectedValueOnce(new Error('unauthorized'))
+    isUnauthorizedErrorMock.mockReturnValueOnce(true)
+    const onComplete = vi.fn()
+    await wrapper.vm.handlePreviewDownload(onComplete)
+    expect(onComplete).toHaveBeenCalled()
+    expect(toastAddMock).not.toHaveBeenCalled()
+
+    // checkAuthentication when user missing
+    isAuthenticatedMock.mockReturnValueOnce(true)
+    getCurrentUserMock.mockReturnValueOnce(null)
+    wrapper.vm.checkAuthentication()
+    expect(wrapper.vm.isAuthenticatedRef).toBe(false)
+    expect(wrapper.vm.userData).toBeNull()
+
+    // Mobile menu command toggles sidebar
+    const menu = wrapper.vm.mobileMenuItems
+    expect(menu.length).toBeGreaterThan(0)
+    const firstCourse = menu[0].items?.[0]
+    if (firstCourse?.command) {
+      sidebarInjected.value = true
+      firstCourse.command()
+      expect(sidebarInjected.value).toBe(false)
+    }
 
     wrapper.unmount()
   })

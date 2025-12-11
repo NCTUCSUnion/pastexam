@@ -918,6 +918,9 @@ async function downloadArchive(archive) {
     const { data } = await archiveService.getArchiveDownloadUrl(selectedCourse.value, archive.id)
 
     const response = await fetch(data.url)
+    if (!response.ok) {
+      throw new Error(`Download failed with status ${response.status}`)
+    }
     const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -929,8 +932,10 @@ async function downloadArchive(archive) {
 
     document.body.appendChild(link)
     link.click()
-    window.URL.revokeObjectURL(url)
-    link.remove()
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url)
+      link.remove()
+    }, 100)
 
     trackEvent(EVENTS.DOWNLOAD_ARCHIVE, {
       archiveName: archive.name,
@@ -1347,6 +1352,9 @@ async function handlePreviewDownload(onComplete) {
     )
 
     const response = await fetch(data.url)
+    if (!response.ok) {
+      throw new Error(`Download failed with status ${response.status}`)
+    }
     const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -1358,8 +1366,10 @@ async function handlePreviewDownload(onComplete) {
 
     document.body.appendChild(link)
     link.click()
-    window.URL.revokeObjectURL(url)
-    link.remove()
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url)
+      link.remove()
+    }, 100)
 
     trackEvent(EVENTS.DOWNLOAD_ARCHIVE, {
       archiveName: selectedArchive.value.name,
@@ -1544,6 +1554,15 @@ const mobileMenuItems = computed(() => {
   background-color: var(--bg-primary);
 }
 
+:deep(.p-accordioncontent),
+:deep(.p-accordioncontent-wrapper),
+:deep(.p-accordioncontent-content) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
 :deep(.p-input-icon-left) {
   width: 100%;
 }
@@ -1589,13 +1608,16 @@ const mobileMenuItems = computed(() => {
 
 .sidebar {
   width: 300px;
+  min-width: 0;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
   transition: width 0.2s ease-in-out;
   overflow: hidden;
   position: relative;
   z-index: 1;
-  height: 100%;
+  height: calc(100% - 0.25rem);
+  margin-left: 0.25rem;
+  margin-bottom: 0.25rem;
   display: flex;
   flex-direction: column;
 }
@@ -1621,6 +1643,10 @@ const mobileMenuItems = computed(() => {
 
 .sidebar.collapsed {
   width: 0;
+  min-width: 0;
+  margin-left: 0;
+  margin-bottom: 0;
+  height: 100%;
   border-right: none;
 }
 
@@ -1749,8 +1775,15 @@ const mobileMenuItems = computed(() => {
   }
 
   /* Table responsive design for mobile */
-  :deep(.p-datatable) {
+  :deep(.p-accordioncontent-content .p-datatable) {
     font-size: 0.75rem;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  :deep(.p-accordioncontent-content .p-datatable-table-container) {
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
   }
 
@@ -1813,7 +1846,14 @@ const mobileMenuItems = computed(() => {
 
 /* Desktop table overflow handling */
 @media (min-width: 769px) {
-  :deep(.p-datatable) {
+  :deep(.p-accordioncontent-content .p-datatable) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  :deep(.p-accordioncontent-content .p-datatable-table-container) {
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
   }
 

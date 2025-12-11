@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isAuthenticated, getCurrentUser } from '../utils/auth.js'
+import { decodeToken, getCurrentUser, isAuthenticated, setToken } from '../utils/auth.js'
 
 const routes = [
   {
@@ -39,6 +39,22 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
+  if (to.name === 'LoginCallback' && to.query?.token) {
+    const token = Array.isArray(to.query.token) ? to.query.token[0] : to.query.token
+    const decoded = decodeToken(token)
+    const nowInSeconds = Math.floor(Date.now() / 1000)
+
+    if (decoded?.exp && decoded.exp > nowInSeconds) {
+      setToken(token)
+      next({ name: 'Archive', replace: true })
+      return
+    }
+
+    sessionStorage.removeItem('authToken')
+    next({ name: 'Home', replace: true })
+    return
+  }
+
   const isLoggedIn = isAuthenticated()
   const currentUser = getCurrentUser()
 
