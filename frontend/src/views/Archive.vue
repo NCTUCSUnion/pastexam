@@ -1544,6 +1544,15 @@ const mobileMenuItems = computed(() => {
   background-color: var(--bg-primary);
 }
 
+:deep(.p-accordioncontent),
+:deep(.p-accordioncontent-wrapper),
+:deep(.p-accordioncontent-content) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
 :deep(.p-input-icon-left) {
   width: 100%;
 }
@@ -1749,8 +1758,15 @@ const mobileMenuItems = computed(() => {
   }
 
   /* Table responsive design for mobile */
-  :deep(.p-datatable) {
+  :deep(.p-accordioncontent-content .p-datatable) {
     font-size: 0.75rem;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  :deep(.p-accordioncontent-content .p-datatable-table-container) {
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
   }
 
@@ -1813,7 +1829,14 @@ const mobileMenuItems = computed(() => {
 
 /* Desktop table overflow handling */
 @media (min-width: 769px) {
-  :deep(.p-datatable) {
+  :deep(.p-accordioncontent-content .p-datatable) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  :deep(.p-accordioncontent-content .p-datatable-table-container) {
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
   }
 
