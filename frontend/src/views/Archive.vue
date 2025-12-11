@@ -1598,6 +1598,7 @@ const mobileMenuItems = computed(() => {
 
 .sidebar {
   width: 300px;
+  min-width: 0;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
   transition: width 0.2s ease-in-out;
@@ -1630,6 +1631,7 @@ const mobileMenuItems = computed(() => {
 
 .sidebar.collapsed {
   width: 0;
+  min-width: 0;
   border-right: none;
 }
 
