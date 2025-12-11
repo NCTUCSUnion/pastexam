@@ -4,6 +4,7 @@ import LoginCallback from '@/views/LoginCallback.vue'
 
 const routerMock = {
   push: vi.fn(),
+  replace: vi.fn(),
 }
 
 let consoleErrorSpy
@@ -29,6 +30,7 @@ function mockURLSearchParams(tokenValue) {
 describe('LoginCallback view', () => {
   beforeEach(() => {
     routerMock.push.mockReset()
+    routerMock.replace.mockReset()
     sessionStorage.clear()
     localStorage.clear()
     document.body.innerHTML = '<div class="code-background"></div>'
@@ -60,7 +62,7 @@ describe('LoginCallback view', () => {
     await flushPromises()
 
     expect(sessionStorage.getItem('authToken')).toBe('test-token')
-    expect(routerMock.push).toHaveBeenCalledWith('/archive')
+    expect(routerMock.replace).toHaveBeenCalledWith('/archive')
   })
 
   it('shows error message when token missing', async () => {
