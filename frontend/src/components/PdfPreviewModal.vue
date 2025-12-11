@@ -36,14 +36,14 @@
         <ProgressSpinner strokeWidth="4" />
       </div>
 
-      <div v-else-if="pdf" class="flex-1 pdf-container">
+      <div v-else-if="pdf" class="flex-1 pdf-container" ref="pdfContainerRef">
         <div class="pdf-pages">
           <VuePDF
             v-for="page in pages"
             :key="page"
             :pdf="pdf"
             :page="page"
-            fit-parent
+            :scale="appliedScale"
             class="pdf-page"
             @loaded="handlePdfLoaded"
           />
@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { VuePDF, usePDF } from '@tato30/vue-pdf'
 import '@tato30/vue-pdf/style.css'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
@@ -116,6 +116,19 @@ const downloading = ref(false)
 const pdfLoading = ref(false)
 const pdfError = ref(false)
 let activeLoadId = 0
+let resizeObserver = null
+const ResizeObserverCtor = typeof ResizeObserver !== 'undefined' ? ResizeObserver : null
+
+const pdfContainerRef = ref(null)
+const containerWidth = ref(0)
+const pageWidth = ref(0)
+const appliedScale = computed(() => {
+  if (containerWidth.value && pageWidth.value) {
+    const widthScale = containerWidth.value / pageWidth.value
+    return Math.max(widthScale, 0.1)
+  }
+  return 1
+})
 
 const currentPdf = computed(() => props.previewUrl || '')
 const { pdf, pages } = usePDF(currentPdf, {
@@ -127,6 +140,7 @@ watch(
   (val) => {
     pdfError.value = false
     pdfLoading.value = !!val
+    pageWidth.value = 0
   },
   { immediate: true }
 )
@@ -136,6 +150,7 @@ watch(
   async (task) => {
     if (!task) {
       pdfLoading.value = false
+      pageWidth.value = 0
       return
     }
 
@@ -148,6 +163,7 @@ watch(
         await task.promise
       }
       if (loadId === activeLoadId) {
+        await updateBasePageWidth(task)
         pdfLoading.value = false
       }
     } catch (err) {
@@ -165,6 +181,30 @@ function onHide() {
   emit('hide')
 }
 
+watch(
+  pdfContainerRef,
+  (el) => {
+    if (resizeObserver) {
+      resizeObserver.disconnect()
+    }
+    if (!ResizeObserverCtor) return
+    if (!el) return
+    resizeObserver = new ResizeObserverCtor((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      containerWidth.value = entry.contentRect.width
+    })
+    resizeObserver.observe(el)
+  },
+  { immediate: true }
+)
+
+onBeforeUnmount(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+  }
+})
+
 function handlePdfError(err) {
   console.error('PDF loading failed:', err)
   pdfError.value = true
@@ -176,6 +216,31 @@ function handlePdfLoaded() {
   pdfLoading.value = false
   pdfError.value = false
   emit('load')
+}
+
+async function updateBasePageWidth(task) {
+  try {
+    const doc = await resolvePdfDocument(task)
+    if (!doc || typeof doc.getPage !== 'function') {
+      return
+    }
+    const page = await doc.getPage(1)
+    const viewport = page.getViewport({ scale: 1 })
+    pageWidth.value = viewport.width
+  } catch (err) {
+    console.error('Failed to measure PDF page size:', err)
+  }
+}
+
+async function resolvePdfDocument(task) {
+  if (!task) return null
+  if (typeof task.getPage === 'function') {
+    return task
+  }
+  if ('promise' in task && task.promise) {
+    return task.promise
+  }
+  return null
 }
 
 function handleDownload() {
@@ -192,7 +257,7 @@ function handleDownload() {
   height: 100%;
   overflow: auto;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   background-color: #525659;
 }
 
