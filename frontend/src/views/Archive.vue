@@ -918,6 +918,9 @@ async function downloadArchive(archive) {
     const { data } = await archiveService.getArchiveDownloadUrl(selectedCourse.value, archive.id)
 
     const response = await fetch(data.url)
+    if (!response.ok) {
+      throw new Error(`Download failed with status ${response.status}`)
+    }
     const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -929,8 +932,10 @@ async function downloadArchive(archive) {
 
     document.body.appendChild(link)
     link.click()
-    window.URL.revokeObjectURL(url)
-    link.remove()
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url)
+      link.remove()
+    }, 100)
 
     trackEvent(EVENTS.DOWNLOAD_ARCHIVE, {
       archiveName: archive.name,
@@ -1347,6 +1352,9 @@ async function handlePreviewDownload(onComplete) {
     )
 
     const response = await fetch(data.url)
+    if (!response.ok) {
+      throw new Error(`Download failed with status ${response.status}`)
+    }
     const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -1358,8 +1366,10 @@ async function handlePreviewDownload(onComplete) {
 
     document.body.appendChild(link)
     link.click()
-    window.URL.revokeObjectURL(url)
-    link.remove()
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url)
+      link.remove()
+    }, 100)
 
     trackEvent(EVENTS.DOWNLOAD_ARCHIVE, {
       archiveName: selectedArchive.value.name,
