@@ -117,7 +117,7 @@
 
       <div class="main-content flex-1 h-full overflow-auto">
         <div class="card h-full flex flex-col">
-          <div v-if="selectedSubject" class="p-3 border-bottom-1 surface-border">
+          <div v-if="selectedSubject" class="p-3 subject-header">
             <div class="flex align-items-center gap-2">
               <Tag severity="secondary" class="text-sm">
                 {{ getCategoryTag(getCategoryName(getCurrentCategory)) }}
@@ -1529,13 +1529,6 @@ const mobileMenuItems = computed(() => {
   background-color: var(--bg-primary);
 }
 
-.surface-border {
-  position: relative;
-  z-index: 1;
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
-}
-
 :deep(.p-sidebar) {
   padding: 0;
   background-color: var(--bg-primary);
@@ -1610,7 +1603,7 @@ const mobileMenuItems = computed(() => {
   width: 300px;
   min-width: 0;
   background: var(--bg-primary);
-  border-right: 1px solid var(--border-color);
+  border: 1px solid var(--border-color);
   transition: width 0.2s ease-in-out;
   overflow: hidden;
   position: relative;
@@ -1620,6 +1613,7 @@ const mobileMenuItems = computed(() => {
   margin-bottom: 0.25rem;
   display: flex;
   flex-direction: column;
+  box-shadow: none;
 }
 
 .upload-section {
@@ -1662,6 +1656,13 @@ const mobileMenuItems = computed(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.subject-header {
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  position: relative;
+  z-index: 1;
 }
 
 .ellipsis {
