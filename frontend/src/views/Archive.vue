@@ -1615,7 +1615,9 @@ const mobileMenuItems = computed(() => {
   overflow: hidden;
   position: relative;
   z-index: 1;
-  height: 100%;
+  height: calc(100% - 0.25rem);
+  margin-left: 0.25rem;
+  margin-bottom: 0.25rem;
   display: flex;
   flex-direction: column;
 }
@@ -1642,6 +1644,9 @@ const mobileMenuItems = computed(() => {
 .sidebar.collapsed {
   width: 0;
   min-width: 0;
+  margin-left: 0;
+  margin-bottom: 0;
+  height: 100%;
   border-right: none;
 }
 
