@@ -11,13 +11,12 @@
 
 <script>
 import Navbar from './components/Navbar.vue'
-import { onBeforeUnmount, onMounted, provide, ref } from 'vue'
+import { provide, ref } from 'vue'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { setGlobalToast } from './utils/toast'
-import { setupAutoHideScrollbars } from './utils/autoHideScrollbar'
 
 export default {
   components: {
@@ -39,14 +38,6 @@ export default {
     const toggleSidebar = () => {
       sidebarVisible.value = !sidebarVisible.value
     }
-
-    let teardownAutoHideScrollbars = null
-    onMounted(() => {
-      teardownAutoHideScrollbars = setupAutoHideScrollbars()
-    })
-    onBeforeUnmount(() => {
-      teardownAutoHideScrollbars?.()
-    })
 
     return {
       toggleSidebar,
