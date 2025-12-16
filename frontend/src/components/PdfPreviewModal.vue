@@ -220,6 +220,7 @@ function handleDownload() {
   width: 100%;
   height: 100%;
   overflow: auto;
+  scrollbar-gutter: stable;
   display: flex;
   flex-direction: column;
   background-color: #525659;
