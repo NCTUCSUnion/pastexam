@@ -885,20 +885,7 @@ export default {
 }
 
 :deep(.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content) {
-  transition: background-color 0.2s ease;
   background: transparent !important;
-}
-
-:deep(.p-menubar .p-button),
-:deep(.p-menubar .p-button-outlined),
-:deep(.p-menubar .p-button-icon-only) {
-  transition: none !important;
-}
-
-:deep(.p-menubar .p-button *),
-:deep(.p-menubar .p-button-outlined *),
-:deep(.p-menubar .p-button-icon-only *) {
-  transition: none !important;
 }
 
 :deep(.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content:hover) {

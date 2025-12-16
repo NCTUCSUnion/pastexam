@@ -1471,43 +1471,6 @@ watch(
   background: var(--bg-primary);
 }
 
-:deep(.p-accordionheader),
-:deep(.p-panelmenu-header-link),
-:deep(.p-panelmenu-content),
-:deep(.p-button),
-:deep(.p-button-outlined),
-:deep(.p-inputtext),
-:deep(.p-dropdown),
-:deep(.p-select),
-:deep(.p-checkbox),
-:deep(.p-checkbox-box),
-:deep(.p-checkbox-icon),
-:deep(.p-tag),
-:deep(.p-toolbar),
-:deep(.p-datatable),
-:deep(.p-datatable-thead > tr > th),
-:deep(.p-datatable-tbody > *),
-:deep(.p-dialog),
-:deep(.p-dialog-header),
-:deep(.p-dialog-content),
-:deep(.p-dialog-footer) {
-  transition: none !important;
-}
-
-:deep(.p-tabs *),
-:deep(.p-tablist *),
-:deep(.p-tab),
-:deep(.p-tablist-active-bar),
-:deep(.p-tabs-active-bar),
-:deep(.p-tablist-content) {
-  transition: none !important;
-}
-
-:deep(.p-paginator),
-:deep(.p-paginator *) {
-  transition: none !important;
-}
-
 .search-icon {
   position: absolute;
   left: 1rem;

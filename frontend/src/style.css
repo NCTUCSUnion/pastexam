@@ -131,3 +131,9 @@ body {
 *[data-scrollbar-scrolling='1']::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb);
 }
+
+/* Disable PrimeVue component transitions (prevents theme-switch fade effects) */
+.p-component,
+.p-component * {
+  transition: none !important;
+}
