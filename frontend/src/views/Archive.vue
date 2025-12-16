@@ -269,7 +269,7 @@
             >
               <i class="pi pi-book text-6xl" style="color: var(--text-secondary)"></i>
               <div class="text-xl font-medium mt-4" style="color: var(--text-secondary)">
-                請從左側選單選擇科目
+                請從左側選單選擇課程
               </div>
               <div class="text-sm mt-2" style="color: var(--text-secondary)">
                 選擇課程後即可瀏覽相關考古題
@@ -307,12 +307,12 @@
           >
             <div class="flex flex-column">
               <div class="flex flex-column gap-2">
-                <label>考古題名稱</label>
-                <InputText v-model="editForm.name" placeholder="輸入考古題名稱" class="w-full" />
+                <label>考試名稱</label>
+                <InputText v-model="editForm.name" placeholder="輸入考試名稱" class="w-full" />
               </div>
 
               <div class="flex flex-column gap-2 mt-3">
-                <label>教授</label>
+                <label>授課教授</label>
                 <AutoComplete
                   :modelValue="editForm.professor"
                   @update:modelValue="(val) => (editForm.professor = val)"
@@ -322,7 +322,7 @@
                   @focus="() => searchEditProfessor({ query: '' })"
                   @click="() => searchEditProfessor({ query: '' })"
                   optionLabel="name"
-                  placeholder="選擇教授"
+                  placeholder="選擇授課教授"
                   class="w-full"
                   dropdown
                   completeOnFocus
@@ -336,14 +336,14 @@
               </div>
 
               <div class="flex flex-column gap-2 mt-3">
-                <label>年份</label>
+                <label>考試年份</label>
                 <DatePicker
                   v-model="editForm.academicYear"
                   @update:modelValue="(val) => (editForm.academicYear = val)"
                   view="year"
                   dateFormat="yy"
                   :showIcon="true"
-                  placeholder="選擇年份"
+                  placeholder="選擇考試年份"
                   class="w-full"
                   :maxDate="new Date()"
                   :minDate="new Date(2000, 0, 1)"
@@ -381,19 +381,19 @@
 
               <div v-if="editForm.shouldTransfer" class="flex flex-column pl-4 mt-3">
                 <div class="flex flex-column gap-2">
-                  <label>目標課程分類</label>
+                  <label>目標課程類別</label>
                   <Select
                     v-model="editForm.targetCategory"
                     :options="categoryOptions"
                     optionLabel="name"
                     optionValue="value"
-                    placeholder="選擇課程分類"
+                    placeholder="選擇課程類別"
                     class="w-full"
                   />
                 </div>
 
                 <div class="flex flex-column gap-2 mt-3">
-                  <label>目標課程</label>
+                  <label>目標課程名稱</label>
                   <AutoComplete
                     v-model="editForm.targetCourse"
                     :suggestions="availableCoursesForTransfer"
