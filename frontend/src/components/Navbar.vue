@@ -889,6 +889,18 @@ export default {
   background: transparent !important;
 }
 
+:deep(.p-menubar .p-button),
+:deep(.p-menubar .p-button-outlined),
+:deep(.p-menubar .p-button-icon-only) {
+  transition: none !important;
+}
+
+:deep(.p-menubar .p-button *),
+:deep(.p-menubar .p-button-outlined *),
+:deep(.p-menubar .p-button-icon-only *) {
+  transition: none !important;
+}
+
 :deep(.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content:hover) {
   background: var(--highlight-bg) !important;
 }

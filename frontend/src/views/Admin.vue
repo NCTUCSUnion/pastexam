@@ -1494,6 +1494,20 @@ watch(
   transition: none !important;
 }
 
+:deep(.p-tabs *),
+:deep(.p-tablist *),
+:deep(.p-tab),
+:deep(.p-tablist-active-bar),
+:deep(.p-tabs-active-bar),
+:deep(.p-tablist-content) {
+  transition: none !important;
+}
+
+:deep(.p-paginator),
+:deep(.p-paginator *) {
+  transition: none !important;
+}
+
 .search-icon {
   position: absolute;
   left: 1rem;
