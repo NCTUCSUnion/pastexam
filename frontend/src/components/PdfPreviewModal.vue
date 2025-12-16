@@ -40,10 +40,10 @@
         <div class="pdf-pages">
           <VuePDF
             v-for="page in pages"
-            :key="page"
+            :key="`${page}-${resizeKey}`"
             :pdf="pdf"
             :page="page"
-            :scale="appliedScale"
+            :fitParent="true"
             class="pdf-page"
             @loaded="handlePdfLoaded"
           />
@@ -120,15 +120,7 @@ let resizeObserver = null
 const ResizeObserverCtor = typeof ResizeObserver !== 'undefined' ? ResizeObserver : null
 
 const pdfContainerRef = ref(null)
-const containerWidth = ref(0)
-const pageWidth = ref(0)
-const appliedScale = computed(() => {
-  if (containerWidth.value && pageWidth.value) {
-    const widthScale = containerWidth.value / pageWidth.value
-    return Math.max(widthScale, 0.1)
-  }
-  return 1
-})
+const resizeKey = ref(0)
 
 const currentPdf = computed(() => props.previewUrl || '')
 const { pdf, pages } = usePDF(currentPdf, {
@@ -140,7 +132,6 @@ watch(
   (val) => {
     pdfError.value = false
     pdfLoading.value = !!val
-    pageWidth.value = 0
   },
   { immediate: true }
 )
@@ -150,7 +141,6 @@ watch(
   async (task) => {
     if (!task) {
       pdfLoading.value = false
-      pageWidth.value = 0
       return
     }
 
@@ -163,7 +153,6 @@ watch(
         await task.promise
       }
       if (loadId === activeLoadId) {
-        await updateBasePageWidth(task)
         pdfLoading.value = false
       }
     } catch (err) {
@@ -192,7 +181,7 @@ watch(
     resizeObserver = new ResizeObserverCtor((entries) => {
       const entry = entries[0]
       if (!entry) return
-      containerWidth.value = entry.contentRect.width
+      resizeKey.value = Math.round(entry.contentRect.width)
     })
     resizeObserver.observe(el)
   },
@@ -216,31 +205,6 @@ function handlePdfLoaded() {
   pdfLoading.value = false
   pdfError.value = false
   emit('load')
-}
-
-async function updateBasePageWidth(task) {
-  try {
-    const doc = await resolvePdfDocument(task)
-    if (!doc || typeof doc.getPage !== 'function') {
-      return
-    }
-    const page = await doc.getPage(1)
-    const viewport = page.getViewport({ scale: 1 })
-    pageWidth.value = viewport.width
-  } catch (err) {
-    console.error('Failed to measure PDF page size:', err)
-  }
-}
-
-async function resolvePdfDocument(task) {
-  if (!task) return null
-  if (typeof task.getPage === 'function') {
-    return task
-  }
-  if ('promise' in task && task.promise) {
-    return task.promise
-  }
-  return null
 }
 
 function handleDownload() {
