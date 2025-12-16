@@ -22,7 +22,7 @@
           <StepPanel v-slot="{ activateCallback }" value="1">
             <div class="flex flex-column gap-4">
               <div class="flex flex-column gap-2">
-                <label>類別</label>
+                <label>課程類別</label>
                 <Select
                   v-model="form.category"
                   :options="[
@@ -42,7 +42,7 @@
               </div>
 
               <div class="flex flex-column gap-2">
-                <label>科目</label>
+                <label>課程名稱</label>
                 <AutoComplete
                   v-model="form.subject"
                   :suggestions="availableSubjects"
@@ -51,7 +51,7 @@
                   @focus="() => searchSubject({ query: '' })"
                   @click="() => searchSubject({ query: '' })"
                   optionLabel="name"
-                  placeholder="搜尋或輸入科目名稱"
+                  placeholder="搜尋或輸入課程名稱"
                   class="w-full"
                   :disabled="!form.category"
                   dropdown
@@ -63,10 +63,11 @@
                     <div>{{ item.name }}</div>
                   </template>
                 </AutoComplete>
+                <small class="text-gray-500">如果課程名稱不在列表上，可自行輸入新增</small>
               </div>
 
               <div class="flex flex-column gap-2">
-                <label>教授</label>
+                <label>授課教授</label>
                 <AutoComplete
                   :modelValue="form.professor"
                   @update:modelValue="(val) => (form.professor = val)"
@@ -76,7 +77,7 @@
                   @focus="() => searchProfessor({ query: '' })"
                   @click="() => searchProfessor({ query: '' })"
                   optionLabel="name"
-                  placeholder="搜尋或輸入教授名稱"
+                  placeholder="搜尋或輸入授課教授"
                   class="w-full"
                   :disabled="!form.subject"
                   dropdown
@@ -88,6 +89,7 @@
                     <div>{{ item.name }}</div>
                   </template>
                 </AutoComplete>
+                <small class="text-gray-500">如果授課教授不在列表上，可自行輸入新增</small>
               </div>
             </div>
             <div class="flex pt-6 justify-end">
@@ -104,13 +106,13 @@
           <StepPanel v-slot="{ activateCallback }" value="2">
             <div class="flex flex-column gap-4">
               <div class="flex flex-column gap-2">
-                <label>年份</label>
+                <label>考試年份</label>
                 <DatePicker
                   v-model="form.academicYear"
                   view="year"
                   dateFormat="yy"
                   :showIcon="true"
-                  placeholder="選擇年份"
+                  placeholder="選擇考試年份"
                   class="w-full"
                   :maxDate="new Date()"
                   :minDate="new Date(2000, 0, 1)"
@@ -281,7 +283,7 @@
                   {{ getCategoryName(form.category) }}
                 </div>
                 <div>
-                  <strong>科目名稱：</strong>
+                  <strong>課程名稱：</strong>
                   {{ form.subject || '' }}
                 </div>
                 <div><strong>授課教授：</strong> {{ form.professor }}</div>
@@ -295,7 +297,7 @@
                 </div>
                 <div><strong>考試名稱：</strong> {{ form.filename }}</div>
                 <div>
-                  <strong>是否附解答：</strong>
+                  <strong>附解答：</strong>
                   {{ form.hasAnswers ? '是' : '否' }}
                 </div>
               </div>

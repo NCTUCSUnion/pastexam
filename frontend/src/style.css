@@ -26,6 +26,10 @@
   --code-meta: #6a737d;
   --code-deletion-bg: #ffeef0;
   --code-addition-bg: #e6ffed;
+
+  /* Scrollbar */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(120, 120, 120, 0.6);
 }
 
 .dark {
@@ -54,6 +58,10 @@
   --code-meta: #bfbfbf;
   --code-deletion-bg: rgba(255, 121, 198, 0.18);
   --code-addition-bg: rgba(80, 250, 123, 0.18);
+
+  /* Scrollbar */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(180, 180, 180, 0.55);
 }
 
 body {
@@ -78,5 +86,40 @@ body {
   }
   to {
     background-position: 300% 300%;
+  }
+}
+
+/* Global scrollbar styling (Windows/Chromium/Firefox) */
+* {
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+  scrollbar-width: thin;
+  scrollbar-color: transparent var(--scrollbar-track);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  *:hover {
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  *:hover::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
   }
 }
