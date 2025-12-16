@@ -498,7 +498,9 @@ function setBg() {
 
 .stat-card {
   min-width: 140px;
-  transition: all 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   backdrop-filter: blur(10px);
   opacity: 0;
   transform: translateY(-20px);
