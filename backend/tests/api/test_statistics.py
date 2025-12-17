@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import func, select
@@ -122,7 +122,9 @@ async def test_get_system_statistics_direct_success(session_maker):
         assert stats["success"] is True
         data = stats["data"]
 
-        total_users = await session.scalar(select(func.count(User.id)))
+        total_users = await session.scalar(
+            select(func.count(User.id)).where(User.deleted_at.is_(None))
+        )
         total_courses = await session.scalar(select(func.count(Course.id)))
         total_archives = await session.scalar(
             select(func.count(Archive.id)).where(Archive.deleted_at.is_(None))
@@ -154,6 +156,7 @@ async def test_get_system_statistics_direct_handles_exception(
     session_maker,
 ):
     async with session_maker() as session:
+
         async def boom(*args, **kwargs):
             raise RuntimeError("broken")
 

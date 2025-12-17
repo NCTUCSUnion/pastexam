@@ -1,9 +1,10 @@
-from typing import Optional, List
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
-from sqlmodel import SQLModel, Field, Relationship
+from typing import List, Optional
+
 from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, String, Text
+from sqlmodel import Field, Relationship, SQLModel
 
 
 class CourseCategory(str, PyEnum):
@@ -39,17 +40,14 @@ class User(SQLModel, table=True):
     password_hash: Optional[str] = Field(default=None)
     is_local: bool = Field(default=False)
     gemini_api_key: Optional[str] = Field(default=None)
+    deleted_at: Optional[datetime] = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     last_login: Optional[datetime] = Field(
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=True
-        )
+        sa_column=Column(DateTime(timezone=True), nullable=True)
     )
     last_logout: Optional[datetime] = Field(
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=True
-        )
+        sa_column=Column(DateTime(timezone=True), nullable=True)
     )
 
     archives: List["Archive"] = Relationship(back_populates="uploader")
@@ -61,10 +59,7 @@ class Course(SQLModel, table=True):
     name: str = Field(index=True)
     category: CourseCategory
     deleted_at: Optional[datetime] = Field(
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=True
-        )
+        sa_column=Column(DateTime(timezone=True), nullable=True)
     )
 
     archives: List["Archive"] = Relationship(back_populates="course")
@@ -93,21 +88,18 @@ class Archive(SQLModel, table=True):
         sa_column=Column(
             DateTime(timezone=True),
             default=lambda: datetime.now(timezone.utc),
-            nullable=False
+            nullable=False,
         )
     )
     updated_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
             default=lambda: datetime.now(timezone.utc),
-            nullable=False
+            nullable=False,
         )
     )
     deleted_at: Optional[datetime] = Field(
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=True
-        )
+        sa_column=Column(DateTime(timezone=True), nullable=True)
     )
 
 
@@ -125,30 +117,27 @@ class Notification(SQLModel, table=True):
     body: str = Field(sa_column=Column(Text, nullable=False))
     severity: NotificationSeverity = Field(default=NotificationSeverity.INFO)
     is_active: bool = Field(default=True)
+    deleted_at: Optional[datetime] = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     starts_at: Optional[datetime] = Field(
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=True
-        )
+        sa_column=Column(DateTime(timezone=True), nullable=True)
     )
     ends_at: Optional[datetime] = Field(
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=True
-        )
+        sa_column=Column(DateTime(timezone=True), nullable=True)
     )
     created_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
             default=lambda: datetime.now(timezone.utc),
-            nullable=False
+            nullable=False,
         )
     )
     updated_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
             default=lambda: datetime.now(timezone.utc),
-            nullable=False
+            nullable=False,
         )
     )
 

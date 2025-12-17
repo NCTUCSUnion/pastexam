@@ -4,13 +4,13 @@ import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
-from sqlmodel import select, func, SQLModel
 import yaml
+from sqlmodel import SQLModel, func, select
 
 from app.core.config import settings
-from app.models.models import User, Meme, Course, CourseCategory
+from app.db.session import AsyncSessionLocal, engine
+from app.models.models import Course, CourseCategory, Meme, User
 from app.utils.auth import get_password_hash
-from app.db.session import engine, AsyncSessionLocal
 
 SEED_DATA_PATH = Path(__file__).with_name("seed_data.yaml")
 
@@ -29,7 +29,7 @@ async def init_db():
             ["uv", "run", "alembic", "upgrade", "head"],
             cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             capture_output=True,
-            text=True
+            text=True,
         )
         if result.returncode != 0:
             print(f"Alembic migration failed: {result.stderr}")
@@ -52,23 +52,28 @@ async def init_db():
         )
         admin_user = result.scalar_one_or_none()
 
-        if not admin_user:
+        if admin_user and getattr(admin_user, "deleted_at", None) is not None:
+            admin_user.deleted_at = None
+            admin_user.password_hash = get_password_hash(
+                settings.DEFAULT_ADMIN_PASSWORD
+            )
+            admin_user.is_local = True
+            admin_user.is_admin = True
+            await session.commit()
+            await session.refresh(admin_user)
+        elif not admin_user:
             admin_user = User(
                 name=settings.DEFAULT_ADMIN_NAME,
                 email=settings.DEFAULT_ADMIN_EMAIL,
-                password_hash=get_password_hash(
-                    settings.DEFAULT_ADMIN_PASSWORD
-                ),
+                password_hash=get_password_hash(settings.DEFAULT_ADMIN_PASSWORD),
                 is_local=True,
-                is_admin=True
+                is_admin=True,
             )
             session.add(admin_user)
             await session.commit()
             await session.refresh(admin_user)
 
-        result = await session.execute(
-            select(func.count()).select_from(Course)
-        )
+        result = await session.execute(select(func.count()).select_from(Course))
         count = result.scalar()
         if count == 0:
             seed_data = load_seed_data()

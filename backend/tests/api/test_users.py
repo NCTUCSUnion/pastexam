@@ -38,9 +38,7 @@ async def test_admin_can_create_and_delete_user(client):
         assert created["email"] == payload["email"]
         assert created["name"] == payload["name"]
 
-        delete_response = await client.delete(
-            f"{ADMIN_PATH}/{created['id']}"
-        )
+        delete_response = await client.delete(f"{ADMIN_PATH}/{created['id']}")
         assert delete_response.status_code == 200
         assert delete_response.json()["detail"] == "User deleted successfully"
     finally:
@@ -500,9 +498,10 @@ async def test_delete_user_direct_not_found(session_maker):
 @pytest.mark.asyncio
 async def test_delete_user_direct_success(session_maker):
     async with session_maker() as session:
+        unique = uuid.uuid4().hex[:8]
         user = User(
-            name="delete-direct",
-            email="delete-direct@example.com",
+            name=f"delete-direct-{unique}",
+            email=f"delete-direct-{unique}@example.com",
             is_admin=False,
             is_local=True,
         )
@@ -518,4 +517,5 @@ async def test_delete_user_direct_success(session_maker):
         assert response["detail"] == "User deleted successfully"
 
         remaining = await session.get(User, user.id)
-        assert remaining is None
+        assert remaining is not None
+        assert remaining.deleted_at is not None
