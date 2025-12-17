@@ -1,15 +1,17 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
 from datetime import datetime, timezone
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from app.core.config import settings
-from app.models.models import UserRoles, User
-from app.db.session import get_session
-from sqlalchemy.orm import Session
+
 import redis
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.db.session import get_session
+from app.models.models import User, UserRoles
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 redis_client = redis.from_url(settings.REDIS_URL)
@@ -34,14 +36,14 @@ def is_token_blacklisted(token: str) -> bool:
     return result is not None
 
 
-async def authenticate_user(
-    name: str, password: str, db: AsyncSession
-) -> User | None:
+async def authenticate_user(name: str, password: str, db: AsyncSession) -> User | None:
     """
     Authenticate a local user with name and password.
     Returns None if authentication fails or if the user is not a local user.
     """
-    result = await db.execute(select(User).where(User.name == name))
+    result = await db.execute(
+        select(User).where(User.name == name, User.deleted_at.is_(None))
+    )
     user = result.scalar_one_or_none()
 
     if not user or not user.is_local:
@@ -57,7 +59,7 @@ async def authenticate_user(
 
 async def get_current_user(
     token: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
 ) -> UserRoles:
     """
     Extract user_id from Bearer <token> in header and verify user's admin
@@ -94,7 +96,9 @@ async def get_current_user(
         if user_id is None:
             raise credentials_exception
 
-        result = await db.execute(select(User).filter(User.id == user_id))
+        result = await db.execute(
+            select(User).where(User.id == user_id, User.deleted_at.is_(None))
+        )
         user = result.scalar_one_or_none()
         if not user:
             raise credentials_exception

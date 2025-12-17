@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends
-from sqlmodel import select, func
-from sqlmodel.ext.asyncio.session import AsyncSession
-from app.db.session import get_session
-from app.models.models import User, Course, Archive
 from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Depends
+from sqlmodel import func, select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.db.session import get_session
+from app.models.models import Archive, Course, User
 
 router = APIRouter()
 
@@ -12,7 +14,9 @@ router = APIRouter()
 async def get_system_statistics(db: AsyncSession = Depends(get_session)):
     """Get system-wide statistics"""
     try:
-        result = await db.execute(select(func.count(User.id)))
+        result = await db.execute(
+            select(func.count(User.id)).where(User.deleted_at.is_(None))
+        )
         total_users = result.scalar()
 
         result = await db.execute(select(func.count(Course.id)))
@@ -24,18 +28,18 @@ async def get_system_statistics(db: AsyncSession = Depends(get_session)):
         total_archives = result.scalar()
 
         result = await db.execute(
-            select(func.coalesce(func.sum(Archive.download_count), 0))
-            .where(Archive.deleted_at.is_(None))
+            select(func.coalesce(func.sum(Archive.download_count), 0)).where(
+                Archive.deleted_at.is_(None)
+            )
         )
         total_downloads = result.scalar()
 
         two_hours_ago = datetime.now(timezone.utc) - timedelta(hours=2)
         result = await db.execute(
-            select(func.count(User.id))
-            .where(
-                (User.last_login >= two_hours_ago) &
-                ((User.last_logout.is_(None)) |
-                 (User.last_logout < User.last_login))
+            select(func.count(User.id)).where(
+                User.deleted_at.is_(None),
+                (User.last_login >= two_hours_ago)
+                & ((User.last_logout.is_(None)) | (User.last_logout < User.last_login)),
             )
         )
         online_users = result.scalar()
@@ -44,8 +48,9 @@ async def get_system_statistics(db: AsyncSession = Depends(get_session)):
             hour=0, minute=0, second=0, microsecond=0
         )
         result = await db.execute(
-            select(func.count(User.id))
-            .where(User.last_login >= today_start)
+            select(func.count(User.id)).where(
+                User.deleted_at.is_(None), User.last_login >= today_start
+            )
         )
         active_today = result.scalar()
 
@@ -57,8 +62,8 @@ async def get_system_statistics(db: AsyncSession = Depends(get_session)):
                 "onlineUsers": online_users,
                 "totalArchives": total_archives,
                 "totalCourses": total_courses,
-                "activeToday": active_today
-            }
+                "activeToday": active_today,
+            },
         }
 
     except Exception as e:
@@ -72,6 +77,6 @@ async def get_system_statistics(db: AsyncSession = Depends(get_session)):
                 "onlineUsers": 0,
                 "totalArchives": 0,
                 "totalCourses": 0,
-                "activeToday": 0
-            }
+                "activeToday": 0,
+            },
         }

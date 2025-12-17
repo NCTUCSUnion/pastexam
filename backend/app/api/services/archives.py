@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile
+import io
+import os
+import uuid
+
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-import uuid
-import os
-import io
 
+from app.core.config import settings
 from app.db.session import get_session
-from app.models.models import User, Course, Archive, CourseCategory
+from app.models.models import Archive, Course, CourseCategory, User
 from app.utils.auth import get_current_user
 from app.utils.storage import get_minio_client
-from app.core.config import settings
 
 router = APIRouter()
 
@@ -25,42 +26,37 @@ async def upload_archive(
     filename: str = Form(...),
     academic_year: int = Form(...),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_session)
+    db: AsyncSession = Depends(get_session),
 ):
     """
     Upload a new archive and create course if not exists
     """
-    user_query = select(User).where(User.id == current_user.user_id)
+    user_query = select(User).where(
+        User.id == current_user.user_id, User.deleted_at.is_(None)
+    )
     user_result = await db.execute(user_query)
     user = user_result.scalar_one_or_none()
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     query = select(Course).where(
-        Course.name == subject,
-        Course.category == category,
-        Course.deleted_at.is_(None)
+        Course.name == subject, Course.category == category, Course.deleted_at.is_(None)
     )
     result = await db.execute(query)
     course = result.scalar_one_or_none()
 
     if not course:
-        course = Course(
-            name=subject,
-            category=category
-        )
+        course = Course(name=subject, category=category)
         db.add(course)
         await db.commit()
         await db.refresh(course)
 
-    if not file.filename.lower().endswith('.pdf'):
+    if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF files are allowed"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Only PDF files are allowed"
         )
 
     file_content = await file.read()
@@ -70,7 +66,7 @@ async def upload_archive(
     if file_size > max_size:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File size exceeds 10MB limit"
+            detail="File size exceeds 10MB limit",
         )
 
     _, file_extension = os.path.splitext(file.filename)
@@ -86,7 +82,7 @@ async def upload_archive(
             object_name=object_name,
             data=file_data,
             length=file_size,
-            content_type="application/pdf"
+            content_type="application/pdf",
         )
 
         archive = Archive(
@@ -97,7 +93,7 @@ async def upload_archive(
             has_answers=has_answers,
             object_name=object_name,
             academic_year=academic_year,
-            uploader_id=current_user.user_id
+            uploader_id=current_user.user_id,
         )
 
         db.add(archive)
@@ -114,12 +110,12 @@ async def upload_archive(
                 "archive_type": archive.archive_type,
                 "has_answers": archive.has_answers,
                 "created_at": archive.created_at,
-                "file_size": file_size
-            }
+                "file_size": file_size,
+            },
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload file: {str(e)}"
+            detail=f"Failed to upload file: {str(e)}",
         )
