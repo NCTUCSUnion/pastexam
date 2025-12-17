@@ -336,6 +336,12 @@
       @update:visible="showUploadPreview = $event"
       :previewUrl="uploadPreviewUrl"
       :title="form.file ? form.file.name : ''"
+      :academicYear="form.academicYear"
+      :archiveType="form.type || ''"
+      :courseName="typeof form.subject === 'string' ? form.subject : form.subject?.name || ''"
+      :professorName="
+        typeof form.professor === 'string' ? form.professor : form.professor?.name || ''
+      "
       :loading="uploadPreviewLoading"
       :error="uploadPreviewError"
       :showDownload="false"
