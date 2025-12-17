@@ -12,7 +12,7 @@
           @click="$emit('toggle-sidebar')"
         />
         <span
-          class="font-bold text-lg md:text-xl pl-2 title-text clickable-title flex align-items-center"
+          class="font-bold text-lg md:text-xl title-text clickable-title flex align-items-center"
           @click="handleTitleClick"
         >
           <img
@@ -836,7 +836,10 @@ export default {
 
 .clickable-title {
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transform: scale(1);
+  transform-origin: center center;
+  will-change: transform;
+  transition: transform 300ms ease-in-out !important;
 }
 
 .clickable-title:hover {
