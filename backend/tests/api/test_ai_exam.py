@@ -239,8 +239,7 @@ async def test_submit_generate_task_conflict_when_active_job(
             "/ai-exam/generate",
             json={"archive_ids": [1], "prompt": "Test"},
         )
-        assert response.status_code == 500
-        assert "active task" in response.json()["detail"]
+        assert response.status_code == 409
         assert "active task" in response.json()["detail"]
     finally:
         app.dependency_overrides.pop(get_current_user, None)

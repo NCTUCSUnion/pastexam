@@ -842,8 +842,8 @@ const taskStatusLabel = computed(() => {
   if (!status) return ''
 
   const map = {
-    pending: '等待處理中 ...',
-    in_progress: '生成中 ...',
+    pending: '等待處理中',
+    in_progress: '生成中',
   }
   return map[status] || `狀態：${status}`
 })
