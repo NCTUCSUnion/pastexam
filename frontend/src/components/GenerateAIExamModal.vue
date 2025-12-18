@@ -322,7 +322,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, inject } from 'vue'
+import { ref, computed, watch, inject, onBeforeUnmount } from 'vue'
 import { aiExamService, courseService } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
@@ -538,7 +538,111 @@ const goBackToProfessorSelection = () => {
   archiveTypeFilter.value = null
 }
 
-let pollInterval = null
+let taskWebSocket = null
+
+const closeTaskWebSocket = () => {
+  if (!taskWebSocket) return
+  try {
+    taskWebSocket.close()
+  } catch {
+    // ignore
+  }
+  taskWebSocket = null
+}
+
+const handleTaskStatusData = (statusData, context = {}) => {
+  if (statusData.status === 'complete') {
+    if (statusData.result && statusData.result.generated_content) {
+      result.value = statusData.result
+      currentStep.value = 'result'
+
+      toast.add({
+        severity: 'success',
+        summary: '生成成功',
+        detail: '模擬試題已成功生成',
+        life: 3000,
+      })
+
+      trackEvent(EVENTS.GENERATE_AI_EXAM, {
+        category: context.category || form.value.category || 'unknown',
+        courseName: context.courseName || form.value.course_name || 'unknown',
+        professor: context.professor || form.value.professor || 'unknown',
+        archivesUsed: statusData.result.archives_used?.length || 0,
+      })
+    } else {
+      clearTaskFromStorage()
+      errorMessage.value = '生成失敗，請稍後再試'
+      currentStep.value = 'error'
+
+      toast.add({
+        severity: 'error',
+        summary: '生成失敗',
+        detail: errorMessage.value,
+        life: 3000,
+      })
+    }
+    return true
+  }
+
+  if (statusData.status === 'failed' || statusData.status === 'not_found') {
+    clearTaskFromStorage()
+    errorMessage.value = '生成失敗，請稍後再試'
+    currentStep.value = 'error'
+
+    toast.add({
+      severity: 'error',
+      summary: '生成失敗',
+      detail: errorMessage.value,
+      life: 3000,
+    })
+    return true
+  }
+
+  return false
+}
+
+const startTaskWebSocketStream = (taskId, context = {}) => {
+  closeTaskWebSocket()
+
+  let finished = false
+  try {
+    taskWebSocket = aiExamService.openTaskStatusWebSocket(taskId)
+    if (!taskWebSocket) return false
+  } catch (e) {
+    console.error('Failed to create WebSocket:', e)
+    taskWebSocket = null
+    return false
+  }
+
+  taskWebSocket.onmessage = (event) => {
+    try {
+      const statusData = JSON.parse(event.data)
+      finished = handleTaskStatusData(statusData, context)
+      if (finished) {
+        closeTaskWebSocket()
+      }
+    } catch (e) {
+      console.error('Failed to parse WebSocket message:', e)
+    }
+  }
+
+  taskWebSocket.onerror = () => {
+    if (!finished && currentStep.value === 'generating') {
+      closeTaskWebSocket()
+      errorMessage.value = '連線中斷，請稍後再試'
+      currentStep.value = 'error'
+    }
+  }
+
+  taskWebSocket.onclose = () => {
+    if (!finished && currentStep.value === 'generating') {
+      errorMessage.value = '連線中斷，請稍後再試'
+      currentStep.value = 'error'
+    }
+  }
+
+  return true
+}
 
 const saveTaskToStorage = (taskId, displayInfo = {}) => {
   try {
@@ -579,78 +683,15 @@ const resumeTask = async (taskId) => {
   currentTaskId.value = taskId
   currentStep.value = 'generating'
 
-  pollInterval = setInterval(async () => {
-    try {
-      const { data: statusData } = await aiExamService.getTaskStatus(taskId)
-
-      if (statusData.status === 'complete') {
-        clearInterval(pollInterval)
-        pollInterval = null
-
-        if (statusData.result && statusData.result.generated_content) {
-          result.value = statusData.result
-          currentStep.value = 'result'
-
-          toast.add({
-            severity: 'success',
-            summary: '生成成功',
-            detail: '模擬試題已成功生成',
-            life: 3000,
-          })
-
-          trackEvent(EVENTS.GENERATE_AI_EXAM, {
-            category: form.value.category || 'resumed',
-            courseName: form.value.course_name || 'resumed',
-            professor: form.value.professor || 'resumed',
-            archivesUsed: statusData.result.archives_used.length,
-          })
-        } else {
-          clearTaskFromStorage()
-          errorMessage.value = '生成失敗，請稍後再試'
-          currentStep.value = 'error'
-
-          toast.add({
-            severity: 'error',
-            summary: '生成失敗',
-            detail: errorMessage.value,
-            life: 3000,
-          })
-        }
-      } else if (statusData.status === 'failed' || statusData.status === 'not_found') {
-        clearInterval(pollInterval)
-        pollInterval = null
-        clearTaskFromStorage()
-
-        errorMessage.value = '生成失敗，請稍後再試'
-        currentStep.value = 'error'
-
-        toast.add({
-          severity: 'error',
-          summary: '生成失敗',
-          detail: errorMessage.value,
-          life: 3000,
-        })
-      }
-    } catch (error) {
-      console.error('Error polling task status:', error)
-      clearInterval(pollInterval)
-      pollInterval = null
-      clearTaskFromStorage()
-
-      errorMessage.value = '服務暫時無法使用，請稍後再試'
-      currentStep.value = 'error'
-
-      if (isUnauthorizedError(error)) {
-        return
-      }
-      toast.add({
-        severity: 'error',
-        summary: '查詢失敗',
-        detail: errorMessage.value,
-        life: 3000,
-      })
-    }
-  }, 10000)
+  const started = startTaskWebSocketStream(taskId, {
+    category: form.value.category || 'resumed',
+    courseName: form.value.course_name || 'resumed',
+    professor: form.value.professor || 'resumed',
+  })
+  if (!started) {
+    errorMessage.value = '無法建立即時連線，請稍後再試'
+    currentStep.value = 'error'
+  }
 }
 
 const generateExam = async () => {
@@ -672,78 +713,15 @@ const generateExam = async () => {
       professor: form.value.professor,
     })
 
-    pollInterval = setInterval(async () => {
-      try {
-        const { data: statusData } = await aiExamService.getTaskStatus(taskId)
-
-        if (statusData.status === 'complete') {
-          clearInterval(pollInterval)
-          pollInterval = null
-
-          if (statusData.result && statusData.result.generated_content) {
-            result.value = statusData.result
-            currentStep.value = 'result'
-
-            toast.add({
-              severity: 'success',
-              summary: '生成成功',
-              detail: '模擬試題已成功生成',
-              life: 3000,
-            })
-
-            trackEvent(EVENTS.GENERATE_AI_EXAM, {
-              category: form.value.category,
-              courseName: form.value.course_name,
-              professor: form.value.professor,
-              archivesUsed: statusData.result.archives_used.length,
-            })
-          } else {
-            clearTaskFromStorage()
-            errorMessage.value = '生成失敗，請稍後再試'
-            currentStep.value = 'error'
-
-            toast.add({
-              severity: 'error',
-              summary: '生成失敗',
-              detail: errorMessage.value,
-              life: 3000,
-            })
-          }
-        } else if (statusData.status === 'failed' || statusData.status === 'not_found') {
-          clearInterval(pollInterval)
-          pollInterval = null
-          clearTaskFromStorage()
-
-          errorMessage.value = '生成失敗，請稍後再試'
-          currentStep.value = 'error'
-
-          toast.add({
-            severity: 'error',
-            summary: '生成失敗',
-            detail: errorMessage.value,
-            life: 3000,
-          })
-        }
-      } catch (error) {
-        console.error('Error polling task status:', error)
-        clearInterval(pollInterval)
-        pollInterval = null
-        clearTaskFromStorage()
-
-        errorMessage.value = '服務暫時無法使用，請稍後再試'
-        currentStep.value = 'error'
-
-        if (isUnauthorizedError(error)) {
-          return
-        }
-        toast.add({
-          severity: 'error',
-          summary: '查詢失敗',
-          detail: errorMessage.value,
-          life: 3000,
-        })
-      }
-    }, 10000)
+    const started = startTaskWebSocketStream(taskId, {
+      category: form.value.category,
+      courseName: form.value.course_name,
+      professor: form.value.professor,
+    })
+    if (!started) {
+      errorMessage.value = '無法建立即時連線，請稍後再試'
+      currentStep.value = 'error'
+    }
   } catch (error) {
     console.error('AI generation error:', error)
     clearTaskFromStorage()
@@ -851,51 +829,21 @@ watch(
       // Check for unfinished task when modal opens
       const savedTask = loadTaskFromStorage()
       if (savedTask && savedTask.taskId) {
-        try {
-          const { data: statusData } = await aiExamService.getTaskStatus(savedTask.taskId)
-
-          if (statusData.status === 'complete') {
-            if (statusData.result && statusData.result.generated_content) {
-              result.value = statusData.result
-              currentStep.value = 'result'
-              currentTaskId.value = savedTask.taskId
-
-              if (savedTask.displayInfo) {
-                if (savedTask.displayInfo.course_name)
-                  form.value.course_name = savedTask.displayInfo.course_name
-                if (savedTask.displayInfo.professor)
-                  form.value.professor = savedTask.displayInfo.professor
-              }
-            } else {
-              clearTaskFromStorage()
-              currentStep.value = 'selectProfessor'
-            }
-          } else if (statusData.status === 'pending' || statusData.status === 'in_progress') {
-            if (savedTask.displayInfo) {
-              if (savedTask.displayInfo.course_name)
-                form.value.course_name = savedTask.displayInfo.course_name
-              if (savedTask.displayInfo.professor)
-                form.value.professor = savedTask.displayInfo.professor
-            }
-            await resumeTask(savedTask.taskId)
-          } else {
-            clearTaskFromStorage()
-            currentStep.value = 'selectProfessor'
+        if (savedTask.displayInfo) {
+          if (savedTask.displayInfo.course_name) {
+            form.value.course_name = savedTask.displayInfo.course_name
           }
-        } catch (error) {
-          console.error('Failed to check saved task:', error)
-          clearTaskFromStorage()
-          currentStep.value = 'selectProfessor'
+          if (savedTask.displayInfo.professor) {
+            form.value.professor = savedTask.displayInfo.professor
+          }
         }
+        await resumeTask(savedTask.taskId)
       } else {
         // No saved task, go to professor selection
         currentStep.value = 'selectProfessor'
       }
     } else {
-      if (pollInterval) {
-        clearInterval(pollInterval)
-        pollInterval = null
-      }
+      closeTaskWebSocket()
 
       // Reset form only if no task has started
       setTimeout(() => {
@@ -917,6 +865,10 @@ watch(
     }
   }
 )
+
+onBeforeUnmount(() => {
+  closeTaskWebSocket()
+})
 
 // API key helpers
 const loadApiKeyStatus = async () => {

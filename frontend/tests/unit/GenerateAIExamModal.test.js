@@ -8,7 +8,9 @@ const confirmRequireMock = vi.hoisted(() => vi.fn((options) => options.accept &&
 const unauthorizedHandlers = vi.hoisted(() => [])
 const clipboardWriteMock = vi.hoisted(() => vi.fn())
 const isUnauthorizedErrorMock = vi.hoisted(() => vi.fn(() => false))
+const webSocketInstances = vi.hoisted(() => [])
 let originalClipboard
+let originalWebSocket
 let consoleErrorSpy
 
 const coursesList = {
@@ -55,7 +57,9 @@ const taskResult = {
 const aiExamServiceMock = vi.hoisted(() => ({
   getApiKeyStatus: vi.fn(),
   generateMockExam: vi.fn(),
-  getTaskStatus: vi.fn(),
+  openTaskStatusWebSocket: vi.fn(
+    (taskId) => new WebSocket(`ws://localhost/api/ai-exam/ws/task/${taskId}`)
+  ),
   updateApiKey: vi.fn(),
   clearApiKey: vi.fn(),
 }))
@@ -125,6 +129,7 @@ describe('GenerateAIExamModal', () => {
     vi.useFakeTimers()
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     unauthorizedHandlers.length = 0
+    webSocketInstances.length = 0
     if (typeof navigator === 'undefined') {
       globalThis.navigator = { clipboard: { writeText: clipboardWriteMock } }
       originalClipboard = undefined
@@ -136,7 +141,6 @@ describe('GenerateAIExamModal', () => {
     clipboardWriteMock.mockResolvedValue()
     aiExamServiceMock.getApiKeyStatus.mockResolvedValue({ data: { has_api_key: false } })
     aiExamServiceMock.generateMockExam.mockResolvedValue({ data: { task_id: 'task-1' } })
-    aiExamServiceMock.getTaskStatus.mockResolvedValue({ data: taskResult })
     aiExamServiceMock.updateApiKey.mockResolvedValue({ data: { has_api_key: true } })
     aiExamServiceMock.clearApiKey.mockResolvedValue({})
     courseServiceMock.getCourseArchives.mockResolvedValue(archiveResponse)
@@ -145,6 +149,27 @@ describe('GenerateAIExamModal', () => {
     confirmRequireMock.mockClear()
     isUnauthorizedErrorMock.mockReturnValue(false)
     localStorage.clear()
+
+    originalWebSocket = globalThis.WebSocket
+    globalThis.WebSocket = vi.fn(function WebSocket(url) {
+      const socket = {
+        url,
+        onmessage: null,
+        onerror: null,
+        onclose: null,
+        close: vi.fn(() => {
+          socket.onclose?.()
+        }),
+        emitMessage(data) {
+          socket.onmessage?.({ data: JSON.stringify(data) })
+        },
+        emitError() {
+          socket.onerror?.()
+        },
+      }
+      webSocketInstances.push(socket)
+      return socket
+    })
   })
 
   afterEach(() => {
@@ -155,6 +180,7 @@ describe('GenerateAIExamModal', () => {
     if (typeof navigator !== 'undefined') {
       navigator.clipboard = originalClipboard
     }
+    globalThis.WebSocket = originalWebSocket
   })
 
   it('handles archive selection and task persistence helpers', async () => {
@@ -352,20 +378,12 @@ describe('GenerateAIExamModal', () => {
     wrapper.unmount()
   })
 
-  it('handles task lifecycle, polling, downloads, and regeneration helpers', async () => {
+  it('handles task lifecycle, downloads, and regeneration helpers', async () => {
     const appendSpy = vi.spyOn(document.body, 'appendChild')
     const removeSpy = vi.spyOn(document.body, 'removeChild')
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     const objectUrlSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock')
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockReturnValue()
-    let intervalFn
-    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation((fn) => {
-      intervalFn = fn
-      return 1
-    })
-    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval').mockImplementation(() => {
-      intervalFn = null
-    })
 
     const wrapper = mountModal()
     const vm = wrapper.vm
@@ -380,19 +398,18 @@ describe('GenerateAIExamModal', () => {
     vm.form.professor = 'Prof. Lin'
 
     aiExamServiceMock.generateMockExam.mockResolvedValueOnce({ data: { task_id: 'task-42' } })
-    aiExamServiceMock.getTaskStatus.mockResolvedValueOnce({ data: { status: 'pending' } })
-    aiExamServiceMock.getTaskStatus.mockResolvedValueOnce({ data: { status: 'in_progress' } })
-    aiExamServiceMock.getTaskStatus.mockResolvedValueOnce({ data: taskResult })
 
     await vm.generateExam()
     await flushPromises()
-    const firstPoll = intervalFn
-    expect(typeof firstPoll).toBe('function')
-    await firstPoll()
+    expect(webSocketInstances.length).toBe(1)
+    const socket = webSocketInstances[0]
+    expect(socket.url).toContain('ai-exam/ws/task/task-42')
+
+    socket.emitMessage({ status: 'pending' })
     await flushPromises()
-    await firstPoll()
-    await flushPromises()
-    await firstPoll()
+    expect(vm.currentStep).toBe('generating')
+
+    socket.emitMessage(taskResult)
     await flushPromises()
 
     expect(vm.currentStep).toBe('result')
@@ -437,24 +454,20 @@ describe('GenerateAIExamModal', () => {
     vm.selectedArchiveIds = ['arch-1']
     vm.currentStep = 'selectArchives'
     aiExamServiceMock.generateMockExam.mockResolvedValueOnce({ data: { task_id: 'task-fail' } })
-    aiExamServiceMock.getTaskStatus.mockResolvedValueOnce({ data: { status: 'failed' } })
     await vm.generateExam()
     await flushPromises()
-    const failPoll = intervalFn
-    expect(typeof failPoll).toBe('function')
-    await failPoll()
+    expect(webSocketInstances.length).toBe(2)
+    webSocketInstances[1].emitMessage({ status: 'failed' })
     await flushPromises()
     expect(vm.currentStep).toBe('error')
 
     vm.selectedArchiveIds = ['arch-1']
     vm.currentStep = 'selectArchives'
     aiExamServiceMock.generateMockExam.mockResolvedValueOnce({ data: { task_id: 'task-error' } })
-    aiExamServiceMock.getTaskStatus.mockRejectedValueOnce(new Error('poll error'))
     await vm.generateExam()
     await flushPromises()
-    const errorPoll = intervalFn
-    expect(typeof errorPoll).toBe('function')
-    await errorPoll()
+    expect(webSocketInstances.length).toBe(3)
+    webSocketInstances[2].emitError()
     await flushPromises()
     expect(vm.currentStep).toBe('error')
 
@@ -464,43 +477,21 @@ describe('GenerateAIExamModal', () => {
     clickSpy.mockRestore()
     objectUrlSpy.mockRestore()
     revokeSpy.mockRestore()
-    setIntervalSpy.mockRestore()
-    clearIntervalSpy.mockRestore()
   })
 
   it('resumes saved tasks and resets state on close', async () => {
     const wrapper = mountModal()
     const vm = wrapper.vm
 
-    let intervalFn
-    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation((fn) => {
-      intervalFn = fn
-      return 1
-    })
-    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval').mockImplementation(() => {
-      intervalFn = null
-    })
-
     vm.saveTaskToStorage('task-resume', {
       course_name: 'Calculus I',
       professor: 'Prof. Lin',
     })
 
-    aiExamServiceMock.getTaskStatus.mockResolvedValueOnce({
-      data: {
-        status: 'pending',
-        result: null,
-      },
-    })
-    aiExamServiceMock.getTaskStatus.mockResolvedValueOnce({ data: taskResult })
-
     await wrapper.setProps({ visible: true })
     await flushPromises()
-    const resumePoll = intervalFn
-    expect(typeof resumePoll).toBe('function')
-    await resumePoll()
-    await flushPromises()
-    await resumePoll()
+    expect(webSocketInstances.length).toBe(1)
+    webSocketInstances[0].emitMessage(taskResult)
     await flushPromises()
     expect(vm.currentStep).toBe('result')
 
@@ -510,19 +501,18 @@ describe('GenerateAIExamModal', () => {
     expect(vm.form.category).toBeNull()
     expect(vm.availableProfessors).toEqual([])
 
-    aiExamServiceMock.getTaskStatus.mockResolvedValueOnce({ data: { status: 'failed' } })
+    vm.saveTaskToStorage('task-resume-failed', {
+      course_name: 'Calculus I',
+      professor: 'Prof. Lin',
+    })
     await wrapper.setProps({ visible: true })
     await flushPromises()
-    expect(vm.currentStep).toBe('selectProfessor')
-
-    aiExamServiceMock.getTaskStatus.mockRejectedValueOnce(new Error('resume error'))
-    await wrapper.setProps({ visible: true })
+    expect(webSocketInstances.length).toBe(2)
+    webSocketInstances[1].emitMessage({ status: 'failed' })
     await flushPromises()
-    expect(vm.currentStep).toBe('selectProfessor')
+    expect(vm.currentStep).toBe('error')
 
     wrapper.unmount()
-    setIntervalSpy.mockRestore()
-    clearIntervalSpy.mockRestore()
   })
 
   it('covers clipboard errors and API key utilities', async () => {

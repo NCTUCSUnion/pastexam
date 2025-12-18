@@ -1,10 +1,13 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from arq.jobs import Job, JobStatus
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
+from jose import JWTError, jwt
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.session import get_session
 from app.models.models import (
     ApiKeyResponse,
@@ -14,7 +17,7 @@ from app.models.models import (
     TaskSubmitResponse,
     User,
 )
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, is_token_blacklisted
 
 # logger = logging.getLogger(__name__)
 # logger.setLevel(logging.INFO)
@@ -30,6 +33,150 @@ from app.utils.auth import get_current_user
 #     logger.addHandler(console_handler)
 
 router = APIRouter()
+
+
+async def _get_ws_user_id(websocket: WebSocket, db: AsyncSession) -> int | None:
+    auth_header = websocket.headers.get("authorization") or ""
+    token = None
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+
+    if not token:
+        token = websocket.query_params.get("token")
+
+    if not token:
+        return None
+
+    if is_token_blacklisted(token):
+        return None
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+
+        exp = payload.get("exp")
+        if exp is None or exp < datetime.now(timezone.utc).timestamp():
+            return None
+
+        user_id: int | None = payload.get("uid")
+        if user_id is None:
+            return None
+
+        user = await db.scalar(
+            select(User.id).where(User.id == user_id, User.deleted_at.is_(None))
+        )
+        return user
+    except JWTError:
+        return None
+
+
+@router.websocket("/ws/task/{task_id}")
+async def stream_task_status(
+    websocket: WebSocket, task_id: str, db: AsyncSession = Depends(get_session)
+):
+    await websocket.accept()
+
+    user_id = await _get_ws_user_id(websocket, db)
+    if not user_id:
+        await websocket.close(code=1008)
+        return
+
+    from app.worker import get_redis_pool
+
+    try:
+        redis = await get_redis_pool()
+
+        metadata_key = f"task_metadata:{task_id}"
+        metadata_str = await redis.get(metadata_key)
+        if not metadata_str:
+            await websocket.close(code=1008)
+            return
+
+        metadata = json.loads(metadata_str.decode("utf-8"))
+        if metadata.get("user_id") != user_id:
+            await websocket.close(code=1008)
+            return
+
+        job = Job(task_id, redis)
+        status_map = {
+            JobStatus.queued: "pending",
+            JobStatus.deferred: "pending",
+            JobStatus.in_progress: "in_progress",
+            JobStatus.complete: "complete",
+            JobStatus.not_found: "not_found",
+        }
+
+        job_status_enum = await job.status()
+        if job_status_enum is None:
+            job_status = "not_found"
+        else:
+            job_status = status_map.get(job_status_enum, "unknown")
+
+        response = TaskStatusResponse(
+            task_id=task_id,
+            status=job_status,
+            created_at=metadata.get("created_at"),
+        )
+
+        if job_status == "complete":
+            try:
+                result = await job.result()
+            except Exception:
+                result = None
+            response.result = result
+            response.completed_at = (
+                metadata.get("completed_at") or datetime.utcnow().isoformat()
+            )
+            await websocket.send_json(response.dict())
+            await websocket.close(code=1000)
+            return
+
+        await websocket.send_json(response.dict())
+
+        if job_status in {"not_found"}:
+            await websocket.close(code=1000)
+            return
+
+        try:
+            result = await job.result()
+        except Exception as e:
+            await websocket.send_json(
+                TaskStatusResponse(
+                    task_id=task_id,
+                    status="failed",
+                    created_at=metadata.get("created_at"),
+                    error=str(e),
+                ).dict()
+            )
+            await websocket.close(code=1011)
+            return
+
+        completed_at = datetime.utcnow().isoformat()
+        metadata["completed_at"] = completed_at
+        metadata["status"] = "complete"
+        await redis.set(
+            metadata_key,
+            json.dumps(metadata),
+            ex=86400,
+        )
+
+        await websocket.send_json(
+            TaskStatusResponse(
+                task_id=task_id,
+                status="complete",
+                created_at=metadata.get("created_at"),
+                completed_at=completed_at,
+                result=result,
+            ).dict()
+        )
+        await websocket.close(code=1000)
+        return
+    except Exception:
+        await websocket.close(code=1011)
+        return
 
 
 @router.post("/generate", response_model=TaskSubmitResponse)
@@ -119,138 +266,6 @@ async def submit_generate_task(
         )
 
 
-@router.get("/task/{task_id}", response_model=TaskStatusResponse)
-async def get_task_status(
-    task_id: str,
-    current_user: User = Depends(get_current_user),
-):
-    """Get task status"""
-    from arq.jobs import Job, JobStatus
-
-    from app.worker import get_redis_pool
-
-    try:
-        redis = await get_redis_pool()
-
-        metadata_key = f"task_metadata:{task_id}"
-        metadata_str = await redis.get(metadata_key)
-
-        if not metadata_str:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-            )
-
-        metadata = json.loads(metadata_str.decode("utf-8"))
-
-        if metadata["user_id"] != current_user.user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this task",
-            )
-
-        job = Job(task_id, redis)
-
-        job_status_enum = await job.status()
-        if job_status_enum is None:
-            job_status = "not_found"
-        else:
-            status_map = {
-                JobStatus.queued: "pending",
-                JobStatus.deferred: "pending",
-                JobStatus.in_progress: "in_progress",
-                JobStatus.complete: "complete",
-                JobStatus.not_found: "not_found",
-            }
-            job_status = status_map.get(job_status_enum, "unknown")
-
-        response = TaskStatusResponse(
-            task_id=task_id, status=job_status, created_at=metadata.get("created_at")
-        )
-
-        if job_status == "complete":
-            try:
-                result = await job.result()
-            except Exception:
-                result = None
-                # logger.warning(
-                #     f"[API] Job complete but result fetch failed: {e}"
-                # )
-            response.result = result
-            response.completed_at = (
-                metadata.get("completed_at") or datetime.utcnow().isoformat()
-            )
-
-        return response
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        # logger.error(f"[API] Failed to get task status: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get task status: {str(e)}",
-        )
-
-
-@router.get("/tasks")
-async def list_user_tasks(
-    current_user: User = Depends(get_current_user),
-):
-    """List all tasks for the current user"""
-    from arq.jobs import Job, JobStatus
-
-    from app.worker import get_redis_pool
-
-    try:
-        redis = await get_redis_pool()
-
-        tasks = []
-        async for key in redis.scan_iter(match="task_metadata:*"):
-            metadata_str = await redis.get(key)
-            if not metadata_str:
-                continue
-
-            metadata = json.loads(metadata_str.decode("utf-8"))
-            if metadata.get("user_id") != current_user.user_id:
-                continue
-
-            task_id = key.decode().replace("task_metadata:", "")
-            job = Job(task_id, redis)
-
-            job_status_enum = await job.status()
-            if job_status_enum is None:
-                job_status = "not_found"
-            else:
-                status_map = {
-                    JobStatus.queued: "pending",
-                    JobStatus.deferred: "pending",
-                    JobStatus.in_progress: "in_progress",
-                    JobStatus.complete: "complete",
-                    JobStatus.not_found: "not_found",
-                }
-                job_status = status_map.get(job_status_enum, "unknown")
-
-            tasks.append(
-                {
-                    "task_id": task_id,
-                    "status": job_status,
-                    "created_at": metadata.get("created_at"),
-                    "archive_ids": metadata.get("archive_ids", []),
-                }
-            )
-
-        tasks.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-
-        return {"tasks": tasks}
-
-    except Exception as e:
-        # logger.error(f"[API] Failed to list tasks: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list tasks: {str(e)}",
-        )
-
-
 @router.delete("/task/{task_id}")
 async def delete_task(
     task_id: str,
@@ -270,7 +285,7 @@ async def delete_task(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
 
-        metadata = json.loads(metadata_str)
+        metadata = json.loads(metadata_str.decode("utf-8"))
 
         if metadata["user_id"] != current_user.user_id:
             raise HTTPException(
