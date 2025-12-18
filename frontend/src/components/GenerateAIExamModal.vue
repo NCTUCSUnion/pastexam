@@ -5,10 +5,28 @@
       @update:visible="$emit('update:visible', $event)"
       :modal="true"
       :draggable="false"
-      header="AI 生成模擬試題"
       :style="{ width: '900px', maxWidth: '95vw' }"
       :autoFocus="false"
     >
+      <template #header>
+        <div class="flex align-items-center gap-3">
+          <i class="pi pi-sparkles text-2xl" />
+          <div class="flex flex-column">
+            <div class="text-xl leading-tight font-semibold">AI 生成模擬試題</div>
+            <div
+              v-if="headerMetaItems.length"
+              class="text-sm mt-1 flex flex-wrap gap-3"
+              style="color: var(--text-secondary)"
+            >
+              <span v-for="item in headerMetaItems" :key="item.key" class="flex align-items-center">
+                <i :class="`pi ${item.icon} mr-1`"></i>
+                {{ item.value }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
+
       <div
         v-if="currentStep === 'loading'"
         class="flex flex-column align-items-center justify-content-center p-6"
@@ -62,8 +80,6 @@
 
       <!-- Step 2: Select past exams -->
       <div v-else-if="currentStep === 'selectArchives'" class="flex flex-column gap-3">
-        <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
-
         <!-- Type filter -->
         <div class="field">
           <label for="archiveTypeFilter" class="block mb-2 font-semibold">考古題類型</label>
@@ -138,12 +154,8 @@
         class="flex flex-column align-items-center justify-content-center p-6"
       >
         <ProgressSpinner strokeWidth="4" />
-        <p class="mt-4 text-lg font-semibold">AI 正在分析考古題並生成模擬試題...</p>
+        <p class="mt-4 text-lg font-semibold">正在分析考古題並生成模擬試題 ...</p>
         <p class="text-sm text-500 mt-2">這可能需要 2-5 分鐘，您可以關閉視窗稍後再回來查看結果</p>
-        <div class="mt-4 text-center">
-          <p class="text-sm text-500">正在分析：</p>
-          <p class="font-semibold">{{ form.course_name }} - {{ form.professor }}</p>
-        </div>
       </div>
 
       <div
@@ -161,7 +173,6 @@
         class="flex flex-column gap-3"
         style="height: 70vh; overflow: hidden"
       >
-        <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
         <div class="p-3 surface-100 border-round">
           <div class="text-sm text-500 mb-2">使用的考古題</div>
           <div v-for="(archive, index) in result.archives_used" :key="index" class="text-sm mb-1">
@@ -375,6 +386,16 @@ const categoryOptions = [
   { name: '通識課程', value: 'general' },
 ]
 
+const headerMetaItems = computed(() => {
+  const courseName = (form.value.course_name || '').trim()
+  const professorName = (form.value.professor || '').trim()
+
+  return [
+    courseName ? { key: 'course', icon: 'pi-book', value: courseName } : null,
+    professorName ? { key: 'professor', icon: 'pi-user', value: professorName } : null,
+  ].filter(Boolean)
+})
+
 const archiveTypeMap = {
   midterm: '期中考',
   final: '期末考',
@@ -546,6 +567,7 @@ const goBackToProfessorSelection = () => {
 }
 
 let taskWebSocket = null
+let closeResetTimeoutId = null
 
 const closeTaskWebSocket = () => {
   if (!taskWebSocket) return
@@ -730,6 +752,27 @@ const clearTaskFromStorage = () => {
   }
 }
 
+const resetModalState = ({ keepTask = false } = {}) => {
+  if (!keepTask) {
+    clearTaskFromStorage()
+  }
+  currentStep.value = 'selectProfessor'
+  errorMessage.value = ''
+  result.value = null
+  selectedArchiveIds.value = []
+  availableArchives.value = []
+  archiveTypeFilter.value = null
+  currentTaskId.value = null
+  availableProfessors.value = []
+  form.value = {
+    category: null,
+    course_name: null,
+    professor: null,
+  }
+  showApiKeyModal.value = false
+  apiKeyForm.value.key = ''
+}
+
 const loadTaskFromStorage = () => {
   try {
     const stored = localStorage.getItem(TASK_STORAGE_KEY)
@@ -874,14 +917,7 @@ const downloadResult = () => {
 }
 
 const resetToSelect = () => {
-  clearTaskFromStorage()
-  currentStep.value = 'selectProfessor'
-  errorMessage.value = ''
-  result.value = null
-  selectedArchiveIds.value = []
-  availableArchives.value = []
-  archiveTypeFilter.value = null
-  currentTaskId.value = null
+  resetModalState({ keepTask: false })
 }
 
 const confirmRegenerate = () => {
@@ -900,6 +936,10 @@ watch(
   () => props.visible,
   async (newVal) => {
     if (newVal) {
+      if (closeResetTimeoutId) {
+        clearTimeout(closeResetTimeoutId)
+        closeResetTimeoutId = null
+      }
       // Load API key status
       loadApiKeyStatus()
 
@@ -929,13 +969,10 @@ watch(
     } else {
       closeTaskWebSocket()
 
-      setTimeout(() => {
-        if (currentStep.value === 'error') {
-          const savedTask = loadTaskFromStorage()
-          if (!savedTask?.taskId && !currentTaskId.value) {
-            resetToSelect()
-          }
-        }
+      closeResetTimeoutId = setTimeout(() => {
+        const savedTask = loadTaskFromStorage()
+        const hasTask = Boolean(savedTask?.taskId || currentTaskId.value)
+        resetModalState({ keepTask: hasTask })
       }, 300)
     }
   }
