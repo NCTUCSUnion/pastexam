@@ -121,18 +121,13 @@
     <Dialog
       :visible="loginVisible"
       @update:visible="loginVisible = $event"
+      header="登入"
       :modal="true"
       :draggable="false"
       :closeOnEscape="false"
       :style="{ width: '350px', maxWidth: '85vw' }"
       :autoFocus="false"
     >
-      <template #header>
-        <div class="flex align-items-center gap-2.5">
-          <i class="pi pi-sign-in text-2xl" />
-          <div class="text-xl leading-tight font-semibold">登入</div>
-        </div>
-      </template>
       <div class="p-fluid w-full">
         <div class="field mt-2 w-full">
           <FloatLabel variant="on" class="w-full">
