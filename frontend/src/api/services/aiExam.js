@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, buildWebSocketUrl } from './client'
 
 export const aiExamService = {
   generateMockExam(params) {
@@ -9,12 +9,13 @@ export const aiExamService = {
     })
   },
 
-  getTaskStatus(taskId) {
-    return api.get(`/ai-exam/task/${taskId}`)
-  },
-
-  listTasks() {
-    return api.get('/ai-exam/tasks')
+  openTaskStatusWebSocket(taskId, { token } = {}) {
+    const authToken = token ?? sessionStorage.getItem('authToken')
+    const url = buildWebSocketUrl(`/ai-exam/ws/task/${taskId}`, {
+      queryParams: authToken ? { token: authToken } : {},
+    })
+    if (!url) return null
+    return new WebSocket(url)
   },
 
   deleteTask(taskId) {

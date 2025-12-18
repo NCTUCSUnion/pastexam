@@ -27,6 +27,7 @@ vi.mock('@/api/services/client', () => ({
     put: putMock,
     interceptors,
   },
+  buildWebSocketUrl: (path) => `ws://localhost${path}`,
 }))
 
 describe('API service wrappers', () => {
@@ -131,6 +132,11 @@ describe('API service wrappers', () => {
   it('ai exam service proxies', async () => {
     const params = { archive_ids: ['a1'], prompt: 'test', temperature: 0.9 }
     const taskId = 'task-1'
+    const originalWebSocket = globalThis.WebSocket
+    const webSocketMock = vi.fn(function WebSocket(url) {
+      return { url }
+    })
+    globalThis.WebSocket = webSocketMock
 
     aiExamService.generateMockExam(params)
     expect(postMock).toHaveBeenCalledWith('/ai-exam/generate', {
@@ -139,20 +145,22 @@ describe('API service wrappers', () => {
       temperature: params.temperature,
     })
 
-    aiExamService.getTaskStatus(taskId)
-    expect(getMock).toHaveBeenCalledWith(`/ai-exam/task/${taskId}`)
-
-    aiExamService.listTasks()
-    expect(getMock).toHaveBeenCalledWith('/ai-exam/tasks')
-
     aiExamService.deleteTask(taskId)
     expect(deleteMock).toHaveBeenCalledWith(`/ai-exam/task/${taskId}`)
+
+    const ws = aiExamService.openTaskStatusWebSocket(taskId)
+    expect(webSocketMock).toHaveBeenCalledWith(
+      expect.stringContaining(`/ai-exam/ws/task/${taskId}`)
+    )
+    expect(ws.url).toContain(`/ai-exam/ws/task/${taskId}`)
 
     aiExamService.getApiKeyStatus()
     expect(getMock).toHaveBeenCalledWith('/ai-exam/api-key')
 
     aiExamService.updateApiKey('secret')
     expect(putMock).toHaveBeenCalledWith('/ai-exam/api-key', { gemini_api_key: 'secret' })
+
+    globalThis.WebSocket = originalWebSocket
   })
 
   it('meme service proxies', () => {

@@ -13,9 +13,23 @@
     @hide="onHide"
   >
     <template #header>
-      <div class="flex align-items-center gap-2">
+      <div class="flex align-items-center gap-2.5">
         <i class="pi pi-file-pdf text-2xl" />
-        <span class="text-xl">{{ title }}</span>
+        <div class="flex flex-column">
+          <div class="text-xl leading-tight">
+            {{ title }}
+          </div>
+          <div
+            v-if="metaTextItems.length"
+            class="text-sm mt-1 flex flex-wrap gap-3"
+            style="color: var(--text-secondary)"
+          >
+            <span v-for="item in metaTextItems" :key="item.key" class="flex align-items-center">
+              <i :class="`pi ${item.icon} mr-1`"></i>
+              {{ item.value }}
+            </span>
+          </div>
+        </div>
       </div>
     </template>
 
@@ -87,6 +101,22 @@ const props = defineProps({
     type: String,
     default: '預覽文件',
   },
+  academicYear: {
+    type: [Number, String, Date],
+    default: null,
+  },
+  archiveType: {
+    type: String,
+    default: '',
+  },
+  courseName: {
+    type: String,
+    default: '',
+  },
+  professorName: {
+    type: String,
+    default: '',
+  },
   loading: {
     type: Boolean,
     default: false,
@@ -110,6 +140,37 @@ useUnauthorizedEvent(() => {
 const localVisible = computed({
   get: () => props.visible,
   set: (value) => emit('update:visible', value),
+})
+
+const archiveTypeLabel = computed(() => {
+  const archiveTypeKey = (props.archiveType || '').trim().toLowerCase()
+  const map = {
+    midterm: '期中考',
+    final: '期末考',
+    quiz: '小考',
+    other: '其他',
+  }
+  return map[archiveTypeKey] || (props.archiveType || '').trim()
+})
+
+const metaTextItems = computed(() => {
+  let year = ''
+  if (props.academicYear instanceof Date) {
+    year = String(props.academicYear.getFullYear())
+  } else if (props.academicYear !== null && props.academicYear !== undefined) {
+    year = String(props.academicYear).trim()
+  }
+
+  const courseName = (props.courseName || '').trim()
+  const professorName = (props.professorName || '').trim()
+  const typeLabel = (archiveTypeLabel.value || '').trim()
+
+  return [
+    year ? { key: 'year', icon: 'pi-calendar', value: year } : null,
+    courseName ? { key: 'course', icon: 'pi-book', value: courseName } : null,
+    professorName ? { key: 'professor', icon: 'pi-user', value: professorName } : null,
+    typeLabel ? { key: 'type', icon: 'pi-bookmark', value: typeLabel } : null,
+  ].filter(Boolean)
 })
 
 const downloading = ref(false)

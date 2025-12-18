@@ -1,17 +1,20 @@
+import asyncio
 import json
+import threading
 from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
+from fastapi.testclient import TestClient
 from httpx import AsyncClient
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.dml import Update
+from starlette.websockets import WebSocketDisconnect
 
+from app.api.services.ai_exam import JobStatus
 from app.main import app
 from app.models.models import User, UserRoles
 from app.utils.auth import get_current_user
-from app.api.services.ai_exam import JobStatus
 
 
 class FakeRedis:
@@ -21,6 +24,9 @@ class FakeRedis:
         self.enqueue_calls: list[tuple[str, dict]] = []
         self.job_statuses: dict[str, JobStatus | None] = {}
         self.results: dict[str, dict] = {}
+        self.streams: dict[str, list[tuple[str, dict[bytes, bytes]]]] = {}
+        self.stream_events: dict[str, threading.Event] = {}
+        self.stream_seq = 0
 
     async def scan_iter(self, match: str | None = None):
         prefix = None
@@ -59,6 +65,67 @@ class FakeRedis:
         self.metadata.pop(key_bytes, None)
         self.expirations.pop(key_bytes, None)
         return 1
+
+    async def xadd(
+        self,
+        name: str,
+        fields: dict,
+        maxlen: int | None = None,
+        approximate: bool = True,
+    ):
+        self.stream_seq += 1
+        entry_id = f"{self.stream_seq}-0"
+        encoded: dict[bytes, bytes] = {}
+        for k, v in fields.items():
+            key_b = k if isinstance(k, bytes) else str(k).encode("utf-8")
+            val_b = v if isinstance(v, bytes) else str(v).encode("utf-8")
+            encoded[key_b] = val_b
+
+        stream = self.streams.setdefault(name, [])
+        stream.append((entry_id, encoded))
+        if maxlen and len(stream) > maxlen:
+            self.streams[name] = stream[-maxlen:]
+
+        event = self.stream_events.setdefault(name, threading.Event())
+        event.set()
+        return entry_id
+
+    async def xread(
+        self, streams: dict, count: int | None = None, block: int | None = None
+    ):
+        (name, last_id) = next(iter(streams.items()))
+
+        def parse_id(val: str) -> int:
+            try:
+                return int(str(val).split("-", 1)[0])
+            except Exception:
+                return 0
+
+        last_num = parse_id(last_id)
+
+        def get_entries():
+            out = []
+            for entry_id, fields in self.streams.get(name, []):
+                if parse_id(entry_id) > last_num:
+                    out.append((entry_id, fields))
+            return out
+
+        entries = get_entries()
+        if not entries and block:
+            event = self.stream_events.setdefault(name, threading.Event())
+            event.clear()
+            await asyncio.to_thread(event.wait, block / 1000.0)
+            entries = get_entries()
+
+        if count:
+            entries = entries[:count]
+
+        if not entries:
+            return []
+        return [(name, entries)]
+
+    async def expire(self, _key: str, _seconds: int):
+        return True
 
 
 class FakeJob:
@@ -141,9 +208,7 @@ async def test_submit_generate_task_enqueues_job(
 
         metadata_key = f"task_metadata:{task_id}".encode("utf-8")
         assert metadata_key in fake_redis.metadata
-        metadata = json.loads(
-            fake_redis.metadata[metadata_key].decode("utf-8")
-        )
+        metadata = json.loads(fake_redis.metadata[metadata_key].decode("utf-8"))
         assert metadata["user_id"] == user.id
         assert metadata["archive_ids"] == [1, 2]
         assert metadata["status"] == "pending"
@@ -211,13 +276,12 @@ async def test_get_task_status_returns_result(
     client: AsyncClient,
     make_user,
     fake_redis: FakeRedis,
+    monkeypatch,
 ):
     user = await make_user()
 
-    async def fake_get_current_user():
-        return UserRoles(user_id=user.id, is_admin=False)
-
-    app.dependency_overrides[get_current_user] = fake_get_current_user
+    async def fake_ws_user_id(websocket, db):
+        return user.id
 
     task_id = "task-123"
     created_at = datetime.utcnow().isoformat()
@@ -234,15 +298,13 @@ async def test_get_task_status_returns_result(
         ex=86400,
     )
     fake_redis.job_statuses[task_id] = JobStatus.complete
-    fake_redis.results[task_id] = {
-        "success": True,
-        "generated_content": "Example",
-    }
+    fake_redis.results[task_id] = {"success": True, "generated_content": "Example"}
 
     try:
-        response = await client.get(f"/ai-exam/task/{task_id}")
-        assert response.status_code == 200, response.json()
-        body = response.json()
+        monkeypatch.setattr("app.api.services.ai_exam._get_ws_user_id", fake_ws_user_id)
+        with TestClient(app) as ws_client:
+            with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
+                body = ws.receive_json()
         assert body["task_id"] == task_id
         assert body["status"] == "complete"
         assert body["created_at"] == created_at
@@ -260,6 +322,7 @@ async def test_get_task_status_reports_not_found_when_job_missing(
     client: AsyncClient,
     make_user,
     fake_redis: FakeRedis,
+    monkeypatch,
 ):
     user = await make_user()
     task_id = "job-missing"
@@ -275,17 +338,68 @@ async def test_get_task_status_reports_not_found_when_job_missing(
     )
     fake_redis.job_statuses[task_id] = None
 
-    async def fake_get_current_user():
-        return UserRoles(user_id=user.id, is_admin=False)
-
-    app.dependency_overrides[get_current_user] = fake_get_current_user
+    async def fake_ws_user_id(websocket, db):
+        return user.id
 
     try:
-        response = await client.get(f"/ai-exam/task/{task_id}")
-        assert response.status_code == 200
-        assert response.json()["status"] == "not_found"
+        monkeypatch.setattr("app.api.services.ai_exam._get_ws_user_id", fake_ws_user_id)
+        with TestClient(app) as ws_client:
+            with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
+                body = ws.receive_json()
+        assert body["status"] == "not_found"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_task_status_stream_emits_in_progress_transition(
+    client: AsyncClient,
+    make_user,
+    fake_redis: FakeRedis,
+    monkeypatch,
+):
+    user = await make_user()
+
+    async def fake_ws_user_id(websocket, db):
+        return user.id
+
+    monkeypatch.setattr("app.api.services.ai_exam._get_ws_user_id", fake_ws_user_id)
+
+    task_id = "job-transition"
+    created_at = datetime.utcnow().isoformat()
+    await fake_redis.set(
+        f"task_metadata:{task_id}",
+        json.dumps({"user_id": user.id, "created_at": created_at}),
+    )
+
+    fake_redis.job_statuses[task_id] = JobStatus.queued
+
+    with TestClient(app) as ws_client:
+        with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
+            first = ws.receive_json()
+            assert first["status"] == "pending"
+
+            await fake_redis.xadd(
+                f"ai_exam:task_events:{task_id}",
+                {"status": "in_progress"},
+            )
+            second = ws.receive_json()
+            assert second["status"] == "in_progress"
+
+            fake_redis.job_statuses[task_id] = JobStatus.complete
+            fake_redis.results[task_id] = {
+                "success": True,
+                "generated_content": "Example",
+            }
+            await fake_redis.xadd(
+                f"ai_exam:task_events:{task_id}",
+                {
+                    "status": "complete",
+                },
+            )
+            final = ws.receive_json()
+            assert final["status"] == "complete"
+            assert final["result"]["generated_content"] == "Example"
 
 
 @pytest.mark.asyncio
@@ -304,21 +418,16 @@ async def test_get_task_status_handles_result_error(
         json.dumps({"user_id": user.id, "created_at": created_at}),
     )
     fake_redis.job_statuses[task_id] = JobStatus.complete
+    fake_redis.results[task_id] = None
 
-    async def failing_result(self):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(FakeJob, "result", failing_result, raising=False)
-
-    async def fake_get_current_user():
-        return UserRoles(user_id=user.id, is_admin=False)
-
-    app.dependency_overrides[get_current_user] = fake_get_current_user
+    async def fake_ws_user_id(websocket, db):
+        return user.id
 
     try:
-        response = await client.get(f"/ai-exam/task/{task_id}")
-        assert response.status_code == 200
-        body = response.json()
+        monkeypatch.setattr("app.api.services.ai_exam._get_ws_user_id", fake_ws_user_id)
+        with TestClient(app) as ws_client:
+            with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
+                body = ws.receive_json()
         assert body["status"] == "complete"
         assert body["result"] is None
         assert body["completed_at"] is not None
@@ -368,93 +477,12 @@ async def test_update_api_key_persists_value(
         body = response.json()
         assert body["has_api_key"] is True
         assert body["api_key_masked"] == f"****{new_key[-4:]}"
-        assert (
-            FakeClient.instances
-            and FakeClient.instances[0].api_key == new_key
-        )
+        assert FakeClient.instances and FakeClient.instances[0].api_key == new_key
         assert FakeClient.instances[0].models.calls
 
         async with session_maker() as session:
             refreshed = await session.get(User, user.id)
             assert refreshed.gemini_api_key == new_key
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
-
-
-@pytest.mark.asyncio
-async def test_list_user_tasks_returns_sorted_results(
-    client: AsyncClient,
-    make_user,
-    fake_redis: FakeRedis,
-):
-    user = await make_user()
-
-    async def fake_get_current_user():
-        return UserRoles(user_id=user.id, is_admin=False)
-
-    app.dependency_overrides[get_current_user] = fake_get_current_user
-
-    try:
-        earlier = datetime.utcnow().isoformat()
-        later = datetime.utcnow().isoformat()
-
-        await fake_redis.set(
-            "task_metadata:job-old",
-            {
-                "user_id": user.id,
-                "archive_ids": [1],
-                "created_at": earlier,
-            },
-        )
-        await fake_redis.set(
-            "task_metadata:job-new",
-            {
-                "user_id": user.id,
-                "archive_ids": [2],
-                "created_at": later,
-            },
-        )
-        fake_redis.job_statuses["job-old"] = JobStatus.in_progress
-        fake_redis.job_statuses["job-new"] = None
-
-        response = await client.get("/ai-exam/tasks")
-        assert response.status_code == 200
-        body = response.json()
-        tasks = body["tasks"]
-        assert [task["task_id"] for task in tasks] == ["job-new", "job-old"]
-        assert tasks[0]["status"] == "not_found"
-        assert tasks[1]["status"] == "in_progress"
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
-
-
-@pytest.mark.asyncio
-async def test_list_user_tasks_filters_out_irrelevant_entries(
-    client: AsyncClient,
-    make_user,
-    fake_redis: FakeRedis,
-):
-    user = await make_user()
-    fake_redis.metadata[b"task_metadata:empty"] = None
-    await fake_redis.set(
-        "task_metadata:foreign",
-        {
-            "user_id": user.id + 1,
-            "archive_ids": [99],
-            "created_at": datetime.utcnow().isoformat(),
-        },
-    )
-    fake_redis.job_statuses["foreign"] = JobStatus.complete
-
-    async def fake_get_current_user():
-        return UserRoles(user_id=user.id, is_admin=False)
-
-    app.dependency_overrides[get_current_user] = fake_get_current_user
-
-    try:
-        response = await client.get("/ai-exam/tasks")
-        assert response.status_code == 200
-        assert response.json()["tasks"] == []
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -483,10 +511,7 @@ async def test_delete_task_success(
         response = await client.delete(f"/ai-exam/task/{task_id}")
         assert response.status_code == 200
         assert response.json()["success"] is True
-        assert (
-            f"task_metadata:{task_id}".encode("utf-8")
-            not in fake_redis.metadata
-        )
+        assert f"task_metadata:{task_id}".encode("utf-8") not in fake_redis.metadata
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -538,16 +563,21 @@ async def test_get_task_status_not_found(
     client: AsyncClient,
     make_user,
     fake_redis: FakeRedis,
+    monkeypatch,
 ):
     user = await make_user()
 
-    async def fake_get_current_user():
-        return UserRoles(user_id=user.id, is_admin=False)
-
-    app.dependency_overrides[get_current_user] = fake_get_current_user
     try:
-        response = await client.get("/ai-exam/task/missing")
-        assert response.status_code == 404
+
+        async def fake_ws_user_id(websocket, db):
+            return user.id
+
+        monkeypatch.setattr("app.api.services.ai_exam._get_ws_user_id", fake_ws_user_id)
+        with TestClient(app) as ws_client:
+            with pytest.raises(WebSocketDisconnect) as exc:
+                with ws_client.websocket_connect("/ai-exam/ws/task/missing") as ws:
+                    ws.receive_json()
+        assert exc.value.code == 1008
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -557,6 +587,7 @@ async def test_get_task_status_forbidden(
     client: AsyncClient,
     make_user,
     fake_redis: FakeRedis,
+    monkeypatch,
 ):
     user = await make_user()
     await fake_redis.set(
@@ -564,13 +595,17 @@ async def test_get_task_status_forbidden(
         json.dumps({"user_id": user.id + 99}),
     )
 
-    async def fake_get_current_user():
-        return UserRoles(user_id=user.id, is_admin=False)
-
-    app.dependency_overrides[get_current_user] = fake_get_current_user
     try:
-        response = await client.get("/ai-exam/task/job-secret")
-        assert response.status_code == 403
+
+        async def fake_ws_user_id(websocket, db):
+            return user.id
+
+        monkeypatch.setattr("app.api.services.ai_exam._get_ws_user_id", fake_ws_user_id)
+        with TestClient(app) as ws_client:
+            with pytest.raises(WebSocketDisconnect) as exc:
+                with ws_client.websocket_connect("/ai-exam/ws/task/job-secret") as ws:
+                    ws.receive_json()
+        assert exc.value.code == 1008
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -586,39 +621,18 @@ async def test_get_task_status_handles_exception(
     async def raise_error():
         raise RuntimeError("boom")
 
-    async def fake_get_current_user():
-        return UserRoles(user_id=user.id, is_admin=False)
-
-    app.dependency_overrides[get_current_user] = fake_get_current_user
-    monkeypatch.setattr("app.worker.get_redis_pool", raise_error)
-
     try:
-        response = await client.get("/ai-exam/task/any")
-        assert response.status_code == 500
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
 
+        async def fake_ws_user_id(websocket, db):
+            return user.id
 
-@pytest.mark.asyncio
-async def test_list_user_tasks_handles_exception(
-    monkeypatch,
-    client,
-    make_user,
-):
-    user = await make_user()
-
-    async def raise_error():
-        raise RuntimeError("boom")
-
-    async def fake_get_current_user():
-        return UserRoles(user_id=user.id, is_admin=False)
-
-    app.dependency_overrides[get_current_user] = fake_get_current_user
-    monkeypatch.setattr("app.worker.get_redis_pool", raise_error)
-
-    try:
-        response = await client.get("/ai-exam/tasks")
-        assert response.status_code == 500
+        monkeypatch.setattr("app.api.services.ai_exam._get_ws_user_id", fake_ws_user_id)
+        monkeypatch.setattr("app.worker.get_redis_pool", raise_error)
+        with TestClient(app) as ws_client:
+            with pytest.raises(WebSocketDisconnect) as exc:
+                with ws_client.websocket_connect("/ai-exam/ws/task/any") as ws:
+                    ws.receive_json()
+        assert exc.value.code == 1011
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 

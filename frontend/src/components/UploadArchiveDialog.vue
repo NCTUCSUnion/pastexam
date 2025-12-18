@@ -6,10 +6,16 @@
       :modal="true"
       :draggable="false"
       :closeOnEscape="false"
-      header="上傳考古題"
       :style="{ width: '700px', maxWidth: '90vw' }"
       :autoFocus="false"
+      :pt="{ root: { 'aria-label': '上傳考古題', 'aria-labelledby': null } }"
     >
+      <template #header>
+        <div class="flex align-items-center gap-2.5">
+          <i class="pi pi-cloud-upload text-2xl" />
+          <div class="text-xl leading-tight font-semibold">上傳考古題</div>
+        </div>
+      </template>
       <Stepper :value="uploadStep" @update:value="uploadStep = $event" linear>
         <StepList>
           <Step value="1">選擇課程</Step>
@@ -96,7 +102,6 @@
               <Button
                 label="下一步"
                 icon="pi pi-arrow-right"
-                iconPos="right"
                 @click="activateCallback('2')"
                 :disabled="!canGoToStep2"
               />
@@ -182,7 +187,6 @@
               <Button
                 label="下一步"
                 icon="pi pi-arrow-right"
-                iconPos="right"
                 @click="activateCallback('3')"
                 :disabled="!canGoToStep3"
               />
@@ -268,7 +272,6 @@
               <Button
                 label="下一步"
                 icon="pi pi-arrow-right"
-                iconPos="right"
                 @click="activateCallback('4')"
                 :disabled="!form.file"
               />
@@ -336,6 +339,12 @@
       @update:visible="showUploadPreview = $event"
       :previewUrl="uploadPreviewUrl"
       :title="form.file ? form.file.name : ''"
+      :academicYear="form.academicYear"
+      :archiveType="form.type || ''"
+      :courseName="typeof form.subject === 'string' ? form.subject : form.subject?.name || ''"
+      :professorName="
+        typeof form.professor === 'string' ? form.professor : form.professor?.name || ''
+      "
       :loading="uploadPreviewLoading"
       :error="uploadPreviewError"
       :showDownload="false"

@@ -5,10 +5,29 @@
       @update:visible="$emit('update:visible', $event)"
       :modal="true"
       :draggable="false"
-      header="AI 生成模擬試題"
       :style="{ width: '900px', maxWidth: '95vw' }"
       :autoFocus="false"
+      :pt="{ root: { 'aria-label': 'AI 模擬試題', 'aria-labelledby': null } }"
     >
+      <template #header>
+        <div class="flex align-items-center gap-2.5">
+          <i class="pi pi-sparkles text-2xl" />
+          <div class="flex flex-column">
+            <div class="text-xl leading-tight font-semibold">AI 模擬試題</div>
+            <div
+              v-if="headerMetaItems.length"
+              class="text-sm mt-1 flex flex-wrap gap-3"
+              style="color: var(--text-secondary)"
+            >
+              <span v-for="item in headerMetaItems" :key="item.key" class="flex align-items-center">
+                <i :class="`pi ${item.icon} mr-1`"></i>
+                {{ item.value }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
+
       <div
         v-if="currentStep === 'loading'"
         class="flex flex-column align-items-center justify-content-center p-6"
@@ -62,8 +81,6 @@
 
       <!-- Step 2: Select past exams -->
       <div v-else-if="currentStep === 'selectArchives'" class="flex flex-column gap-3">
-        <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
-
         <!-- Type filter -->
         <div class="field">
           <label for="archiveTypeFilter" class="block mb-2 font-semibold">考古題類型</label>
@@ -138,11 +155,15 @@
         class="flex flex-column align-items-center justify-content-center p-6"
       >
         <ProgressSpinner strokeWidth="4" />
-        <p class="mt-4 text-lg font-semibold">AI 正在分析考古題並生成模擬試題...</p>
+        <p class="mt-4 text-lg font-semibold">正在分析考古題並生成模擬試題</p>
         <p class="text-sm text-500 mt-2">這可能需要 2-5 分鐘，您可以關閉視窗稍後再回來查看結果</p>
-        <div class="mt-4 text-center">
-          <p class="text-sm text-500">正在分析：</p>
-          <p class="font-semibold">{{ form.course_name }} - {{ form.professor }}</p>
+        <div
+          v-if="taskStatusLabel"
+          class="mt-4 flex align-items-center gap-2 text-sm"
+          style="color: var(--text-secondary)"
+        >
+          <i :class="`pi ${taskStatusIcon}`" />
+          <span>{{ taskStatusLabel }}</span>
         </div>
       </div>
 
@@ -156,8 +177,11 @@
       </div>
 
       <!-- Result step -->
-      <div v-else-if="currentStep === 'result'" class="flex flex-column gap-3">
-        <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
+      <div
+        v-else-if="currentStep === 'result'"
+        class="flex flex-column gap-3"
+        style="height: 70vh; overflow: hidden"
+      >
         <div class="p-3 surface-100 border-round">
           <div class="text-sm text-500 mb-2">使用的考古題</div>
           <div v-for="(archive, index) in result.archives_used" :key="index" class="text-sm mb-1">
@@ -169,7 +193,7 @@
 
         <Divider />
 
-        <div class="generated-content" style="max-height: 50vh; overflow-y: auto">
+        <div class="flex flex-column flex-1" style="min-height: 0">
           <div class="flex justify-content-between align-items-center mb-3">
             <div class="text-lg font-semibold">生成的模擬試題</div>
             <Button
@@ -180,7 +204,10 @@
               @click="copyContent"
             />
           </div>
-          <div class="whitespace-pre-wrap p-3 surface-50 border-round" style="line-height: 1.8">
+          <div
+            class="whitespace-pre-wrap p-3 surface-50 border-round flex-1"
+            style="line-height: 1.8; overflow-y: auto"
+          >
             {{ result.generated_content }}
           </div>
         </div>
@@ -252,13 +279,19 @@
       :visible="showApiKeyModal"
       @update:visible="handleApiKeyModalClose"
       :modal="true"
-      header="API Key 設定"
       :style="{ width: '500px' }"
       :draggable="false"
       :closable="true"
+      :pt="{ root: { 'aria-label': 'API Key 設定', 'aria-labelledby': null } }"
     >
+      <template #header>
+        <div class="flex align-items-center gap-2.5">
+          <i class="pi pi-key text-2xl" />
+          <div class="text-xl leading-tight font-semibold">API Key 設定</div>
+        </div>
+      </template>
       <div class="flex flex-column gap-4">
-        <div class="text-sm text-500">請設定您的 Google Gemini API Key 以使用 AI 生成功能</div>
+        <div class="text-sm text-500">請設定您的 Google Gemini API Key 以使用 AI 模擬試題功能</div>
 
         <div class="flex flex-column gap-2">
           <label class="font-semibold">API Key 狀態</label>
@@ -322,7 +355,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, inject } from 'vue'
+import { ref, computed, watch, inject, onBeforeUnmount } from 'vue'
 import { aiExamService, courseService } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
@@ -344,6 +377,7 @@ const result = ref(null)
 const availableArchives = ref([])
 const selectedArchiveIds = ref([])
 const currentTaskId = ref(null)
+const taskStatus = ref('')
 
 const showApiKeyModal = ref(false)
 const apiKeyStatus = ref({ has_api_key: false, api_key_masked: null })
@@ -367,6 +401,16 @@ const categoryOptions = [
   { name: '跨領域課程', value: 'interdisciplinary' },
   { name: '通識課程', value: 'general' },
 ]
+
+const headerMetaItems = computed(() => {
+  const courseName = (form.value.course_name || '').trim()
+  const professorName = (form.value.professor || '').trim()
+
+  return [
+    courseName ? { key: 'course', icon: 'pi-book', value: courseName } : null,
+    professorName ? { key: 'professor', icon: 'pi-user', value: professorName } : null,
+  ].filter(Boolean)
+})
 
 const archiveTypeMap = {
   midterm: '期中考',
@@ -538,7 +582,173 @@ const goBackToProfessorSelection = () => {
   archiveTypeFilter.value = null
 }
 
-let pollInterval = null
+let taskWebSocket = null
+let closeResetTimeoutId = null
+
+const closeTaskWebSocket = () => {
+  if (!taskWebSocket) return
+  try {
+    // Mark as intentional close so onclose/onerror won't flip UI to error.
+    taskWebSocket.__manualClose = true
+    taskWebSocket.close()
+  } catch {
+    // ignore
+  }
+  taskWebSocket = null
+}
+
+const handleTaskStatusData = (statusData, context = {}) => {
+  if (statusData.status === 'complete') {
+    if (statusData.result && statusData.result.generated_content) {
+      result.value = statusData.result
+      currentStep.value = 'result'
+
+      const taskId = statusData.task_id
+      if (!hasShownSuccessToastForTask(taskId)) {
+        toast.add({
+          severity: 'success',
+          summary: '生成成功',
+          detail: '模擬試題已成功生成',
+          life: 3000,
+        })
+
+        trackEvent(EVENTS.GENERATE_AI_EXAM, {
+          category: context.category || form.value.category || 'unknown',
+          courseName: context.courseName || form.value.course_name || 'unknown',
+          professor: context.professor || form.value.professor || 'unknown',
+          archivesUsed: statusData.result.archives_used?.length || 0,
+        })
+
+        updateTaskInStorage(taskId, { successToastShown: true })
+      }
+    } else {
+      errorMessage.value = '生成失敗，請稍後再試'
+      currentStep.value = 'error'
+
+      toast.add({
+        severity: 'error',
+        summary: '生成失敗',
+        detail: errorMessage.value,
+        life: 3000,
+      })
+    }
+    return true
+  }
+
+  if (statusData.status === 'failed' || statusData.status === 'not_found') {
+    clearTaskFromStorage()
+    currentTaskId.value = null
+    result.value = null
+    errorMessage.value = '生成失敗，請稍後再試'
+    currentStep.value = 'error'
+
+    toast.add({
+      severity: 'error',
+      summary: '生成失敗',
+      detail: errorMessage.value,
+      life: 3000,
+    })
+    return true
+  }
+
+  return false
+}
+
+const startTaskWebSocketStream = (taskId, context = {}) => {
+  closeTaskWebSocket()
+
+  let finished = false
+  try {
+    taskWebSocket = aiExamService.openTaskStatusWebSocket(taskId)
+    if (!taskWebSocket) return false
+  } catch (e) {
+    console.error('Failed to create WebSocket:', e)
+    taskWebSocket = null
+    return false
+  }
+
+  const socket = taskWebSocket
+
+  socket.onopen = () => {
+    taskStatus.value = 'pending'
+  }
+
+  socket.onmessage = (event) => {
+    try {
+      const statusData = JSON.parse(event.data)
+      if (!statusData || typeof statusData !== 'object') {
+        throw new Error('Invalid status payload: not an object')
+      }
+      if (!statusData.task_id) {
+        throw new Error('Invalid status payload: missing task_id')
+      }
+      if (statusData.task_id !== taskId) {
+        throw new Error(
+          `Invalid status payload: task_id mismatch (expected ${taskId}, got ${statusData.task_id})`
+        )
+      }
+      if (statusData.status) {
+        taskStatus.value = statusData.status
+      }
+      finished = handleTaskStatusData(statusData, context)
+      if (finished) {
+        closeTaskWebSocket()
+      }
+    } catch (e) {
+      console.error('Failed to parse WebSocket message:', e)
+      if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
+        closeTaskWebSocket()
+        clearTaskFromStorage()
+        currentTaskId.value = null
+        taskStatus.value = ''
+        errorMessage.value = '狀態更新格式錯誤或任務不一致，請稍後再試'
+        currentStep.value = 'error'
+        toast.add({
+          severity: 'error',
+          summary: '連線失敗',
+          detail: errorMessage.value,
+          life: 3000,
+        })
+      }
+    }
+  }
+
+  socket.onerror = () => {
+    if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
+      closeTaskWebSocket()
+      clearTaskFromStorage()
+      currentTaskId.value = null
+      taskStatus.value = ''
+      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
+      currentStep.value = 'error'
+      toast.add({
+        severity: 'error',
+        summary: '連線失敗',
+        detail: errorMessage.value,
+        life: 3000,
+      })
+    }
+  }
+
+  socket.onclose = () => {
+    if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
+      taskWebSocket = null
+      clearTaskFromStorage()
+      currentTaskId.value = null
+      taskStatus.value = ''
+      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
+      currentStep.value = 'error'
+      toast.add({
+        severity: 'error',
+        summary: '連線失敗',
+        detail: errorMessage.value,
+        life: 3000,
+      })
+    }
+  }
+
+  return true
+}
 
 const saveTaskToStorage = (taskId, displayInfo = {}) => {
   try {
@@ -548,10 +758,40 @@ const saveTaskToStorage = (taskId, displayInfo = {}) => {
         taskId,
         displayInfo, // Store only the presentation-ready fields
         timestamp: Date.now(),
+        successToastShown: false,
       })
     )
   } catch (e) {
     console.error('Failed to save task to storage:', e)
+  }
+}
+
+const updateTaskInStorage = (taskId, updates = {}) => {
+  try {
+    const stored = loadTaskFromStorage()
+    if (!stored || stored.taskId !== taskId) return
+
+    localStorage.setItem(
+      TASK_STORAGE_KEY,
+      JSON.stringify({
+        ...stored,
+        ...updates,
+        displayInfo: updates.displayInfo
+          ? { ...stored.displayInfo, ...updates.displayInfo }
+          : stored.displayInfo,
+      })
+    )
+  } catch (e) {
+    console.error('Failed to update task in storage:', e)
+  }
+}
+
+const hasShownSuccessToastForTask = (taskId) => {
+  try {
+    const stored = loadTaskFromStorage()
+    return Boolean(stored && stored.taskId === taskId && stored.successToastShown)
+  } catch {
+    return false
   }
 }
 
@@ -561,6 +801,28 @@ const clearTaskFromStorage = () => {
   } catch (e) {
     console.error('Failed to clear task from storage:', e)
   }
+}
+
+const resetModalState = ({ keepTask = false } = {}) => {
+  if (!keepTask) {
+    clearTaskFromStorage()
+  }
+  currentStep.value = 'selectProfessor'
+  errorMessage.value = ''
+  result.value = null
+  taskStatus.value = ''
+  selectedArchiveIds.value = []
+  availableArchives.value = []
+  archiveTypeFilter.value = null
+  currentTaskId.value = null
+  availableProfessors.value = []
+  form.value = {
+    category: null,
+    course_name: null,
+    professor: null,
+  }
+  showApiKeyModal.value = false
+  apiKeyForm.value.key = ''
 }
 
 const loadTaskFromStorage = () => {
@@ -575,82 +837,49 @@ const loadTaskFromStorage = () => {
   return null
 }
 
+const taskStatusLabel = computed(() => {
+  const status = (taskStatus.value || '').trim()
+  if (!status) return ''
+
+  const map = {
+    pending: '等待處理中 ...',
+    in_progress: '生成中 ...',
+  }
+  return map[status] || `狀態：${status}`
+})
+
+const taskStatusIcon = computed(() => {
+  const status = (taskStatus.value || '').trim()
+  const map = {
+    pending: 'pi-clock',
+    in_progress: 'pi-spin pi-sync',
+  }
+  return map[status] || 'pi-info-circle'
+})
+
 const resumeTask = async (taskId) => {
   currentTaskId.value = taskId
   currentStep.value = 'generating'
+  taskStatus.value = ''
 
-  pollInterval = setInterval(async () => {
-    try {
-      const { data: statusData } = await aiExamService.getTaskStatus(taskId)
-
-      if (statusData.status === 'complete') {
-        clearInterval(pollInterval)
-        pollInterval = null
-
-        if (statusData.result && statusData.result.generated_content) {
-          result.value = statusData.result
-          currentStep.value = 'result'
-
-          toast.add({
-            severity: 'success',
-            summary: '生成成功',
-            detail: '模擬試題已成功生成',
-            life: 3000,
-          })
-
-          trackEvent(EVENTS.GENERATE_AI_EXAM, {
-            category: form.value.category || 'resumed',
-            courseName: form.value.course_name || 'resumed',
-            professor: form.value.professor || 'resumed',
-            archivesUsed: statusData.result.archives_used.length,
-          })
-        } else {
-          clearTaskFromStorage()
-          errorMessage.value = '生成失敗，請稍後再試'
-          currentStep.value = 'error'
-
-          toast.add({
-            severity: 'error',
-            summary: '生成失敗',
-            detail: errorMessage.value,
-            life: 3000,
-          })
-        }
-      } else if (statusData.status === 'failed' || statusData.status === 'not_found') {
-        clearInterval(pollInterval)
-        pollInterval = null
-        clearTaskFromStorage()
-
-        errorMessage.value = '生成失敗，請稍後再試'
-        currentStep.value = 'error'
-
-        toast.add({
-          severity: 'error',
-          summary: '生成失敗',
-          detail: errorMessage.value,
-          life: 3000,
-        })
-      }
-    } catch (error) {
-      console.error('Error polling task status:', error)
-      clearInterval(pollInterval)
-      pollInterval = null
-      clearTaskFromStorage()
-
-      errorMessage.value = '服務暫時無法使用，請稍後再試'
-      currentStep.value = 'error'
-
-      if (isUnauthorizedError(error)) {
-        return
-      }
-      toast.add({
-        severity: 'error',
-        summary: '查詢失敗',
-        detail: errorMessage.value,
-        life: 3000,
-      })
-    }
-  }, 10000)
+  const started = startTaskWebSocketStream(taskId, {
+    category: form.value.category || 'resumed',
+    courseName: form.value.course_name || 'resumed',
+    professor: form.value.professor || 'resumed',
+  })
+  if (!started) {
+    clearTaskFromStorage()
+    currentTaskId.value = null
+    taskStatus.value = ''
+    errorMessage.value = '無法連接即時狀態服務，請稍後再試'
+    currentStep.value = 'error'
+    toast.add({
+      severity: 'error',
+      summary: '連線失敗',
+      detail: errorMessage.value,
+      life: 3000,
+    })
+  }
 }
 
 const generateExam = async () => {
@@ -658,6 +887,7 @@ const generateExam = async () => {
 
   clearTaskFromStorage()
   currentStep.value = 'generating'
+  taskStatus.value = ''
 
   try {
     const { data: taskData } = await aiExamService.generateMockExam({
@@ -672,78 +902,24 @@ const generateExam = async () => {
       professor: form.value.professor,
     })
 
-    pollInterval = setInterval(async () => {
-      try {
-        const { data: statusData } = await aiExamService.getTaskStatus(taskId)
-
-        if (statusData.status === 'complete') {
-          clearInterval(pollInterval)
-          pollInterval = null
-
-          if (statusData.result && statusData.result.generated_content) {
-            result.value = statusData.result
-            currentStep.value = 'result'
-
-            toast.add({
-              severity: 'success',
-              summary: '生成成功',
-              detail: '模擬試題已成功生成',
-              life: 3000,
-            })
-
-            trackEvent(EVENTS.GENERATE_AI_EXAM, {
-              category: form.value.category,
-              courseName: form.value.course_name,
-              professor: form.value.professor,
-              archivesUsed: statusData.result.archives_used.length,
-            })
-          } else {
-            clearTaskFromStorage()
-            errorMessage.value = '生成失敗，請稍後再試'
-            currentStep.value = 'error'
-
-            toast.add({
-              severity: 'error',
-              summary: '生成失敗',
-              detail: errorMessage.value,
-              life: 3000,
-            })
-          }
-        } else if (statusData.status === 'failed' || statusData.status === 'not_found') {
-          clearInterval(pollInterval)
-          pollInterval = null
-          clearTaskFromStorage()
-
-          errorMessage.value = '生成失敗，請稍後再試'
-          currentStep.value = 'error'
-
-          toast.add({
-            severity: 'error',
-            summary: '生成失敗',
-            detail: errorMessage.value,
-            life: 3000,
-          })
-        }
-      } catch (error) {
-        console.error('Error polling task status:', error)
-        clearInterval(pollInterval)
-        pollInterval = null
-        clearTaskFromStorage()
-
-        errorMessage.value = '服務暫時無法使用，請稍後再試'
-        currentStep.value = 'error'
-
-        if (isUnauthorizedError(error)) {
-          return
-        }
-        toast.add({
-          severity: 'error',
-          summary: '查詢失敗',
-          detail: errorMessage.value,
-          life: 3000,
-        })
-      }
-    }, 10000)
+    const started = startTaskWebSocketStream(taskId, {
+      category: form.value.category,
+      courseName: form.value.course_name,
+      professor: form.value.professor,
+    })
+    if (!started) {
+      clearTaskFromStorage()
+      currentTaskId.value = null
+      taskStatus.value = ''
+      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
+      currentStep.value = 'error'
+      toast.add({
+        severity: 'error',
+        summary: '連線失敗',
+        detail: errorMessage.value,
+        life: 3000,
+      })
+    }
   } catch (error) {
     console.error('AI generation error:', error)
     clearTaskFromStorage()
@@ -819,14 +995,7 @@ const downloadResult = () => {
 }
 
 const resetToSelect = () => {
-  clearTaskFromStorage()
-  currentStep.value = 'selectProfessor'
-  errorMessage.value = ''
-  result.value = null
-  selectedArchiveIds.value = []
-  availableArchives.value = []
-  archiveTypeFilter.value = null
-  currentTaskId.value = null
+  resetModalState({ keepTask: false })
 }
 
 const confirmRegenerate = () => {
@@ -845,78 +1014,51 @@ watch(
   () => props.visible,
   async (newVal) => {
     if (newVal) {
+      if (closeResetTimeoutId) {
+        clearTimeout(closeResetTimeoutId)
+        closeResetTimeoutId = null
+      }
       // Load API key status
       loadApiKeyStatus()
 
       // Check for unfinished task when modal opens
       const savedTask = loadTaskFromStorage()
       if (savedTask && savedTask.taskId) {
-        try {
-          const { data: statusData } = await aiExamService.getTaskStatus(savedTask.taskId)
-
-          if (statusData.status === 'complete') {
-            if (statusData.result && statusData.result.generated_content) {
-              result.value = statusData.result
-              currentStep.value = 'result'
-              currentTaskId.value = savedTask.taskId
-
-              if (savedTask.displayInfo) {
-                if (savedTask.displayInfo.course_name)
-                  form.value.course_name = savedTask.displayInfo.course_name
-                if (savedTask.displayInfo.professor)
-                  form.value.professor = savedTask.displayInfo.professor
-              }
-            } else {
-              clearTaskFromStorage()
-              currentStep.value = 'selectProfessor'
-            }
-          } else if (statusData.status === 'pending' || statusData.status === 'in_progress') {
-            if (savedTask.displayInfo) {
-              if (savedTask.displayInfo.course_name)
-                form.value.course_name = savedTask.displayInfo.course_name
-              if (savedTask.displayInfo.professor)
-                form.value.professor = savedTask.displayInfo.professor
-            }
-            await resumeTask(savedTask.taskId)
-          } else {
-            clearTaskFromStorage()
-            currentStep.value = 'selectProfessor'
-          }
-        } catch (error) {
-          console.error('Failed to check saved task:', error)
-          clearTaskFromStorage()
-          currentStep.value = 'selectProfessor'
+        if (
+          currentStep.value === 'result' &&
+          currentTaskId.value === savedTask.taskId &&
+          result.value
+        ) {
+          return
         }
+        if (savedTask.displayInfo) {
+          if (savedTask.displayInfo.course_name) {
+            form.value.course_name = savedTask.displayInfo.course_name
+          }
+          if (savedTask.displayInfo.professor) {
+            form.value.professor = savedTask.displayInfo.professor
+          }
+        }
+        await resumeTask(savedTask.taskId)
       } else {
         // No saved task, go to professor selection
         currentStep.value = 'selectProfessor'
       }
     } else {
-      if (pollInterval) {
-        clearInterval(pollInterval)
-        pollInterval = null
-      }
+      closeTaskWebSocket()
 
-      // Reset form only if no task has started
-      setTimeout(() => {
-        if (currentStep.value === 'selectProfessor' || currentStep.value === 'selectArchives') {
-          // Only reset form if still in selection phase (no task started)
-          form.value = {
-            category: null,
-            course_name: null,
-            professor: null,
-          }
-          availableProfessors.value = []
-          selectedArchiveIds.value = []
-          availableArchives.value = []
-          archiveTypeFilter.value = null
-          errorMessage.value = ''
-        }
-        // Don't reset currentTaskId and result if task has been started
+      closeResetTimeoutId = setTimeout(() => {
+        const savedTask = loadTaskFromStorage()
+        const hasTask = Boolean(savedTask?.taskId || currentTaskId.value)
+        resetModalState({ keepTask: hasTask })
       }, 300)
     }
   }
 )
+
+onBeforeUnmount(() => {
+  closeTaskWebSocket()
+})
 
 // API key helpers
 const loadApiKeyStatus = async () => {
