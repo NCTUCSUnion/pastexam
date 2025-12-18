@@ -156,7 +156,11 @@
       </div>
 
       <!-- Result step -->
-      <div v-else-if="currentStep === 'result'" class="flex flex-column gap-3">
+      <div
+        v-else-if="currentStep === 'result'"
+        class="flex flex-column gap-3"
+        style="height: 70vh; overflow: hidden"
+      >
         <div class="font-semibold">{{ form.course_name }} - {{ form.professor }}</div>
         <div class="p-3 surface-100 border-round">
           <div class="text-sm text-500 mb-2">使用的考古題</div>
@@ -169,7 +173,7 @@
 
         <Divider />
 
-        <div class="generated-content" style="max-height: 50vh; overflow-y: auto">
+        <div class="flex flex-column flex-1" style="min-height: 0">
           <div class="flex justify-content-between align-items-center mb-3">
             <div class="text-lg font-semibold">生成的模擬試題</div>
             <Button
@@ -180,7 +184,10 @@
               @click="copyContent"
             />
           </div>
-          <div class="whitespace-pre-wrap p-3 surface-50 border-round" style="line-height: 1.8">
+          <div
+            class="whitespace-pre-wrap p-3 surface-50 border-round flex-1"
+            style="line-height: 1.8; overflow-y: auto"
+          >
             {{ result.generated_content }}
           </div>
         </div>
@@ -237,10 +244,10 @@
             />
             <Button
               v-else-if="currentStep === 'error'"
-              label="重試"
+              :label="resumableTaskId ? '重新連線' : '重試'"
               icon="pi pi-refresh"
               severity="warning"
-              @click="resetToSelect"
+              @click="handleErrorPrimaryAction"
             />
           </div>
         </div>
@@ -543,6 +550,8 @@ let taskWebSocket = null
 const closeTaskWebSocket = () => {
   if (!taskWebSocket) return
   try {
+    // Mark as intentional close so onclose/onerror won't flip UI to error.
+    taskWebSocket.__manualClose = true
     taskWebSocket.close()
   } catch {
     // ignore
@@ -556,21 +565,25 @@ const handleTaskStatusData = (statusData, context = {}) => {
       result.value = statusData.result
       currentStep.value = 'result'
 
-      toast.add({
-        severity: 'success',
-        summary: '生成成功',
-        detail: '模擬試題已成功生成',
-        life: 3000,
-      })
+      const taskId = statusData.task_id
+      if (!hasShownSuccessToastForTask(taskId)) {
+        toast.add({
+          severity: 'success',
+          summary: '生成成功',
+          detail: '模擬試題已成功生成',
+          life: 3000,
+        })
 
-      trackEvent(EVENTS.GENERATE_AI_EXAM, {
-        category: context.category || form.value.category || 'unknown',
-        courseName: context.courseName || form.value.course_name || 'unknown',
-        professor: context.professor || form.value.professor || 'unknown',
-        archivesUsed: statusData.result.archives_used?.length || 0,
-      })
+        trackEvent(EVENTS.GENERATE_AI_EXAM, {
+          category: context.category || form.value.category || 'unknown',
+          courseName: context.courseName || form.value.course_name || 'unknown',
+          professor: context.professor || form.value.professor || 'unknown',
+          archivesUsed: statusData.result.archives_used?.length || 0,
+        })
+
+        updateTaskInStorage(taskId, { successToastShown: true })
+      }
     } else {
-      clearTaskFromStorage()
       errorMessage.value = '生成失敗，請稍後再試'
       currentStep.value = 'error'
 
@@ -586,6 +599,8 @@ const handleTaskStatusData = (statusData, context = {}) => {
 
   if (statusData.status === 'failed' || statusData.status === 'not_found') {
     clearTaskFromStorage()
+    currentTaskId.value = null
+    result.value = null
     errorMessage.value = '生成失敗，請稍後再試'
     currentStep.value = 'error'
 
@@ -614,28 +629,46 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
     return false
   }
 
-  taskWebSocket.onmessage = (event) => {
+  const socket = taskWebSocket
+
+  socket.onmessage = (event) => {
     try {
       const statusData = JSON.parse(event.data)
+      if (!statusData || typeof statusData !== 'object') {
+        throw new Error('Invalid status payload: not an object')
+      }
+      if (!statusData.task_id) {
+        throw new Error('Invalid status payload: missing task_id')
+      }
+      if (statusData.task_id !== taskId) {
+        throw new Error(
+          `Invalid status payload: task_id mismatch (expected ${taskId}, got ${statusData.task_id})`
+        )
+      }
       finished = handleTaskStatusData(statusData, context)
       if (finished) {
         closeTaskWebSocket()
       }
     } catch (e) {
       console.error('Failed to parse WebSocket message:', e)
+      if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
+        closeTaskWebSocket()
+        errorMessage.value = '狀態更新格式錯誤或任務不一致，請稍後再試'
+        currentStep.value = 'error'
+      }
     }
   }
 
-  taskWebSocket.onerror = () => {
-    if (!finished && currentStep.value === 'generating') {
+  socket.onerror = () => {
+    if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
       closeTaskWebSocket()
       errorMessage.value = '連線中斷，請稍後再試'
       currentStep.value = 'error'
     }
   }
 
-  taskWebSocket.onclose = () => {
-    if (!finished && currentStep.value === 'generating') {
+  socket.onclose = () => {
+    if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
       errorMessage.value = '連線中斷，請稍後再試'
       currentStep.value = 'error'
     }
@@ -652,10 +685,40 @@ const saveTaskToStorage = (taskId, displayInfo = {}) => {
         taskId,
         displayInfo, // Store only the presentation-ready fields
         timestamp: Date.now(),
+        successToastShown: false,
       })
     )
   } catch (e) {
     console.error('Failed to save task to storage:', e)
+  }
+}
+
+const updateTaskInStorage = (taskId, updates = {}) => {
+  try {
+    const stored = loadTaskFromStorage()
+    if (!stored || stored.taskId !== taskId) return
+
+    localStorage.setItem(
+      TASK_STORAGE_KEY,
+      JSON.stringify({
+        ...stored,
+        ...updates,
+        displayInfo: updates.displayInfo
+          ? { ...stored.displayInfo, ...updates.displayInfo }
+          : stored.displayInfo,
+      })
+    )
+  } catch (e) {
+    console.error('Failed to update task in storage:', e)
+  }
+}
+
+const hasShownSuccessToastForTask = (taskId) => {
+  try {
+    const stored = loadTaskFromStorage()
+    return Boolean(stored && stored.taskId === taskId && stored.successToastShown)
+  } catch {
+    return false
   }
 }
 
@@ -677,6 +740,20 @@ const loadTaskFromStorage = () => {
     console.error('Failed to load task from storage:', e)
   }
   return null
+}
+
+const resumableTaskId = computed(() => {
+  return currentTaskId.value || loadTaskFromStorage()?.taskId || null
+})
+
+const handleErrorPrimaryAction = async () => {
+  const taskId = resumableTaskId.value
+  if (taskId) {
+    errorMessage.value = ''
+    await resumeTask(taskId)
+    return
+  }
+  resetToSelect()
 }
 
 const resumeTask = async (taskId) => {
@@ -829,6 +906,13 @@ watch(
       // Check for unfinished task when modal opens
       const savedTask = loadTaskFromStorage()
       if (savedTask && savedTask.taskId) {
+        if (
+          currentStep.value === 'result' &&
+          currentTaskId.value === savedTask.taskId &&
+          result.value
+        ) {
+          return
+        }
         if (savedTask.displayInfo) {
           if (savedTask.displayInfo.course_name) {
             form.value.course_name = savedTask.displayInfo.course_name
@@ -845,22 +929,13 @@ watch(
     } else {
       closeTaskWebSocket()
 
-      // Reset form only if no task has started
       setTimeout(() => {
-        if (currentStep.value === 'selectProfessor' || currentStep.value === 'selectArchives') {
-          // Only reset form if still in selection phase (no task started)
-          form.value = {
-            category: null,
-            course_name: null,
-            professor: null,
+        if (currentStep.value === 'error') {
+          const savedTask = loadTaskFromStorage()
+          if (!savedTask?.taskId && !currentTaskId.value) {
+            resetToSelect()
           }
-          availableProfessors.value = []
-          selectedArchiveIds.value = []
-          availableArchives.value = []
-          archiveTypeFilter.value = null
-          errorMessage.value = ''
         }
-        // Don't reset currentTaskId and result if task has been started
       }, 300)
     }
   }

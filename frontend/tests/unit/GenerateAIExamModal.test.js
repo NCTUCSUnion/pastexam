@@ -405,11 +405,11 @@ describe('GenerateAIExamModal', () => {
     const socket = webSocketInstances[0]
     expect(socket.url).toContain('ai-exam/ws/task/task-42')
 
-    socket.emitMessage({ status: 'pending' })
+    socket.emitMessage({ task_id: 'task-42', status: 'pending' })
     await flushPromises()
     expect(vm.currentStep).toBe('generating')
 
-    socket.emitMessage(taskResult)
+    socket.emitMessage({ task_id: 'task-42', ...taskResult })
     await flushPromises()
 
     expect(vm.currentStep).toBe('result')
@@ -457,7 +457,7 @@ describe('GenerateAIExamModal', () => {
     await vm.generateExam()
     await flushPromises()
     expect(webSocketInstances.length).toBe(2)
-    webSocketInstances[1].emitMessage({ status: 'failed' })
+    webSocketInstances[1].emitMessage({ task_id: 'task-fail', status: 'failed' })
     await flushPromises()
     expect(vm.currentStep).toBe('error')
 
@@ -491,7 +491,7 @@ describe('GenerateAIExamModal', () => {
     await wrapper.setProps({ visible: true })
     await flushPromises()
     expect(webSocketInstances.length).toBe(1)
-    webSocketInstances[0].emitMessage(taskResult)
+    webSocketInstances[0].emitMessage({ task_id: 'task-resume', ...taskResult })
     await flushPromises()
     expect(vm.currentStep).toBe('result')
 
@@ -508,7 +508,7 @@ describe('GenerateAIExamModal', () => {
     await wrapper.setProps({ visible: true })
     await flushPromises()
     expect(webSocketInstances.length).toBe(2)
-    webSocketInstances[1].emitMessage({ status: 'failed' })
+    webSocketInstances[1].emitMessage({ task_id: 'task-resume-failed', status: 'failed' })
     await flushPromises()
     expect(vm.currentStep).toBe('error')
 
