@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import datetime, timezone
 
@@ -33,6 +34,16 @@ from app.utils.auth import get_current_user, is_token_blacklisted
 #     logger.addHandler(console_handler)
 
 router = APIRouter()
+
+_STATUS_MAP = {
+    JobStatus.queued: "pending",
+    JobStatus.deferred: "pending",
+    JobStatus.in_progress: "in_progress",
+    JobStatus.complete: "complete",
+    JobStatus.not_found: "not_found",
+}
+
+TASK_EVENT_STREAM_BLOCK_MS = 5000
 
 
 async def _get_ws_user_id(websocket: WebSocket, db: AsyncSession) -> int | None:
@@ -100,20 +111,14 @@ async def stream_task_status(
             await websocket.close(code=1008)
             return
 
-        job = Job(task_id, redis)
-        status_map = {
-            JobStatus.queued: "pending",
-            JobStatus.deferred: "pending",
-            JobStatus.in_progress: "in_progress",
-            JobStatus.complete: "complete",
-            JobStatus.not_found: "not_found",
-        }
+        stream_key = f"ai_exam:task_events:{task_id}"
 
+        job = Job(task_id, redis)
         job_status_enum = await job.status()
         if job_status_enum is None:
             job_status = "not_found"
         else:
-            job_status = status_map.get(job_status_enum, "unknown")
+            job_status = _STATUS_MAP.get(job_status_enum, "unknown")
 
         response = TaskStatusResponse(
             task_id=task_id,
@@ -121,12 +126,44 @@ async def stream_task_status(
             created_at=metadata.get("created_at"),
         )
 
+        def _extract_status(fields):
+            if not isinstance(fields, dict):
+                return ""
+            status_raw = fields.get(b"status") or fields.get("status")
+            if isinstance(status_raw, bytes):
+                return status_raw.decode("utf-8", errors="ignore").strip()
+            return str(status_raw or "").strip()
+
+        def _extract_error(fields):
+            if not isinstance(fields, dict):
+                return None
+            error_raw = fields.get(b"error") or fields.get("error")
+            if isinstance(error_raw, bytes):
+                return error_raw.decode("utf-8", errors="ignore")
+            if error_raw is None:
+                return None
+            return str(error_raw)
+
+        async def _get_job_result():
+            last_err: Exception | None = None
+            for _ in range(5):
+                try:
+                    res = await job.result()
+                    if res is None:
+                        pass
+                    elif isinstance(res, dict):
+                        return res
+                    else:
+                        raise TypeError("Task result must be a dict")
+                except Exception as e:
+                    last_err = e
+                await asyncio.sleep(0.05)
+            if last_err:
+                raise last_err
+            return None
+
         if job_status == "complete":
-            try:
-                result = await job.result()
-            except Exception:
-                result = None
-            response.result = result
+            response.result = await _get_job_result()
             response.completed_at = (
                 metadata.get("completed_at") or datetime.utcnow().isoformat()
             )
@@ -140,40 +177,120 @@ async def stream_task_status(
             await websocket.close(code=1000)
             return
 
-        try:
-            result = await job.result()
-        except Exception as e:
-            await websocket.send_json(
-                TaskStatusResponse(
-                    task_id=task_id,
-                    status="failed",
-                    created_at=metadata.get("created_at"),
-                    error=str(e),
-                ).dict()
+        last_stream_id = "0-0"
+        last_sent_status = job_status
+
+        while True:
+            streams = await redis.xread(
+                {stream_key: last_stream_id},
+                count=10,
+                block=TASK_EVENT_STREAM_BLOCK_MS,
             )
-            await websocket.close(code=1011)
-            return
+            if not streams:
+                # Fallback: if stream events were not published for any reason,
+                # still keep the client updated by checking ARQ job status.
+                try:
+                    status_enum = await job.status()
+                    current_status = (
+                        "not_found"
+                        if status_enum is None
+                        else _STATUS_MAP.get(status_enum, "unknown")
+                    )
+                except Exception:
+                    current_status = last_sent_status
 
-        completed_at = datetime.utcnow().isoformat()
-        metadata["completed_at"] = completed_at
-        metadata["status"] = "complete"
-        await redis.set(
-            metadata_key,
-            json.dumps(metadata),
-            ex=86400,
-        )
+                if current_status and current_status != last_sent_status:
+                    last_sent_status = current_status
 
-        await websocket.send_json(
-            TaskStatusResponse(
-                task_id=task_id,
-                status="complete",
-                created_at=metadata.get("created_at"),
-                completed_at=completed_at,
-                result=result,
-            ).dict()
-        )
-        await websocket.close(code=1000)
-        return
+                    if current_status == "complete":
+                        result = await _get_job_result()
+                        completed_at = datetime.utcnow().isoformat()
+                        metadata["completed_at"] = completed_at
+                        metadata["status"] = "complete"
+                        await redis.set(
+                            metadata_key,
+                            json.dumps(metadata),
+                            ex=86400,
+                        )
+
+                        await websocket.send_json(
+                            TaskStatusResponse(
+                                task_id=task_id,
+                                status="complete",
+                                created_at=metadata.get("created_at"),
+                                completed_at=completed_at,
+                                result=result,
+                            ).dict()
+                        )
+                        await websocket.close(code=1000)
+                        return
+
+                    await websocket.send_json(
+                        TaskStatusResponse(
+                            task_id=task_id,
+                            status=current_status,
+                            created_at=metadata.get("created_at"),
+                        ).dict()
+                    )
+
+                continue
+
+            for _stream_name, entries in streams:
+                for entry_id, fields in entries:
+                    last_stream_id = entry_id
+
+                    status_value = _extract_status(fields)
+
+                    if not status_value or status_value == last_sent_status:
+                        continue
+                    last_sent_status = status_value
+
+                    if status_value == "failed":
+                        error_value = _extract_error(fields)
+
+                        await websocket.send_json(
+                            TaskStatusResponse(
+                                task_id=task_id,
+                                status="failed",
+                                created_at=metadata.get("created_at"),
+                                error=error_value,
+                            ).dict()
+                        )
+                        await websocket.close(code=1011)
+                        return
+
+                    if status_value != "complete":
+                        await websocket.send_json(
+                            TaskStatusResponse(
+                                task_id=task_id,
+                                status=status_value,
+                                created_at=metadata.get("created_at"),
+                            ).dict()
+                        )
+                        continue
+
+                    result = await _get_job_result()
+
+                    completed_at = datetime.utcnow().isoformat()
+                    metadata["completed_at"] = completed_at
+                    metadata["status"] = "complete"
+                    await redis.set(
+                        metadata_key,
+                        json.dumps(metadata),
+                        ex=86400,
+                    )
+
+                    await websocket.send_json(
+                        TaskStatusResponse(
+                            task_id=task_id,
+                            status="complete",
+                            created_at=metadata.get("created_at"),
+                            completed_at=completed_at,
+                            result=result,
+                        ).dict()
+                    )
+                    await websocket.close(code=1000)
+                    return
     except Exception:
         await websocket.close(code=1011)
         return

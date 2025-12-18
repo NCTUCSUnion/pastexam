@@ -1,4 +1,7 @@
 import io
+import json
+import logging
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
@@ -17,6 +20,7 @@ from app.utils.storage import get_minio_client
 
 # logging.basicConfig(level=logging.INFO)
 # logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 PROMPT_TEMPLATE_PATH = (
@@ -195,7 +199,37 @@ async def generate_ai_exam_task(ctx, task_data: dict):
     #     task_data.get("user_id"),
     # )
 
+    redis = None
+    task_id = None
+    if ctx is None:
+        redis = None
+        task_id = None
+    else:
+        if not isinstance(ctx, dict):
+            raise TypeError("ARQ ctx must be a dict")
+        if "redis" not in ctx or "job_id" not in ctx:
+            raise KeyError("ARQ ctx missing required keys: redis/job_id")
+        redis = ctx.get("redis")
+        task_id = ctx.get("job_id")
+        if isinstance(task_id, bytes):
+            task_id = task_id.decode("utf-8", errors="ignore")
+
+    async def publish_event(status: str, *, error: str | None = None):
+        if not redis or not task_id:
+            return
+        try:
+            fields = {"status": status, "ts": datetime.utcnow().isoformat()}
+            if error:
+                fields["error"] = error
+            stream_key = f"ai_exam:task_events:{task_id}"
+            await redis.xadd(stream_key, fields)
+            await redis.expire(stream_key, 86400)
+        except Exception:
+            # Event streaming is best-effort; do not fail the job if Redis Streams is unavailable.
+            logger.exception("Failed to publish ai_exam event (task_id=%s)", task_id)
+
     try:
+        await publish_event("in_progress")
         result = await generate_exam_content(
             archive_ids=task_data["archive_ids"],
             user_id=task_data["user_id"],
@@ -204,9 +238,11 @@ async def generate_ai_exam_task(ctx, task_data: dict):
         )
 
         # logger.info(f"[Worker] Task completed successfully")
+        await publish_event("complete")
         return result
 
-    except Exception:
+    except Exception as e:
+        await publish_event("failed", error=str(e))
         # logger.error(f"[Worker] Task failed: {str(e)}")
         raise
 

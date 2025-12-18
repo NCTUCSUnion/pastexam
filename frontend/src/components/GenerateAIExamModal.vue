@@ -154,8 +154,16 @@
         class="flex flex-column align-items-center justify-content-center p-6"
       >
         <ProgressSpinner strokeWidth="4" />
-        <p class="mt-4 text-lg font-semibold">正在分析考古題並生成模擬試題 ...</p>
+        <p class="mt-4 text-lg font-semibold">正在分析考古題並生成模擬試題</p>
         <p class="text-sm text-500 mt-2">這可能需要 2-5 分鐘，您可以關閉視窗稍後再回來查看結果</p>
+        <div
+          v-if="taskStatusLabel"
+          class="mt-4 flex align-items-center gap-2 text-sm"
+          style="color: var(--text-secondary)"
+        >
+          <i :class="`pi ${taskStatusIcon}`" />
+          <span>{{ taskStatusLabel }}</span>
+        </div>
       </div>
 
       <div
@@ -255,10 +263,10 @@
             />
             <Button
               v-else-if="currentStep === 'error'"
-              :label="resumableTaskId ? '重新連線' : '重試'"
+              label="重試"
               icon="pi pi-refresh"
               severity="warning"
-              @click="handleErrorPrimaryAction"
+              @click="resetToSelect"
             />
           </div>
         </div>
@@ -362,6 +370,7 @@ const result = ref(null)
 const availableArchives = ref([])
 const selectedArchiveIds = ref([])
 const currentTaskId = ref(null)
+const taskStatus = ref('')
 
 const showApiKeyModal = ref(false)
 const apiKeyStatus = ref({ has_api_key: false, api_key_masked: null })
@@ -653,6 +662,10 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
 
   const socket = taskWebSocket
 
+  socket.onopen = () => {
+    taskStatus.value = 'pending'
+  }
+
   socket.onmessage = (event) => {
     try {
       const statusData = JSON.parse(event.data)
@@ -667,6 +680,9 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
           `Invalid status payload: task_id mismatch (expected ${taskId}, got ${statusData.task_id})`
         )
       }
+      if (statusData.status) {
+        taskStatus.value = statusData.status
+      }
       finished = handleTaskStatusData(statusData, context)
       if (finished) {
         closeTaskWebSocket()
@@ -675,8 +691,17 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
       console.error('Failed to parse WebSocket message:', e)
       if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
         closeTaskWebSocket()
+        clearTaskFromStorage()
+        currentTaskId.value = null
+        taskStatus.value = ''
         errorMessage.value = '狀態更新格式錯誤或任務不一致，請稍後再試'
         currentStep.value = 'error'
+        toast.add({
+          severity: 'error',
+          summary: '連線失敗',
+          detail: errorMessage.value,
+          life: 3000,
+        })
       }
     }
   }
@@ -684,15 +709,34 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
   socket.onerror = () => {
     if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
       closeTaskWebSocket()
-      errorMessage.value = '連線中斷，請稍後再試'
+      clearTaskFromStorage()
+      currentTaskId.value = null
+      taskStatus.value = ''
+      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
       currentStep.value = 'error'
+      toast.add({
+        severity: 'error',
+        summary: '連線失敗',
+        detail: errorMessage.value,
+        life: 3000,
+      })
     }
   }
 
   socket.onclose = () => {
     if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
-      errorMessage.value = '連線中斷，請稍後再試'
+      taskWebSocket = null
+      clearTaskFromStorage()
+      currentTaskId.value = null
+      taskStatus.value = ''
+      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
       currentStep.value = 'error'
+      toast.add({
+        severity: 'error',
+        summary: '連線失敗',
+        detail: errorMessage.value,
+        life: 3000,
+      })
     }
   }
 
@@ -759,6 +803,7 @@ const resetModalState = ({ keepTask = false } = {}) => {
   currentStep.value = 'selectProfessor'
   errorMessage.value = ''
   result.value = null
+  taskStatus.value = ''
   selectedArchiveIds.value = []
   availableArchives.value = []
   archiveTypeFilter.value = null
@@ -785,23 +830,30 @@ const loadTaskFromStorage = () => {
   return null
 }
 
-const resumableTaskId = computed(() => {
-  return currentTaskId.value || loadTaskFromStorage()?.taskId || null
+const taskStatusLabel = computed(() => {
+  const status = (taskStatus.value || '').trim()
+  if (!status) return ''
+
+  const map = {
+    pending: '等待處理中 ...',
+    in_progress: '生成中 ...',
+  }
+  return map[status] || `狀態：${status}`
 })
 
-const handleErrorPrimaryAction = async () => {
-  const taskId = resumableTaskId.value
-  if (taskId) {
-    errorMessage.value = ''
-    await resumeTask(taskId)
-    return
+const taskStatusIcon = computed(() => {
+  const status = (taskStatus.value || '').trim()
+  const map = {
+    pending: 'pi-clock',
+    in_progress: 'pi-spin pi-sync',
   }
-  resetToSelect()
-}
+  return map[status] || 'pi-info-circle'
+})
 
 const resumeTask = async (taskId) => {
   currentTaskId.value = taskId
   currentStep.value = 'generating'
+  taskStatus.value = ''
 
   const started = startTaskWebSocketStream(taskId, {
     category: form.value.category || 'resumed',
@@ -809,8 +861,17 @@ const resumeTask = async (taskId) => {
     professor: form.value.professor || 'resumed',
   })
   if (!started) {
-    errorMessage.value = '無法建立即時連線，請稍後再試'
+    clearTaskFromStorage()
+    currentTaskId.value = null
+    taskStatus.value = ''
+    errorMessage.value = '無法連接即時狀態服務，請稍後再試'
     currentStep.value = 'error'
+    toast.add({
+      severity: 'error',
+      summary: '連線失敗',
+      detail: errorMessage.value,
+      life: 3000,
+    })
   }
 }
 
@@ -819,6 +880,7 @@ const generateExam = async () => {
 
   clearTaskFromStorage()
   currentStep.value = 'generating'
+  taskStatus.value = ''
 
   try {
     const { data: taskData } = await aiExamService.generateMockExam({
@@ -839,8 +901,17 @@ const generateExam = async () => {
       professor: form.value.professor,
     })
     if (!started) {
-      errorMessage.value = '無法建立即時連線，請稍後再試'
+      clearTaskFromStorage()
+      currentTaskId.value = null
+      taskStatus.value = ''
+      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
       currentStep.value = 'error'
+      toast.add({
+        severity: 'error',
+        summary: '連線失敗',
+        detail: errorMessage.value,
+        life: 3000,
+      })
     }
   } catch (error) {
     console.error('AI generation error:', error)
