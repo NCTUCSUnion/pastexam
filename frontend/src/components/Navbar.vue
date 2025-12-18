@@ -121,13 +121,18 @@
     <Dialog
       :visible="loginVisible"
       @update:visible="loginVisible = $event"
-      header="登入"
       :modal="true"
       :draggable="false"
       :closeOnEscape="false"
       :style="{ width: '350px', maxWidth: '85vw' }"
       :autoFocus="false"
     >
+      <template #header>
+        <div class="flex align-items-center gap-2.5">
+          <i class="pi pi-sign-in text-2xl" />
+          <div class="text-xl leading-tight font-semibold">登入</div>
+        </div>
+      </template>
       <div class="p-fluid w-full">
         <div class="field mt-2 w-full">
           <FloatLabel variant="on" class="w-full">
@@ -184,13 +189,18 @@
     <Dialog
       :visible="issueReportVisible"
       @update:visible="handleIssueReportDialogClose"
-      header="問題回報"
       :modal="true"
       :draggable="false"
       :closeOnEscape="true"
       :style="{ width: '700px', maxWidth: '90vw' }"
       class="issue-report-dialog"
     >
+      <template #header>
+        <div class="flex align-items-center gap-2.5">
+          <i class="pi pi-comments text-2xl" />
+          <div class="text-xl leading-tight font-semibold">問題回報</div>
+        </div>
+      </template>
       <div class="p-fluid w-full">
         <div class="field">
           <label for="issue-type" class="font-semibold">問題類型</label>

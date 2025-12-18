@@ -9,10 +9,10 @@
       :autoFocus="false"
     >
       <template #header>
-        <div class="flex align-items-center gap-3">
+        <div class="flex align-items-center gap-2.5">
           <i class="pi pi-sparkles text-2xl" />
           <div class="flex flex-column">
-            <div class="text-xl leading-tight font-semibold">AI 生成模擬試題</div>
+            <div class="text-xl leading-tight font-semibold">AI 模擬試題</div>
             <div
               v-if="headerMetaItems.length"
               class="text-sm mt-1 flex flex-wrap gap-3"
@@ -278,13 +278,18 @@
       :visible="showApiKeyModal"
       @update:visible="handleApiKeyModalClose"
       :modal="true"
-      header="API Key 設定"
       :style="{ width: '500px' }"
       :draggable="false"
       :closable="true"
     >
+      <template #header>
+        <div class="flex align-items-center gap-2.5">
+          <i class="pi pi-key text-2xl" />
+          <div class="text-xl leading-tight font-semibold">API Key 設定</div>
+        </div>
+      </template>
       <div class="flex flex-column gap-4">
-        <div class="text-sm text-500">請設定您的 Google Gemini API Key 以使用 AI 生成功能</div>
+        <div class="text-sm text-500">請設定您的 Google Gemini API Key 以使用 AI 模擬試題功能</div>
 
         <div class="flex flex-column gap-2">
           <label class="font-semibold">API Key 狀態</label>

@@ -6,9 +6,14 @@
       modal
       :style="{ width: '700px', maxWidth: '95vw' }"
       :draggable="false"
-      header="公告中心"
       :blockScroll="true"
     >
+      <template #header>
+        <div class="flex align-items-center gap-2.5">
+          <i class="pi pi-bell text-2xl" />
+          <div class="text-xl leading-tight font-semibold">公告中心</div>
+        </div>
+      </template>
       <div v-if="loading" class="flex justify-content-center py-5">
         <ProgressSpinner style="width: 40px; height: 40px" strokeWidth="4" />
       </div>
@@ -70,9 +75,14 @@
       modal
       :style="{ width: '520px', maxWidth: '90vw' }"
       :draggable="false"
-      header="公告內容"
       :blockScroll="true"
     >
+      <template #header>
+        <div class="flex align-items-center gap-2.5">
+          <i class="pi pi-info-circle text-2xl" />
+          <div class="text-xl leading-tight font-semibold">公告內容</div>
+        </div>
+      </template>
       <div v-if="selectedNotification" class="flex flex-column gap-3">
         <div class="flex justify-content-between align-items-start gap-3">
           <div class="flex flex-column gap-1">

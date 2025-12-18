@@ -13,7 +13,7 @@
     @hide="onHide"
   >
     <template #header>
-      <div class="flex align-items-center gap-3">
+      <div class="flex align-items-center gap-2.5">
         <i class="pi pi-file-pdf text-2xl" />
         <div class="flex flex-column">
           <div class="text-xl leading-tight">

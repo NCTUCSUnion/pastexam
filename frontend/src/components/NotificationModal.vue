@@ -6,9 +6,14 @@
     :style="{ width: '480px', maxWidth: '90vw' }"
     :draggable="false"
     :showHeader="true"
-    header="系統公告"
     :blockScroll="true"
   >
+    <template #header>
+      <div class="flex align-items-center gap-2.5">
+        <i class="pi pi-megaphone text-2xl" />
+        <div class="text-xl leading-tight font-semibold">系統公告</div>
+      </div>
+    </template>
     <div v-if="notification" class="flex flex-column gap-3">
       <div class="flex justify-content-between align-items-start gap-3">
         <div class="flex flex-column gap-1">
