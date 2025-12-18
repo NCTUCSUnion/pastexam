@@ -375,6 +375,8 @@ async def submit_generate_task(
             message="Task submitted, please check results later",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         # logger.error(f"[API] Failed to submit task: {str(e)}")
         raise HTTPException(
@@ -452,6 +454,8 @@ async def get_api_key_status(
             api_key_masked = f"****{user.gemini_api_key[-4:]}"
 
         return ApiKeyResponse(has_api_key=has_api_key, api_key_masked=api_key_masked)
+    except HTTPException:
+        raise
     except Exception as e:
         # logger.error(f"[API] Failed to get API key status: {str(e)}")
         raise HTTPException(
@@ -498,6 +502,8 @@ async def update_api_key(
             api_key_masked = f"****{user.gemini_api_key[-4:]}"
 
         return ApiKeyResponse(has_api_key=has_api_key, api_key_masked=api_key_masked)
+    except HTTPException:
+        raise
     except Exception as e:
         # logger.error(f"[API] Failed to update API key: {str(e)}")
 
