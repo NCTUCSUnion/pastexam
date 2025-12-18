@@ -7,6 +7,7 @@
       :style="{ width: '700px', maxWidth: '95vw' }"
       :draggable="false"
       :blockScroll="true"
+      :pt="{ root: { 'aria-label': '公告中心', 'aria-labelledby': null } }"
     >
       <template #header>
         <div class="flex align-items-center gap-2.5">
@@ -76,6 +77,7 @@
       :style="{ width: '520px', maxWidth: '90vw' }"
       :draggable="false"
       :blockScroll="true"
+      :pt="{ root: { 'aria-label': '公告內容', 'aria-labelledby': null } }"
     >
       <template #header>
         <div class="flex align-items-center gap-2.5">

@@ -7,6 +7,7 @@
       :draggable="false"
       :style="{ width: '900px', maxWidth: '95vw' }"
       :autoFocus="false"
+      :pt="{ root: { 'aria-label': 'AI 模擬試題', 'aria-labelledby': null } }"
     >
       <template #header>
         <div class="flex align-items-center gap-2.5">
@@ -281,6 +282,7 @@
       :style="{ width: '500px' }"
       :draggable="false"
       :closable="true"
+      :pt="{ root: { 'aria-label': 'API Key 設定', 'aria-labelledby': null } }"
     >
       <template #header>
         <div class="flex align-items-center gap-2.5">

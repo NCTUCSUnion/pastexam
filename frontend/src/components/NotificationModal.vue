@@ -7,6 +7,7 @@
     :draggable="false"
     :showHeader="true"
     :blockScroll="true"
+    :pt="{ root: { 'aria-label': '系統公告', 'aria-labelledby': null } }"
   >
     <template #header>
       <div class="flex align-items-center gap-2.5">

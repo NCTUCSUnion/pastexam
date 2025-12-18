@@ -8,6 +8,7 @@
       :closeOnEscape="false"
       :style="{ width: '700px', maxWidth: '90vw' }"
       :autoFocus="false"
+      :pt="{ root: { 'aria-label': '上傳考古題', 'aria-labelledby': null } }"
     >
       <template #header>
         <div class="flex align-items-center gap-2.5">
