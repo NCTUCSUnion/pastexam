@@ -102,7 +102,11 @@ api.interceptors.response.use(
       }
 
       if (router.currentRoute.value.path !== '/') {
-        router.push('/')
+        const navigate = typeof router.replace === 'function' ? router.replace : router.push
+        const result = navigate.call(router, '/')
+        result?.catch?.(() => {
+          window.location.href = '/'
+        })
       }
     }
     return Promise.reject(error)
