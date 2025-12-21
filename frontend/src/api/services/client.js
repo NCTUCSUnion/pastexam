@@ -6,6 +6,71 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
 let unauthorizedToastActive = false
 let unauthorizedToastTimer = null
 
+export const WS_UNAUTHORIZED_CLOSE_CODE = 4401
+
+export const handleUnauthorized = ({ redirect = true } = {}) => {
+  try {
+    sessionStorage.removeItem('authToken')
+    localStorage.removeItem('authToken')
+  } catch {
+    // ignore
+  }
+
+  const toast = getGlobalToast()
+  if (toast) {
+    if (!unauthorizedToastActive) {
+      unauthorizedToastActive = true
+      toast.add({
+        severity: 'warn',
+        summary: '登入階段已過期',
+        detail: '請重新登入。',
+        life: 3000,
+      })
+    }
+
+    clearTimeout(unauthorizedToastTimer)
+    unauthorizedToastTimer = setTimeout(() => {
+      unauthorizedToastActive = false
+    }, 1000)
+  }
+
+  try {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('app:unauthorized'))
+    }
+  } catch {
+    // ignore
+  }
+
+  if (!redirect) return
+  try {
+    if (router.currentRoute.value.path !== '/') {
+      const navigate = typeof router.replace === 'function' ? router.replace : router.push
+      const result = navigate.call(router, '/')
+      result?.catch?.(() => {
+        window.location.href = '/'
+      })
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export const bindUnauthorizedWebSocket = (ws) => {
+  if (!ws) return ws
+  if (ws.__pastexamUnauthorizedBound) return ws
+  ws.__pastexamUnauthorizedBound = true
+
+  if (typeof ws.addEventListener === 'function') {
+    ws.addEventListener('close', (event) => {
+      if (event?.code === WS_UNAUTHORIZED_CLOSE_CODE) {
+        handleUnauthorized()
+      }
+    })
+  }
+  return ws
+}
+
 export const api = axios.create({
   baseURL: apiBaseUrl,
   withCredentials: true,
@@ -76,34 +141,8 @@ api.interceptors.response.use(
     }
 
     if (status === 401) {
-      sessionStorage.removeItem('authToken')
       error.isUnauthorized = true
-
-      const toast = getGlobalToast()
-      if (toast) {
-        if (!unauthorizedToastActive) {
-          unauthorizedToastActive = true
-          toast.add({
-            severity: 'warn',
-            summary: '登入階段已過期',
-            detail: '請重新登入。',
-            life: 3000,
-          })
-        }
-
-        clearTimeout(unauthorizedToastTimer)
-        unauthorizedToastTimer = setTimeout(() => {
-          unauthorizedToastActive = false
-        }, 1000)
-      }
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('app:unauthorized'))
-      }
-
-      if (router.currentRoute.value.path !== '/') {
-        router.push('/')
-      }
+      handleUnauthorized()
     }
     return Promise.reject(error)
   }

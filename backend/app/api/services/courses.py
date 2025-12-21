@@ -33,7 +33,7 @@ from app.models.models import (
     UserRoles,
 )
 from app.utils.auth import get_current_user
-from app.utils.auth_ws import get_ws_user
+from app.utils.auth_ws import get_ws_token_payload
 from app.utils.storage import presigned_get_url
 
 router = APIRouter()
@@ -271,10 +271,25 @@ async def archive_discussion_ws(
 ):
     await websocket.accept()
 
-    user = await get_ws_user(websocket, db)
-    if not user:
-        await websocket.close(code=1008)
+    payload = await get_ws_token_payload(websocket)
+    if not payload:
+        await websocket.close(code=4401)
         return
+
+    user_id = payload.get("uid")
+    if not user_id:
+        await websocket.close(code=4401)
+        return
+
+    user = await db.scalar(
+        select(User).where(User.id == user_id, User.deleted_at.is_(None))
+    )
+    if not user:
+        await websocket.close(code=4401)
+        return
+
+    exp = payload.get("exp")
+    exp_ts = float(exp) if exp is not None else None
 
     try:
         await _ensure_archive_exists_for_discussion(course_id, archive_id, db)
@@ -295,6 +310,9 @@ async def archive_discussion_ws(
 
         while True:
             raw = await websocket.receive_text()
+            if exp_ts is not None and exp_ts < datetime.now(timezone.utc).timestamp():
+                await websocket.close(code=4401)
+                return
             try:
                 data = json.loads(raw)
             except Exception:

@@ -367,6 +367,7 @@
       @update:visible="showArchivePreview = $event"
       :courseId="selectedCourseId"
       :archiveId="archivePreviewMeta.archiveId"
+      :showDiscussion="false"
       :previewUrl="archivePreviewUrl"
       :title="archivePreviewMeta.title"
       :academicYear="archivePreviewMeta.academicYear"

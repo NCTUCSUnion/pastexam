@@ -363,12 +363,13 @@ async function connect() {
     scheduleReconnect()
   }
 
-  ws.onclose = () => {
+  ws.onclose = (event) => {
     if (seq !== connectSeq) return
     if (ws.__manualClose) return
     connected.value = false
     connecting.value = false
     loading.value = false
+    if (event?.code === 4401) return
     scheduleReconnect()
   }
 }

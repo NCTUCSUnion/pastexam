@@ -1,4 +1,4 @@
-import { api, buildWebSocketUrl } from './client'
+import { api, bindUnauthorizedWebSocket, buildWebSocketUrl } from './client'
 
 export const aiExamService = {
   generateMockExam(params) {
@@ -15,7 +15,7 @@ export const aiExamService = {
       queryParams: authToken ? { token: authToken } : {},
     })
     if (!url) return null
-    return new WebSocket(url)
+    return bindUnauthorizedWebSocket(new WebSocket(url))
   },
 
   deleteTask(taskId) {

@@ -134,6 +134,32 @@ describe('api client interceptors', () => {
     dispatchSpy.mockRestore()
   })
 
+  it('handles unauthorized websocket close code', async () => {
+    sessionStorage.setItem('authToken', 'token-xyz')
+    localStorage.setItem('authToken', 'token-xyz')
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
+    const { bindUnauthorizedWebSocket, WS_UNAUTHORIZED_CLOSE_CODE } =
+      await import('@/api/services/client.js')
+
+    const closeHandlers = []
+    const ws = {
+      addEventListener: vi.fn((type, handler) => {
+        if (type === 'close') closeHandlers.push(handler)
+      }),
+    }
+
+    bindUnauthorizedWebSocket(ws)
+    closeHandlers.forEach((handler) => handler({ code: WS_UNAUTHORIZED_CLOSE_CODE }))
+
+    expect(sessionStorage.getItem('authToken')).toBeNull()
+    expect(localStorage.getItem('authToken')).toBeNull()
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.any(CustomEvent))
+    expect(routerPushMock).toHaveBeenCalledWith('/')
+
+    dispatchSpy.mockRestore()
+  })
+
   it('does not redirect when already on root path', async () => {
     vi.resetModules()
     currentRouteMock = { value: { path: '/', fullPath: '/' } }

@@ -152,6 +152,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  showDiscussion: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const emit = defineEmits(['update:visible', 'hide', 'load', 'error', 'download'])
@@ -166,7 +170,9 @@ const localVisible = computed({
 })
 
 const isMaximized = ref(false)
-const discussionEnabled = computed(() => Boolean(props.courseId) && Boolean(props.archiveId))
+const discussionEnabled = computed(
+  () => props.showDiscussion && Boolean(props.courseId) && Boolean(props.archiveId)
+)
 
 const archiveTypeLabel = computed(() => {
   const archiveTypeKey = (props.archiveType || '').trim().toLowerCase()

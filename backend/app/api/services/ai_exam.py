@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from arq.jobs import Job, JobStatus
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
@@ -16,7 +16,7 @@ from app.models.models import (
     User,
 )
 from app.utils.auth import get_current_user
-from app.utils.auth_ws import get_ws_user_id
+from app.utils.auth_ws import get_ws_token_payload
 
 # logger = logging.getLogger(__name__)
 # logger.setLevel(logging.INFO)
@@ -50,10 +50,16 @@ async def stream_task_status(
 ):
     await websocket.accept()
 
-    user_id = await get_ws_user_id(websocket, db)
-    if not user_id:
-        await websocket.close(code=1008)
+    payload = await get_ws_token_payload(websocket)
+    if not payload:
+        await websocket.close(code=4401)
         return
+    user_id = payload.get("uid")
+    if not user_id:
+        await websocket.close(code=4401)
+        return
+    exp = payload.get("exp")
+    exp_ts = float(exp) if exp is not None else None
 
     from app.worker import get_redis_pool
 
@@ -141,6 +147,10 @@ async def stream_task_status(
         last_sent_status = job_status
 
         while True:
+            if exp_ts is not None and exp_ts < datetime.now(timezone.utc).timestamp():
+                await websocket.close(code=4401)
+                return
+
             streams = await redis.xread(
                 {stream_key: last_stream_id},
                 count=10,

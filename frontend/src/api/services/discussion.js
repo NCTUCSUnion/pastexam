@@ -1,4 +1,4 @@
-import { api, buildWebSocketUrl } from './client'
+import { api, bindUnauthorizedWebSocket, buildWebSocketUrl } from './client'
 
 export const discussionService = {
   listArchiveMessages(courseId, archiveId, { limit = 50, beforeId } = {}) {
@@ -20,6 +20,6 @@ export const discussionService = {
       queryParams: authToken ? { token: authToken } : {},
     })
     if (!url) return null
-    return new WebSocket(url)
+    return bindUnauthorizedWebSocket(new WebSocket(url))
   },
 }

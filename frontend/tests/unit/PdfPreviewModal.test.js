@@ -167,4 +167,50 @@ describe('PdfPreviewModal', () => {
 
     wrapper.unmount()
   })
+
+  it('can disable discussion panel explicitly', async () => {
+    const wrapper = mount(PdfPreviewModal, {
+      props: {
+        visible: true,
+        previewUrl: '',
+        courseId: 1,
+        archiveId: 2,
+        showDiscussion: false,
+      },
+      global: {
+        stubs: {
+          Dialog: stubComponent,
+          ProgressSpinner: stubComponent,
+          Button: stubComponent,
+          ArchiveDiscussionPanel: { template: '<div class="discussion-panel-stub"></div>' },
+        },
+      },
+    })
+
+    expect(wrapper.find('.discussion-panel-stub').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('renders discussion panel when enabled and ids present', async () => {
+    const wrapper = mount(PdfPreviewModal, {
+      props: {
+        visible: true,
+        previewUrl: '',
+        courseId: 1,
+        archiveId: 2,
+        showDiscussion: true,
+      },
+      global: {
+        stubs: {
+          Dialog: stubComponent,
+          ProgressSpinner: stubComponent,
+          Button: stubComponent,
+          ArchiveDiscussionPanel: { template: '<div class="discussion-panel-stub"></div>' },
+        },
+      },
+    })
+
+    expect(wrapper.find('.discussion-panel-stub').exists()).toBe(true)
+    wrapper.unmount()
+  })
 })
