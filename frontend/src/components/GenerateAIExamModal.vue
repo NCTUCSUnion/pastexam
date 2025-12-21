@@ -365,6 +365,7 @@
     </Dialog>
 
     <PdfPreviewModal
+      v-if="showArchivePreview"
       :visible="showArchivePreview"
       @update:visible="showArchivePreview = $event"
       :previewUrl="archivePreviewUrl"
@@ -383,12 +384,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, inject, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, inject, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import { aiExamService, courseService, archiveService } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 import { isUnauthorizedError } from '../utils/http'
-import PdfPreviewModal from './PdfPreviewModal.vue'
+
+const PdfPreviewModal = defineAsyncComponent(() => import('./PdfPreviewModal.vue'))
 
 const props = defineProps({
   visible: Boolean,
