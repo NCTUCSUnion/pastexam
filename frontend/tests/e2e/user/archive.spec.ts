@@ -111,6 +111,75 @@ test.describe('User › Archive browsing', () => {
       })
     })
 
+    await page.addInitScript(() => {
+      const OriginalWebSocket = window.WebSocket
+
+      class FakeDiscussionWebSocket {
+        static OPEN = 1
+        static CLOSED = 3
+
+        constructor(url) {
+          this.url = url
+          this.readyState = FakeDiscussionWebSocket.OPEN
+          this.onopen = null
+          this.onmessage = null
+          this.onerror = null
+          this.onclose = null
+          this.__listeners = {}
+
+          setTimeout(() => {
+            this.onopen?.()
+            this.__emit('open', {})
+
+            const history = { type: 'history', messages: [] }
+            const evt = { data: JSON.stringify(history) }
+            this.onmessage?.(evt)
+            this.__emit('message', evt)
+          }, 0)
+        }
+
+        addEventListener(type, handler) {
+          this.__listeners[type] = this.__listeners[type] || []
+          this.__listeners[type].push(handler)
+        }
+
+        removeEventListener(type, handler) {
+          const list = this.__listeners[type] || []
+          this.__listeners[type] = list.filter((h) => h !== handler)
+        }
+
+        __emit(type, event) {
+          ;(this.__listeners[type] || []).forEach((handler) => {
+            try {
+              handler(event)
+            } catch {
+              // ignore
+            }
+          })
+        }
+
+        send() {
+          // ignore in test
+        }
+
+        close(code = 1000) {
+          this.readyState = FakeDiscussionWebSocket.CLOSED
+          const evt = { code }
+          this.onclose?.(evt)
+          this.__emit('close', evt)
+        }
+      }
+
+      window.WebSocket = class PatchedWebSocket {
+        constructor(url, protocols) {
+          if (typeof url === 'string' && url.includes('/discussion/ws')) {
+            return new FakeDiscussionWebSocket(url)
+          }
+          return new OriginalWebSocket(url, protocols)
+        }
+      }
+    })
+
     await page.goto('/admin')
 
     await expect(page).toHaveURL(/\/archive$/)
