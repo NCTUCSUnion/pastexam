@@ -311,7 +311,7 @@ async def archive_discussion_ws(
             content = raw_content.strip()
             if not content:
                 continue
-            if len(raw_content) > DISCUSSION_MESSAGE_MAX_LENGTH:
+            if len(content) > DISCUSSION_MESSAGE_MAX_LENGTH:
                 await websocket.send_json(
                     jsonable_encoder(
                         {
@@ -534,7 +534,7 @@ async def update_archive_course(
                     detail="Cannot transfer archive to the same course",
                 )
         else:
-            # Create new course if it doesn't exis
+            # Create new course if it doesn't exist
             new_course = Course(
                 name=course_update.course_name, category=course_update.course_category
             )

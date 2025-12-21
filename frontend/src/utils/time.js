@@ -4,7 +4,7 @@ export function formatRelativeTime(value) {
   if (Number.isNaN(date.getTime())) return String(value)
 
   const now = new Date()
-  const diffInMs = now - date
+  const diffInMs = Math.max(now - date, 0)
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
   const diffInDays = Math.floor(diffInHours / 24)
 

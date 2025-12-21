@@ -60,6 +60,14 @@ describe('utils/svgBg', () => {
   })
 })
 
+describe('utils/time', () => {
+  it('formats future dates as 剛剛', async () => {
+    const { formatRelativeTime } = await import('@/utils/time.js')
+    const future = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+    expect(formatRelativeTime(future)).toBe('剛剛')
+  })
+})
+
 describe('utils/analytics', () => {
   let analyticsModule
   let consoleErrorSpy
