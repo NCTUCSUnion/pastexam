@@ -48,7 +48,18 @@
 
     <!-- Canonical URL -->
     <link rel="canonical" href="https://pastexam.nctucsunion.me/" />
-    <script defer src="%VITE_UMAMI_SCRIPT_URL%" data-website-id="%VITE_UMAMI_WEBSITE_ID%"></script>
+    <script type="module">
+      const umamiScriptUrl = '%VITE_UMAMI_SCRIPT_URL%'.trim()
+      const umamiWebsiteId = '%VITE_UMAMI_WEBSITE_ID%'.trim()
+
+      if (umamiScriptUrl && umamiWebsiteId) {
+        const script = document.createElement('script')
+        script.defer = true
+        script.src = umamiScriptUrl
+        script.dataset.websiteId = umamiWebsiteId
+        document.head.appendChild(script)
+      }
+    </script>
     <script>
       function updateFavicon(isDark) {
         const theme = isDark ? 'dark' : 'bright'
