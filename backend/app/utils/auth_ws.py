@@ -10,7 +10,7 @@ from app.models.models import User
 from app.utils.auth import is_token_blacklisted
 
 
-async def get_ws_user_id(websocket: WebSocket, db: AsyncSession) -> int | None:
+def get_ws_token(websocket: WebSocket) -> str | None:
     auth_header = websocket.headers.get("authorization") or ""
     token = None
     if auth_header.lower().startswith("bearer "):
@@ -19,6 +19,14 @@ async def get_ws_user_id(websocket: WebSocket, db: AsyncSession) -> int | None:
     if not token:
         token = websocket.query_params.get("token")
 
+    if not token:
+        return None
+
+    return token
+
+
+async def get_ws_token_payload(websocket: WebSocket) -> dict | None:
+    token = get_ws_token(websocket)
     if not token:
         return None
 
@@ -40,12 +48,23 @@ async def get_ws_user_id(websocket: WebSocket, db: AsyncSession) -> int | None:
         if user_id is None:
             return None
 
-        user = await db.scalar(
-            select(User.id).where(User.id == user_id, User.deleted_at.is_(None))
-        )
-        return user
+        return payload
     except JWTError:
         return None
+
+
+async def get_ws_user_id(websocket: WebSocket, db: AsyncSession) -> int | None:
+    payload = await get_ws_token_payload(websocket)
+    if not payload:
+        return None
+
+    user_id: int | None = payload.get("uid")
+    if user_id is None:
+        return None
+
+    return await db.scalar(
+        select(User.id).where(User.id == user_id, User.deleted_at.is_(None))
+    )
 
 
 async def get_ws_user(websocket: WebSocket, db: AsyncSession) -> User | None:

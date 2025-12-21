@@ -54,10 +54,12 @@ async def test_discussion_ws_sends_history_and_ignores_blank(
         archive_id = archive.id
         course_id = course.id
 
-    async def fake_get_ws_user(websocket, db):
-        return user.model
+    async def fake_ws_payload(websocket):
+        return {"uid": user.id, "exp": 4102444800}
 
-    monkeypatch.setattr("app.api.services.courses.get_ws_user", fake_get_ws_user)
+    monkeypatch.setattr(
+        "app.api.services.courses.get_ws_token_payload", fake_ws_payload
+    )
 
     with TestClient(app) as ws_client:
         with ws_client.websocket_connect(
@@ -107,10 +109,12 @@ async def test_discussion_ws_accepts_padded_message_within_limit(
         archive_id = archive.id
         course_id = course.id
 
-    async def fake_get_ws_user(websocket, db):
-        return user.model
+    async def fake_ws_payload(websocket):
+        return {"uid": user.id, "exp": 4102444800}
 
-    monkeypatch.setattr("app.api.services.courses.get_ws_user", fake_get_ws_user)
+    monkeypatch.setattr(
+        "app.api.services.courses.get_ws_token_payload", fake_ws_payload
+    )
 
     content = "a" * 200
     raw = f"  {content}  "
@@ -165,10 +169,12 @@ async def test_discussion_ws_rejects_message_too_long(
         archive_id = archive.id
         course_id = course.id
 
-    async def fake_get_ws_user(websocket, db):
-        return user.model
+    async def fake_ws_payload(websocket):
+        return {"uid": user.id, "exp": 4102444800}
 
-    monkeypatch.setattr("app.api.services.courses.get_ws_user", fake_get_ws_user)
+    monkeypatch.setattr(
+        "app.api.services.courses.get_ws_token_payload", fake_ws_payload
+    )
 
     with TestClient(app) as ws_client:
         with ws_client.websocket_connect(

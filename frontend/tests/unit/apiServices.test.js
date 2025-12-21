@@ -29,6 +29,7 @@ vi.mock('@/api/services/client', () => ({
     put: putMock,
     interceptors,
   },
+  bindUnauthorizedWebSocket: (ws) => ws,
   buildWebSocketUrl: (path) => `ws://localhost${path}`,
 }))
 

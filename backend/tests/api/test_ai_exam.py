@@ -279,8 +279,8 @@ async def test_get_task_status_returns_result(
 ):
     user = await make_user()
 
-    async def fake_ws_user_id(websocket, db):
-        return user.id
+    async def fake_ws_payload(websocket):
+        return {"uid": user.id, "exp": 4102444800}
 
     task_id = "task-123"
     created_at = datetime.utcnow().isoformat()
@@ -300,7 +300,9 @@ async def test_get_task_status_returns_result(
     fake_redis.results[task_id] = {"success": True, "generated_content": "Example"}
 
     try:
-        monkeypatch.setattr("app.api.services.ai_exam.get_ws_user_id", fake_ws_user_id)
+        monkeypatch.setattr(
+            "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
+        )
         with TestClient(app) as ws_client:
             with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
                 body = ws.receive_json()
@@ -337,11 +339,13 @@ async def test_get_task_status_reports_not_found_when_job_missing(
     )
     fake_redis.job_statuses[task_id] = None
 
-    async def fake_ws_user_id(websocket, db):
-        return user.id
+    async def fake_ws_payload(websocket):
+        return {"uid": user.id, "exp": 4102444800}
 
     try:
-        monkeypatch.setattr("app.api.services.ai_exam.get_ws_user_id", fake_ws_user_id)
+        monkeypatch.setattr(
+            "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
+        )
         with TestClient(app) as ws_client:
             with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
                 body = ws.receive_json()
@@ -359,10 +363,12 @@ async def test_task_status_stream_emits_in_progress_transition(
 ):
     user = await make_user()
 
-    async def fake_ws_user_id(websocket, db):
-        return user.id
+    async def fake_ws_payload(websocket):
+        return {"uid": user.id, "exp": 4102444800}
 
-    monkeypatch.setattr("app.api.services.ai_exam.get_ws_user_id", fake_ws_user_id)
+    monkeypatch.setattr(
+        "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
+    )
 
     task_id = "job-transition"
     created_at = datetime.utcnow().isoformat()
@@ -419,11 +425,13 @@ async def test_get_task_status_handles_result_error(
     fake_redis.job_statuses[task_id] = JobStatus.complete
     fake_redis.results[task_id] = None
 
-    async def fake_ws_user_id(websocket, db):
-        return user.id
+    async def fake_ws_payload(websocket):
+        return {"uid": user.id, "exp": 4102444800}
 
     try:
-        monkeypatch.setattr("app.api.services.ai_exam.get_ws_user_id", fake_ws_user_id)
+        monkeypatch.setattr(
+            "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
+        )
         with TestClient(app) as ws_client:
             with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
                 body = ws.receive_json()
@@ -568,10 +576,12 @@ async def test_get_task_status_not_found(
 
     try:
 
-        async def fake_ws_user_id(websocket, db):
-            return user.id
+        async def fake_ws_payload(websocket):
+            return {"uid": user.id, "exp": 4102444800}
 
-        monkeypatch.setattr("app.api.services.ai_exam.get_ws_user_id", fake_ws_user_id)
+        monkeypatch.setattr(
+            "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
+        )
         with TestClient(app) as ws_client:
             with pytest.raises(WebSocketDisconnect) as exc:
                 with ws_client.websocket_connect("/ai-exam/ws/task/missing") as ws:
@@ -596,10 +606,12 @@ async def test_get_task_status_forbidden(
 
     try:
 
-        async def fake_ws_user_id(websocket, db):
-            return user.id
+        async def fake_ws_payload(websocket):
+            return {"uid": user.id, "exp": 4102444800}
 
-        monkeypatch.setattr("app.api.services.ai_exam.get_ws_user_id", fake_ws_user_id)
+        monkeypatch.setattr(
+            "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
+        )
         with TestClient(app) as ws_client:
             with pytest.raises(WebSocketDisconnect) as exc:
                 with ws_client.websocket_connect("/ai-exam/ws/task/job-secret") as ws:
@@ -622,10 +634,12 @@ async def test_get_task_status_handles_exception(
 
     try:
 
-        async def fake_ws_user_id(websocket, db):
-            return user.id
+        async def fake_ws_payload(websocket):
+            return {"uid": user.id, "exp": 4102444800}
 
-        monkeypatch.setattr("app.api.services.ai_exam.get_ws_user_id", fake_ws_user_id)
+        monkeypatch.setattr(
+            "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
+        )
         monkeypatch.setattr("app.worker.get_redis_pool", raise_error)
         with TestClient(app) as ws_client:
             with pytest.raises(WebSocketDisconnect) as exc:
