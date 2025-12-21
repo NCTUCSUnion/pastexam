@@ -95,6 +95,10 @@ vi.mock('@/utils/http', () => ({
 }))
 
 const stubComponent = { template: '<div><slot /></div>' }
+const pdfPreviewStub = {
+  template: '<div class="pdf-preview-stub" :data-show-discussion="String(showDiscussion)"></div>',
+  props: ['showDiscussion'],
+}
 
 function mountModal() {
   return mount(GenerateAIExamModal, {
@@ -119,7 +123,7 @@ function mountModal() {
         InputText: stubComponent,
         FileUpload: stubComponent,
         Divider: stubComponent,
-        PdfPreviewModal: stubComponent,
+        PdfPreviewModal: pdfPreviewStub,
         Password: stubComponent,
       },
       provide: {
@@ -296,6 +300,30 @@ describe('GenerateAIExamModal', () => {
     await flushPromises()
     expect(vm.showApiKeyModal).toBe(true)
 
+    wrapper.unmount()
+  })
+
+  it('disables discussion panel in archive preview modal', async () => {
+    const wrapper = mountModal()
+    const vm = wrapper.vm
+
+    vm.selectedCourseId = 'course-1'
+    vm.archivePreviewMeta = {
+      archiveId: 'arch-1',
+      title: 'Midterm',
+      academicYear: '2023',
+      archiveType: 'midterm',
+      courseName: 'Calculus I',
+      professorName: 'Prof. Lin',
+    }
+    vm.archivePreviewUrl = 'https://example.com/preview.pdf'
+    vm.showArchivePreview = true
+
+    await flushPromises()
+
+    const preview = wrapper.find('.pdf-preview-stub')
+    expect(preview.exists()).toBe(true)
+    expect(preview.attributes('data-show-discussion')).toBe('false')
     wrapper.unmount()
   })
 
