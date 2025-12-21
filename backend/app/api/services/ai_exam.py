@@ -1,14 +1,11 @@
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 
 from arq.jobs import Job, JobStatus
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
-from jose import JWTError, jwt
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.db.session import get_session
 from app.models.models import (
     ApiKeyResponse,
