@@ -19,7 +19,7 @@ from app.models.models import (
     User,
 )
 from app.utils.auth import get_current_user
-from app.utils.ws_auth import get_ws_user_id
+from app.utils.auth_ws import get_ws_user_id
 
 # logger = logging.getLogger(__name__)
 # logger.setLevel(logging.INFO)

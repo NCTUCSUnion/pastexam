@@ -33,8 +33,8 @@ from app.models.models import (
     UserRoles,
 )
 from app.utils.auth import get_current_user
+from app.utils.auth_ws import get_ws_user
 from app.utils.storage import presigned_get_url
-from app.utils.ws_auth import get_ws_user
 
 router = APIRouter()
 
