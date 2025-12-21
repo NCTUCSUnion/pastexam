@@ -101,6 +101,7 @@ async def auth_callback_endpoint(
             oauth_sub=info["sub"],
             email=info["email"],
             name=info["name"],
+            nickname=info["name"],
             is_local=False,
             last_login=now,
         )

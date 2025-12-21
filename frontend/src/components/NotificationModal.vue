@@ -11,7 +11,7 @@
   >
     <template #header>
       <div class="flex align-items-center gap-2.5">
-        <i class="pi pi-megaphone text-2xl" />
+        <i class="pi pi-bell text-2xl" />
         <div class="text-xl leading-tight font-semibold">系統公告</div>
       </div>
     </template>

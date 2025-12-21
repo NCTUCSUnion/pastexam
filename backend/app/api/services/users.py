@@ -6,10 +6,19 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.session import get_session
-from app.models.models import User, UserCreate, UserRead, UserRoles, UserUpdate
+from app.models.models import (
+    User,
+    UserCreate,
+    UserNicknameUpdate,
+    UserRead,
+    UserRoles,
+    UserUpdate,
+)
 from app.utils.auth import get_current_user, get_password_hash
 
 router = APIRouter()
+
+NICKNAME_MAX_LENGTH = 15
 
 
 @router.get("/admin/users", response_model=List[UserRead])
@@ -60,6 +69,7 @@ async def create_user(
     hashed_password = get_password_hash(user_data.password)
     user = User(
         name=user_data.name,
+        nickname=user_data.name,
         email=user_data.email,
         password_hash=hashed_password,
         is_admin=user_data.is_admin,
@@ -70,6 +80,54 @@ async def create_user(
     await db.commit()
     await db.refresh(user)
 
+    return user
+
+
+@router.get("/me", response_model=UserRead)
+async def get_me(
+    current_user: UserRoles = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    user = await db.scalar(
+        select(User).where(User.id == current_user.user_id, User.deleted_at.is_(None))
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    if not user.nickname:
+        user.nickname = user.name
+        await db.commit()
+        await db.refresh(user)
+    return user
+
+
+@router.patch("/me/nickname", response_model=UserRead)
+async def update_my_nickname(
+    payload: UserNicknameUpdate,
+    current_user: UserRoles = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    user = await db.scalar(
+        select(User).where(User.id == current_user.user_id, User.deleted_at.is_(None))
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    nickname = (payload.nickname or "").strip()
+    if not nickname:
+        nickname = user.name
+    if len(nickname) > NICKNAME_MAX_LENGTH:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"暱稱超出 {NICKNAME_MAX_LENGTH} 字",
+        )
+
+    user.nickname = nickname
+    await db.commit()
+    await db.refresh(user)
     return user
 
 

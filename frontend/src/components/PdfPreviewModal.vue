@@ -10,6 +10,8 @@
     :dismissableMask="true"
     :maximizable="true"
     :autoFocus="false"
+    @maximize="handleMaximize"
+    @unmaximize="handleUnmaximize"
     @hide="onHide"
   >
     <template #header>
@@ -34,38 +36,50 @@
     </template>
 
     <div class="w-full h-full flex flex-column">
-      <div
-        v-if="error || pdfError"
-        class="flex-1 flex flex-column align-items-center justify-content-center gap-4"
-      >
-        <i class="pi pi-exclamation-circle text-6xl text-red-500" />
-        <div class="text-xl">無法載入預覽</div>
-        <div class="text-sm text-gray-600">請嘗試下載檔案查看</div>
-      </div>
+      <div class="flex-1 flex min-h-0">
+        <div class="flex-1 flex flex-column min-w-0">
+          <div
+            v-if="error || pdfError"
+            class="flex-1 flex flex-column align-items-center justify-content-center gap-4"
+          >
+            <i class="pi pi-exclamation-circle text-6xl text-red-500" />
+            <div class="text-xl">無法載入預覽</div>
+            <div class="text-sm text-gray-600">請嘗試下載檔案查看</div>
+          </div>
 
-      <div
-        v-else-if="loading || pdfLoading"
-        class="flex-1 flex align-items-center justify-content-center"
-      >
-        <ProgressSpinner strokeWidth="4" />
-      </div>
+          <div
+            v-else-if="loading || pdfLoading"
+            class="flex-1 flex align-items-center justify-content-center"
+          >
+            <ProgressSpinner strokeWidth="4" />
+          </div>
 
-      <div v-else-if="pdf" class="flex-1 pdf-container" ref="pdfContainerRef">
-        <div class="pdf-pages">
-          <VuePDF
-            v-for="page in pages"
-            :key="`${page}-${resizeKey}`"
-            :pdf="pdf"
-            :page="page"
-            :fitParent="true"
-            class="pdf-page"
-            @loaded="handlePdfLoaded"
-          />
+          <div v-else-if="pdf" class="flex-1 pdf-container" ref="pdfContainerRef">
+            <div class="pdf-pages">
+              <VuePDF
+                v-for="page in pages"
+                :key="`${page}-${resizeKey}`"
+                :pdf="pdf"
+                :page="page"
+                :fitParent="true"
+                class="pdf-page"
+                @loaded="handlePdfLoaded"
+              />
+            </div>
+          </div>
+
+          <div v-else class="flex-1 flex align-items-center justify-content-center">
+            <ProgressSpinner strokeWidth="4" />
+          </div>
         </div>
-      </div>
 
-      <div v-else class="flex-1 flex align-items-center justify-content-center">
-        <ProgressSpinner strokeWidth="4" />
+        <ArchiveDiscussionPanel
+          v-if="discussionEnabled && !isMaximized"
+          :courseId="courseId"
+          :archiveId="archiveId"
+          width="380px"
+          class="ml-4"
+        />
       </div>
     </div>
 
@@ -87,11 +101,20 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { VuePDF, usePDF } from '@tato30/vue-pdf'
 import '@tato30/vue-pdf/style.css'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
+import ArchiveDiscussionPanel from './ArchiveDiscussionPanel.vue'
 
 const props = defineProps({
   visible: {
     type: Boolean,
     required: true,
+  },
+  courseId: {
+    type: [Number, String],
+    default: null,
+  },
+  archiveId: {
+    type: [Number, String],
+    default: null,
   },
   previewUrl: {
     type: String,
@@ -141,6 +164,9 @@ const localVisible = computed({
   get: () => props.visible,
   set: (value) => emit('update:visible', value),
 })
+
+const isMaximized = ref(false)
+const discussionEnabled = computed(() => Boolean(props.courseId) && Boolean(props.archiveId))
 
 const archiveTypeLabel = computed(() => {
   const archiveTypeKey = (props.archiveType || '').trim().toLowerCase()
@@ -228,7 +254,16 @@ watch(
 function onHide() {
   pdfLoading.value = false
   pdfError.value = false
+  isMaximized.value = false
   emit('hide')
+}
+
+function handleMaximize() {
+  isMaximized.value = true
+}
+
+function handleUnmaximize() {
+  isMaximized.value = false
 }
 
 watch(

@@ -546,6 +546,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { getCurrentUser } from '../utils/auth'
 import { isUnauthorizedError } from '../utils/http'
+import { formatRelativeTime } from '../utils/time'
 import {
   getCourses,
   createCourse,
@@ -739,18 +740,7 @@ const isNotificationEffective = (notification) => {
 }
 
 const formatNotificationDate = (value) => {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return date.toLocaleString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatRelativeTime(value)
 }
 
 const resetNotificationForm = () => {
@@ -1338,36 +1328,7 @@ const deleteNotificationAction = async (notification) => {
 
 const formatDateTime = (dateString) => {
   if (!dateString) return '從未登入'
-
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffInMs = now - date
-  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
-  const diffInDays = Math.floor(diffInHours / 24)
-
-  if (diffInDays === 0) {
-    if (diffInHours === 0) {
-      const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
-      if (diffInMinutes < 1) {
-        return '剛剛'
-      } else if (diffInMinutes < 60) {
-        return `${diffInMinutes} 分鐘前`
-      }
-    }
-    return `${diffInHours} 小時前`
-  } else if (diffInDays === 1) {
-    return '昨天'
-  } else if (diffInDays < 7) {
-    return `${diffInDays} 天前`
-  } else {
-    return date.toLocaleDateString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+  return formatRelativeTime(dateString)
 }
 
 // Persist the current tab in localStorage

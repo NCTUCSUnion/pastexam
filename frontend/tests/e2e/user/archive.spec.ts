@@ -64,6 +64,14 @@ test.describe('User › Archive browsing', () => {
       })
     })
 
+    await page.route('**/api/users/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ id: 2, name: '一般使用者', nickname: '' }),
+      })
+    })
+
     let downloadEndpointCalled = false
     await page.route('**/api/courses/101/archives/201/download', async (route) => {
       downloadEndpointCalled = true

@@ -52,6 +52,10 @@ async def test_public_notification_endpoints_return_active_only(
     client: AsyncClient,
     session_maker,
 ):
+    async with session_maker() as session:
+        await session.execute(delete(Notification))
+        await session.commit()
+
     active = await _create_notification(session_maker)
     await _create_notification(
         session_maker,
@@ -157,9 +161,7 @@ async def test_delete_notification_not_found(client: AsyncClient, make_user):
     )
 
     try:
-        response = await client.delete(
-            "/notifications/admin/notifications/424242"
-        )
+        response = await client.delete("/notifications/admin/notifications/424242")
         assert response.status_code == 404
     finally:
         app.dependency_overrides.pop(get_current_user, None)
@@ -191,9 +193,7 @@ async def test_admin_notifications_require_admin(
         response = await client.get("/notifications/admin/notifications")
         assert response.status_code == 403
 
-        response = await client.post(
-            "/notifications/admin/notifications", json=payload
-        )
+        response = await client.post("/notifications/admin/notifications", json=payload)
         assert response.status_code == 403
 
         response = await client.put(

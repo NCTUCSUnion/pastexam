@@ -474,6 +474,20 @@ describe('Navbar methods', () => {
       platform: 'MacIntel',
       language: 'zh-TW',
       url: 'https://example.com',
+      route: { path: '/archive', name: 'ArchiveView', fullPath: '/archive?course=1' },
+      pageContext: {
+        archiveContext: {
+          course: { id: 101, name: '資料結構' },
+          filters: {
+            year: '2024',
+            professor: '王教授',
+            type: 'final',
+            hasAnswers: true,
+            searchQuery: '資',
+          },
+          preview: { open: true, archiveId: 201, name: '期末考' },
+        },
+      },
       timestamp: '2025-10-30T00:00:00Z',
     }
 
@@ -486,6 +500,10 @@ describe('Navbar methods', () => {
     )
     expect(ctx.getBrowserInfo).toHaveBeenCalledWith('chrome ua')
     expect(bodyWithContact).toContain('contact@example.com')
+    expect(bodyWithContact).toContain('## 頁面資訊')
+    expect(bodyWithContact).toContain('資料結構')
+    expect(bodyWithContact).toContain('year=2024')
+    expect(bodyWithContact).toContain('archiveId=201')
 
     const bodyWithoutContact = Navbar.methods.formatIssueBody.call(
       ctx,
@@ -521,13 +539,31 @@ describe('Navbar methods', () => {
   })
 
   it('collects system info and formats timestamps', () => {
+    sessionStorage.setItem(
+      'pastexam:issueContext',
+      JSON.stringify({
+        page: 'archive',
+        course: { id: 101, name: '資料結構' },
+        filters: {
+          year: '2024',
+          professor: null,
+          type: null,
+          hasAnswers: false,
+          searchQuery: null,
+        },
+        preview: { open: false, archiveId: null },
+      })
+    )
+
     const info = Navbar.methods.getSystemInfo.call({})
     expect(info).toMatchObject({
       userAgent: navigator.userAgent,
       platform: navigator.platform,
       language: navigator.language,
       url: window.location.href,
+      route: { path: null, name: null, fullPath: null },
     })
+    expect(info).toHaveProperty('pageContext')
     expect(typeof info.timestamp).toBe('string')
 
     const formatted = Navbar.methods.formatTimestamp.call({}, '2024-01-01T00:00:00Z')

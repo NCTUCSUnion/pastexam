@@ -89,8 +89,8 @@ vi.mock('@/api', () => ({
 vi.mock('@/components/PdfPreviewModal.vue', () => ({
   default: {
     template: '<div><slot /></div>',
-    props: ['visible', 'archive', 'loading', 'error'],
-    emits: ['update:visible', 'download'],
+    props: ['visible', 'previewUrl', 'courseId', 'archiveId', 'loading', 'error'],
+    emits: ['update:visible', 'download', 'hide', 'error'],
   },
 }))
 
@@ -160,6 +160,8 @@ describe('ArchiveView', () => {
   beforeEach(() => {
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.useFakeTimers()
+    localStorage.clear()
+    sessionStorage.clear()
     trackEventMock.mockReset()
     isUnauthorizedErrorMock.mockReturnValue(false)
     listCoursesMock.mockResolvedValue({ data: sampleCourses })
@@ -223,6 +225,11 @@ describe('ArchiveView', () => {
     vi.runAllTimers()
     await flushPromises()
 
+    const initialIssueContextRaw = sessionStorage.getItem('pastexam:issueContext')
+    expect(initialIssueContextRaw).toBeTruthy()
+    const initialIssueContext = JSON.parse(initialIssueContextRaw)
+    expect(initialIssueContext.page).toBe('archive')
+
     const vm = wrapper.vm
 
     vm.filterBySubject(null)
@@ -237,6 +244,9 @@ describe('ArchiveView', () => {
     expect(vm.selectedSubject).toBe('Calculus I')
     expect(vm.groupedArchives.length).toBeGreaterThan(0)
 
+    const issueContextAfterSelect = JSON.parse(sessionStorage.getItem('pastexam:issueContext'))
+    expect(issueContextAfterSelect.course).toEqual({ id: 'c1', name: 'Calculus I' })
+
     vm.filters.year = '2023'
     vm.filters.professor = 'Prof. Chen'
     vm.filters.type = 'midterm'
@@ -247,6 +257,17 @@ describe('ArchiveView', () => {
     vi.runAllTimers()
     await flushPromises()
 
+    const issueContextAfterFilters = JSON.parse(sessionStorage.getItem('pastexam:issueContext'))
+    expect(issueContextAfterFilters.filters).toEqual(
+      expect.objectContaining({
+        year: '2023',
+        professor: 'Prof. Chen',
+        type: 'midterm',
+        hasAnswers: true,
+        searchQuery: 'calc',
+      })
+    )
+
     const archiveItem = vm.groupedArchives[0].list[0]
     await vm.downloadArchive(archiveItem)
     await flushPromises()
@@ -255,8 +276,17 @@ describe('ArchiveView', () => {
     expect(toastAddMock).toHaveBeenCalled()
 
     await vm.previewArchive(archiveItem)
+    await flushPromises()
     expect(vm.showPreview).toBe(true)
     expect(vm.selectedArchive.previewUrl).toContain('preview')
+
+    const issueContextAfterPreview = JSON.parse(sessionStorage.getItem('pastexam:issueContext'))
+    expect(issueContextAfterPreview.preview).toEqual(
+      expect.objectContaining({
+        open: true,
+        archiveId: archiveItem.id,
+      })
+    )
 
     vm.handlePreviewError()
     expect(vm.previewError).toBe(true)
@@ -267,6 +297,11 @@ describe('ArchiveView', () => {
 
     vm.closePreview()
     expect(vm.showPreview).toBe(false)
+    await nextTick()
+    const issueContextAfterClosePreview = JSON.parse(
+      sessionStorage.getItem('pastexam:issueContext')
+    )
+    expect(issueContextAfterClosePreview.preview?.open).toBe(false)
 
     vm.confirmDelete(archiveItem)
     await flushPromises()
