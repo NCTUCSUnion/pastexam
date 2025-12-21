@@ -68,9 +68,15 @@ const courseServiceMock = vi.hoisted(() => ({
   getCourseArchives: vi.fn(),
 }))
 
+const archiveServiceMock = vi.hoisted(() => ({
+  getArchivePreviewUrl: vi.fn(),
+  getArchiveDownloadUrl: vi.fn(),
+}))
+
 vi.mock('@/api', () => ({
   aiExamService: aiExamServiceMock,
   courseService: courseServiceMock,
+  archiveService: archiveServiceMock,
 }))
 
 vi.mock('@/utils/analytics', () => ({

@@ -96,7 +96,12 @@
           />
         </div>
 
-        <div class="text-sm text-500">找到 {{ filteredArchives.length }} 份考古題</div>
+        <div class="text-sm text-500">
+          找到 {{ matchingArchivesCount }} 份考古題
+          <span v-if="pinnedSelectedArchivesCount > 0">
+            （已選擇但不符合篩選：{{ pinnedSelectedArchivesCount }}）
+          </span>
+        </div>
 
         <div v-if="filteredArchives.length === 0" class="p-4 text-center text-500">
           <i class="pi pi-inbox text-4xl mb-3"></i>
@@ -136,6 +141,13 @@
                   </span>
                 </div>
               </div>
+              <Button
+                icon="pi pi-eye"
+                label="預覽"
+                size="small"
+                severity="secondary"
+                @click.stop="previewArchive(archive)"
+              />
             </div>
           </div>
         </div>
@@ -351,15 +363,34 @@
         </div>
       </template>
     </Dialog>
+
+    <PdfPreviewModal
+      v-if="showArchivePreview"
+      :visible="showArchivePreview"
+      @update:visible="showArchivePreview = $event"
+      :previewUrl="archivePreviewUrl"
+      :title="archivePreviewMeta.title"
+      :academicYear="archivePreviewMeta.academicYear"
+      :archiveType="archivePreviewMeta.archiveType"
+      :courseName="archivePreviewMeta.courseName"
+      :professorName="archivePreviewMeta.professorName"
+      :loading="archivePreviewLoading"
+      :error="archivePreviewError"
+      @hide="closeArchivePreview"
+      @error="handleArchivePreviewError"
+      @download="downloadArchiveFromPreview"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, inject, onBeforeUnmount } from 'vue'
-import { aiExamService, courseService } from '../api'
+import { ref, computed, watch, inject, onBeforeUnmount, defineAsyncComponent } from 'vue'
+import { aiExamService, courseService, archiveService } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 import { isUnauthorizedError } from '../utils/http'
+
+const PdfPreviewModal = defineAsyncComponent(() => import('./PdfPreviewModal.vue'))
 
 const props = defineProps({
   visible: Boolean,
@@ -436,16 +467,42 @@ const archiveTypeOptions = [
   { name: '期末考', value: 'final' },
 ]
 
-const filteredArchives = computed(() => {
-  let archives = availableArchives.value.filter(
+const selectedCourseId = ref(null)
+
+const baseArchives = computed(() => {
+  return availableArchives.value.filter(
     (archive) => archive.archive_type === 'midterm' || archive.archive_type === 'final'
   )
+})
 
-  if (archiveTypeFilter.value) {
-    archives = archives.filter((archive) => archive.archive_type === archiveTypeFilter.value)
-  }
+const matchingArchivesCount = computed(() => {
+  if (!archiveTypeFilter.value) return baseArchives.value.length
+  return baseArchives.value.filter((archive) => archive.archive_type === archiveTypeFilter.value)
+    .length
+})
 
-  return archives
+const pinnedSelectedArchivesCount = computed(() => {
+  if (!archiveTypeFilter.value) return 0
+  return baseArchives.value.filter(
+    (archive) =>
+      selectedArchiveIds.value.includes(archive.id) &&
+      archive.archive_type !== archiveTypeFilter.value
+  ).length
+})
+
+const filteredArchives = computed(() => {
+  const archives = baseArchives.value
+  if (!archiveTypeFilter.value) return archives
+
+  const pinnedSelected = archives.filter(
+    (archive) =>
+      selectedArchiveIds.value.includes(archive.id) &&
+      archive.archive_type !== archiveTypeFilter.value
+  )
+  const matching = archives.filter((archive) => archive.archive_type === archiveTypeFilter.value)
+
+  const pinnedSelectedIds = new Set(pinnedSelected.map((a) => a.id))
+  return [...pinnedSelected, ...matching.filter((a) => !pinnedSelectedIds.has(a.id))]
 })
 
 const canGoToNextStep = computed(() => {
@@ -476,6 +533,7 @@ const toggleArchiveSelection = (archiveId) => {
 const onCategoryChange = () => {
   form.value.course_name = null
   form.value.professor = null
+  selectedCourseId.value = null
   availableProfessors.value = []
   availableArchives.value = []
   selectedArchiveIds.value = []
@@ -485,6 +543,7 @@ const onCourseChange = async () => {
   form.value.professor = null
   availableArchives.value = []
   selectedArchiveIds.value = []
+  selectedCourseId.value = null
 
   if (!form.value.course_name) {
     availableProfessors.value = []
@@ -494,6 +553,7 @@ const onCourseChange = async () => {
   try {
     const course = availableCourses.value.find((c) => c.name === form.value.course_name)
     if (!course) return
+    selectedCourseId.value = course.id
 
     const { data } = await courseService.getCourseArchives(course.id)
 
@@ -530,6 +590,7 @@ const goToArchiveSelection = async () => {
   try {
     const course = availableCourses.value.find((c) => c.name === form.value.course_name)
     if (!course) return
+    selectedCourseId.value = course.id
 
     const { data } = await courseService.getCourseArchives(course.id)
 
@@ -580,6 +641,130 @@ const goBackToProfessorSelection = () => {
   currentStep.value = 'selectProfessor'
   selectedArchiveIds.value = []
   archiveTypeFilter.value = null
+}
+
+const showArchivePreview = ref(false)
+const archivePreviewUrl = ref('')
+const archivePreviewLoading = ref(false)
+const archivePreviewError = ref(false)
+const archivePreviewMeta = ref({
+  title: '',
+  academicYear: null,
+  archiveType: '',
+  courseName: '',
+  professorName: '',
+  archiveId: null,
+})
+
+const previewArchive = async (archive) => {
+  const courseId = selectedCourseId.value
+  if (!courseId) {
+    toast.add({
+      severity: 'error',
+      summary: '預覽失敗',
+      detail: '無法取得課程資訊，請重新選擇課程後再試',
+      life: 3000,
+    })
+    return
+  }
+
+  archivePreviewMeta.value = {
+    title: archive?.name || '考古題預覽',
+    academicYear: archive?.academic_year ?? null,
+    archiveType: archive?.archive_type || '',
+    courseName: form.value.course_name || '',
+    professorName: form.value.professor || '',
+    archiveId: archive?.id ?? null,
+  }
+
+  showArchivePreview.value = true
+  archivePreviewLoading.value = true
+  archivePreviewError.value = false
+  archivePreviewUrl.value = ''
+
+  try {
+    const { data } = await archiveService.getArchivePreviewUrl(courseId, archive.id)
+    archivePreviewUrl.value = data?.url || ''
+
+    trackEvent(EVENTS.PREVIEW_ARCHIVE, {
+      context: 'ai-exam-modal',
+      courseName: form.value.course_name || '',
+      professor: form.value.professor || '',
+      archiveId: archive.id,
+      archiveType: archive.archive_type,
+      academicYear: archive.academic_year,
+    })
+  } catch (error) {
+    console.error('Preview error:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
+    archivePreviewError.value = true
+    toast.add({
+      severity: 'error',
+      summary: '預覽失敗',
+      detail: '無法載入預覽，請稍後再試',
+      life: 3000,
+    })
+  } finally {
+    archivePreviewLoading.value = false
+  }
+}
+
+const handleArchivePreviewError = () => {
+  archivePreviewError.value = true
+}
+
+const closeArchivePreview = () => {
+  showArchivePreview.value = false
+  archivePreviewLoading.value = false
+  archivePreviewError.value = false
+  archivePreviewUrl.value = ''
+  archivePreviewMeta.value = {
+    title: '',
+    academicYear: null,
+    archiveType: '',
+    courseName: '',
+    professorName: '',
+    archiveId: null,
+  }
+}
+
+const downloadArchiveFromPreview = async (done) => {
+  const finish = typeof done === 'function' ? done : () => {}
+  const courseId = selectedCourseId.value
+  const archiveId = archivePreviewMeta.value.archiveId
+
+  if (!courseId || !archiveId) {
+    finish()
+    return
+  }
+
+  try {
+    const { data } = await archiveService.getArchiveDownloadUrl(courseId, archiveId)
+    const url = data?.url
+    if (!url) throw new Error('Missing download url')
+
+    const link = document.createElement('a')
+    link.href = url
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (error) {
+    console.error('Download error:', error)
+    if (!isUnauthorizedError(error)) {
+      toast.add({
+        severity: 'error',
+        summary: '下載失敗',
+        detail: '無法下載檔案，請稍後再試',
+        life: 3000,
+      })
+    }
+  } finally {
+    finish()
+  }
 }
 
 let taskWebSocket = null
@@ -816,11 +1001,13 @@ const resetModalState = ({ keepTask = false } = {}) => {
   archiveTypeFilter.value = null
   currentTaskId.value = null
   availableProfessors.value = []
+  selectedCourseId.value = null
   form.value = {
     category: null,
     course_name: null,
     professor: null,
   }
+  closeArchivePreview()
   showApiKeyModal.value = false
   apiKeyForm.value.key = ''
 }
