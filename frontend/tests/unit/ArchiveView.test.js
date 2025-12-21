@@ -89,8 +89,8 @@ vi.mock('@/api', () => ({
 vi.mock('@/components/PdfPreviewModal.vue', () => ({
   default: {
     template: '<div><slot /></div>',
-    props: ['visible', 'archive', 'loading', 'error'],
-    emits: ['update:visible', 'download'],
+    props: ['visible', 'previewUrl', 'courseId', 'archiveId', 'loading', 'error'],
+    emits: ['update:visible', 'download', 'hide', 'error'],
   },
 }))
 

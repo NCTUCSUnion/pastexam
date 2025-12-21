@@ -267,6 +267,8 @@
           <PdfPreviewModal
             :visible="showPreview"
             @update:visible="showPreview = $event"
+            :courseId="selectedCourse"
+            :archiveId="selectedArchive?.id"
             :previewUrl="selectedArchive?.previewUrl"
             :title="selectedArchive?.name || ''"
             :academicYear="selectedArchive?.year"

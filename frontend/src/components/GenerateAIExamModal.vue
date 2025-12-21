@@ -153,12 +153,9 @@
         </div>
 
         <div class="flex flex-column gap-2">
-          <div class="text-sm text-500">
-            建議選擇 2-3 份考古題以獲得最佳生成效果
-            <span v-if="selectedArchiveIds.length > 0" class="font-semibold text-green-600">
-              （已選擇 {{ selectedArchiveIds.length }}/3）
-            </span>
-          </div>
+          <small class="text-sm text-500">
+            建議選擇 2-3 份考古題以獲得最佳生成效果（已選擇 {{ selectedArchiveIds.length }}/3）
+          </small>
         </div>
       </div>
 
@@ -298,7 +295,7 @@
     >
       <template #header>
         <div class="flex align-items-center gap-2.5">
-          <i class="pi pi-key text-2xl" />
+          <i class="pi pi-cog text-2xl" />
           <div class="text-xl leading-tight font-semibold">API Key 設定</div>
         </div>
       </template>
@@ -368,6 +365,8 @@
       v-if="showArchivePreview"
       :visible="showArchivePreview"
       @update:visible="showArchivePreview = $event"
+      :courseId="selectedCourseId"
+      :archiveId="archivePreviewMeta.archiveId"
       :previewUrl="archivePreviewUrl"
       :title="archivePreviewMeta.title"
       :academicYear="archivePreviewMeta.academicYear"

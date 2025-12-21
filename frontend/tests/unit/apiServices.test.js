@@ -6,6 +6,8 @@ import { authService } from '@/api/services/auth.js'
 import { aiExamService } from '@/api/services/aiExam.js'
 import { memeService } from '@/api/services/meme.js'
 import { statisticsService } from '@/api/services/statistics.js'
+import { discussionService } from '@/api/services/discussion.js'
+import { userService } from '@/api/services/users.js'
 import * as adminService from '@/api/services/admin.js'
 
 const getMock = vi.hoisted(() => vi.fn())
@@ -176,6 +178,38 @@ describe('API service wrappers', () => {
     const error = new Error('fail')
     getMock.mockRejectedValueOnce(error)
     await expect(statisticsService.getSystemStatistics()).rejects.toThrow('fail')
+  })
+
+  it('discussion service proxies', () => {
+    discussionService.listArchiveMessages('course-1', 'arch-1')
+    expect(getMock).toHaveBeenCalledWith('/courses/course-1/archives/arch-1/discussion/messages', {
+      params: { limit: 50, before_id: undefined },
+    })
+
+    discussionService.deleteArchiveMessage('course-1', 'arch-1', 123)
+    expect(deleteMock).toHaveBeenCalledWith('/courses/course-1/archives/arch-1/discussion/123')
+
+    const originalWebSocket = globalThis.WebSocket
+    const webSocketMock = vi.fn(function WebSocket(url) {
+      return { url }
+    })
+    globalThis.WebSocket = webSocketMock
+
+    const ws = discussionService.openArchiveDiscussionWebSocket('course-1', 'arch-1')
+    expect(webSocketMock).toHaveBeenCalledWith(
+      expect.stringContaining('/courses/course-1/archives/arch-1/discussion/ws')
+    )
+    expect(ws.url).toContain('/courses/course-1/archives/arch-1/discussion/ws')
+
+    globalThis.WebSocket = originalWebSocket
+  })
+
+  it('user service proxies', () => {
+    userService.getMe()
+    expect(getMock).toHaveBeenCalledWith('/users/me')
+
+    userService.updateMyNickname('Nick')
+    expect(patchMock).toHaveBeenCalledWith('/users/me/nickname', { nickname: 'Nick' })
   })
 
   it('admin service exports call API client', () => {

@@ -36,6 +36,7 @@ class User(SQLModel, table=True):
     oauth_sub: Optional[str] = Field(default=None)
     email: str = Field(unique=True, index=True)
     name: str = Field(unique=True, index=True)
+    nickname: Optional[str] = Field(default=None, index=True)
     is_admin: bool = Field(default=False)
     password_hash: Optional[str] = Field(default=None)
     is_local: bool = Field(default=False)
@@ -103,6 +104,24 @@ class Archive(SQLModel, table=True):
     )
 
 
+class ArchiveDiscussionMessage(SQLModel, table=True):
+    __tablename__ = "archive_discussion_messages"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    archive_id: int = Field(foreign_key="archives.id", index=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    content: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            default=lambda: datetime.now(timezone.utc),
+            nullable=False,
+        )
+    )
+    deleted_at: Optional[datetime] = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+
+
 class Meme(SQLModel, table=True):
     __tablename__ = "memes"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -146,6 +165,7 @@ class UserRead(BaseModel):
     id: int
     email: str
     name: str
+    nickname: Optional[str] = None
     is_admin: bool
     is_local: bool
     last_login: Optional[datetime]
@@ -166,6 +186,10 @@ class UserUpdate(BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None
     is_admin: Optional[bool] = None
+
+
+class UserNicknameUpdate(BaseModel):
+    nickname: str
 
 
 class UserRoles(BaseModel):
@@ -247,6 +271,18 @@ class ArchiveRead(BaseModel):
     created_at: datetime
     uploader_id: Optional[int] = None
     download_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class ArchiveDiscussionMessageRead(BaseModel):
+    id: int
+    archive_id: int
+    user_id: int
+    user_name: str
+    content: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
