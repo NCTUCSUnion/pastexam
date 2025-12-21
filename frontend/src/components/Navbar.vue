@@ -663,7 +663,7 @@ export default {
           name: this.$route?.name || null,
           fullPath: this.$route?.fullPath || null,
         },
-        pageContext: this.getIssuePageContext(),
+        pageContext: this.getIssuePageContext?.() ?? null,
         timestamp: new Date().toISOString(),
       }
     },
