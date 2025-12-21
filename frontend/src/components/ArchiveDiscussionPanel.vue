@@ -164,6 +164,8 @@ const toast = inject('toast', null)
 const confirm = inject('confirm', null)
 
 let socket = null
+let reconnectTimer = null
+let connectSeq = 0
 
 const currentUser = computed(() => getCurrentUser())
 const canSend = computed(() => props.enabled && connected.value && Boolean(currentUser.value))
@@ -176,8 +178,10 @@ const nicknameSaving = ref(false)
 
 const MESSAGE_MAX_LENGTH = 200
 const MESSAGE_PREVIEW_LENGTH = 100
+const WS_RECONNECT_MAX_ATTEMPTS = 6
 
 const expandedById = ref({})
+const reconnectAttempts = ref(0)
 
 const nicknameHint = computed(() => {
   const trimmed = (nicknameDraft.value || '').trim()
@@ -237,6 +241,10 @@ function scrollToBottom() {
 }
 
 function closeSocket() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
   if (!socket) return
   try {
     socket.__manualClose = true
@@ -249,7 +257,32 @@ function closeSocket() {
   connecting.value = false
 }
 
+function scheduleReconnect() {
+  if (!props.enabled) return
+  if (!currentUser.value) return
+  if (reconnectTimer) return
+  if (reconnectAttempts.value >= WS_RECONNECT_MAX_ATTEMPTS) {
+    toast?.add?.({
+      severity: 'warn',
+      summary: '連線中斷',
+      detail: '討論區已斷線，請重新整理後再試',
+      life: 4000,
+    })
+    return
+  }
+
+  reconnectAttempts.value += 1
+  const baseDelayMs = 500
+  const maxDelayMs = 10_000
+  const delay = Math.min(maxDelayMs, baseDelayMs * 2 ** (reconnectAttempts.value - 1))
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null
+    connect()
+  }, delay)
+}
+
 async function connect() {
+  const seq = (connectSeq += 1)
   closeSocket()
   if (!props.enabled) return
   const courseId = normalizeId(props.courseId)
@@ -270,12 +303,15 @@ async function connect() {
   socket = ws
 
   ws.onopen = () => {
+    if (seq !== connectSeq) return
     connecting.value = false
     connected.value = true
+    reconnectAttempts.value = 0
   }
 
   ws.onmessage = async (event) => {
     try {
+      if (seq !== connectSeq) return
       const data = JSON.parse(event.data)
       if (!data || typeof data !== 'object') return
       if (data.type === 'history' && Array.isArray(data.messages)) {
@@ -319,19 +355,21 @@ async function connect() {
   }
 
   ws.onerror = () => {
-    if (!ws.__manualClose) {
-      connected.value = false
-      connecting.value = false
-      loading.value = false
-    }
+    if (seq !== connectSeq) return
+    if (ws.__manualClose) return
+    connected.value = false
+    connecting.value = false
+    loading.value = false
+    scheduleReconnect()
   }
 
   ws.onclose = () => {
-    if (!ws.__manualClose) {
-      connected.value = false
-      connecting.value = false
-      loading.value = false
-    }
+    if (seq !== connectSeq) return
+    if (ws.__manualClose) return
+    connected.value = false
+    connecting.value = false
+    loading.value = false
+    scheduleReconnect()
   }
 }
 
