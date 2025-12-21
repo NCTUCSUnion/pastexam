@@ -599,6 +599,67 @@ watch(searchQuery, (newValue) => {
   }
 })
 
+const ISSUE_CONTEXT_STORAGE_KEY = 'pastexam:issueContext'
+
+function persistIssueContext() {
+  try {
+    if (typeof window === 'undefined') return
+
+    const selectedSubjectRaw = localStorage.getItem('selectedSubject')
+    let selectedSubjectStored = null
+    try {
+      selectedSubjectStored = selectedSubjectRaw ? JSON.parse(selectedSubjectRaw) : null
+    } catch {
+      selectedSubjectStored = null
+    }
+
+    const payload = {
+      page: 'archive',
+      timestamp: new Date().toISOString(),
+      course: {
+        id: selectedCourse.value ?? selectedSubjectStored?.id ?? null,
+        name: selectedSubject.value ?? selectedSubjectStored?.label ?? null,
+      },
+      filters: {
+        year: filters.value?.year || null,
+        professor: filters.value?.professor || null,
+        type: filters.value?.type || null,
+        hasAnswers: Boolean(filters.value?.hasAnswers),
+        searchQuery: searchQuery.value || null,
+      },
+      preview: {
+        open: Boolean(showPreview.value),
+        archiveId: selectedArchive.value?.id ?? null,
+        name: selectedArchive.value?.name ?? null,
+        year: selectedArchive.value?.year ?? null,
+        professor: selectedArchive.value?.professor ?? null,
+        type: selectedArchive.value?.type ?? null,
+        hasAnswers: selectedArchive.value?.hasAnswers ?? null,
+      },
+    }
+
+    sessionStorage.setItem(ISSUE_CONTEXT_STORAGE_KEY, JSON.stringify(payload))
+  } catch {
+    // ignore
+  }
+}
+
+watch(
+  () => [
+    selectedCourse.value,
+    selectedSubject.value,
+    showPreview.value,
+    selectedArchive.value?.id,
+    filters.value?.year,
+    filters.value?.professor,
+    filters.value?.type,
+    filters.value?.hasAnswers,
+    searchQuery.value,
+  ],
+  () => persistIssueContext(),
+  { immediate: true }
+)
+
 const menuItems = computed(() => {
   if (!coursesList.value) return []
 

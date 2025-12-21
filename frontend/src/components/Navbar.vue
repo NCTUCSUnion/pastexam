@@ -658,8 +658,44 @@ export default {
         platform: nav.platform,
         language: nav.language,
         url: window.location.href,
+        route: {
+          path: this.$route?.path || null,
+          name: this.$route?.name || null,
+          fullPath: this.$route?.fullPath || null,
+        },
+        pageContext: this.getIssuePageContext(),
         timestamp: new Date().toISOString(),
       }
+    },
+
+    getIssuePageContext() {
+      const context = {
+        selectedSubject: null,
+        adminCurrentTab: null,
+        archiveContext: null,
+      }
+
+      try {
+        const raw = localStorage.getItem('selectedSubject')
+        context.selectedSubject = raw ? JSON.parse(raw) : null
+      } catch {
+        context.selectedSubject = null
+      }
+
+      try {
+        context.adminCurrentTab = localStorage.getItem('adminCurrentTab')
+      } catch {
+        context.adminCurrentTab = null
+      }
+
+      try {
+        const raw = sessionStorage.getItem('pastexam:issueContext')
+        context.archiveContext = raw ? JSON.parse(raw) : null
+      } catch {
+        context.archiveContext = null
+      }
+
+      return context
     },
 
     getBrowserInfo(userAgent) {
@@ -738,13 +774,42 @@ export default {
       const osInfo = this.getOSInfo(systemInfo.platform, systemInfo.userAgent)
       const formattedTime = this.formatTimestamp(systemInfo.timestamp)
 
+      const ctx = systemInfo.pageContext || {}
+      const archiveCtx = ctx.archiveContext || {}
+      const course = archiveCtx.course || {}
+      const preview = archiveCtx.preview || {}
+      const filters = archiveCtx.filters || {}
+
+      body += '## 頁面資訊\n\n'
+      body += `| 項目 | 資訊 |\n`
+      body += `|------|------|\n`
+      body += `| 目前頁面 | ${systemInfo.route?.fullPath || systemInfo.url} |\n`
+      if (course?.name || ctx.selectedSubject?.label) {
+        body += `| 課程 | ${(course?.name || ctx.selectedSubject?.label || '').trim()} |\n`
+      }
+      if (course?.id || ctx.selectedSubject?.id) {
+        body += `| 課程 ID | ${course?.id ?? ctx.selectedSubject?.id} |\n`
+      }
+      if (filters?.year || filters?.professor || filters?.type || filters?.hasAnswers) {
+        body += `| 篩選 | year=${filters?.year || '-'}, professor=${filters?.professor || '-'}, type=${filters?.type || '-'}, hasAnswers=${filters?.hasAnswers ? 'Y' : 'N'} |\n`
+      }
+      if (filters?.searchQuery) {
+        body += `| 搜尋 | ${filters.searchQuery} |\n`
+      }
+      if (preview?.open) {
+        body += `| 預覽 | open=true, archiveId=${preview.archiveId || '-'}, name=${preview.name || '-'} |\n`
+      }
+      if (systemInfo.route?.path === '/admin' && ctx.adminCurrentTab !== null) {
+        body += `| 管理頁籤 | ${ctx.adminCurrentTab} |\n`
+      }
+      body += '\n'
+
       body += '## 環境資訊\n\n'
       body += `| 項目 | 資訊 |\n`
       body += `|------|------|\n`
       body += `| 瀏覽器 | ${browserInfo} |\n`
       body += `| 作業系統 | ${osInfo} |\n`
       body += `| 語言設定 | ${systemInfo.language} |\n`
-      body += `| 頁面位置 | ${systemInfo.url} |\n`
       body += `| 回報時間 | ${formattedTime} |\n\n`
 
       body += '<details>\n<summary>詳細系統資訊</summary>\n\n'
@@ -752,6 +817,8 @@ export default {
       body += `User Agent: ${systemInfo.userAgent}\n`
       body += `Platform: ${systemInfo.platform}\n`
       body += `Timestamp: ${systemInfo.timestamp}\n`
+      body += `Route: ${JSON.stringify(systemInfo.route || {})}\n`
+      body += `Page Context: ${JSON.stringify(systemInfo.pageContext || {})}\n`
       body += '```\n'
       body += '</details>\n\n'
 
