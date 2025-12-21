@@ -21,6 +21,8 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 RUN echo "VITE_API_BASE_URL=${VITE_API_BASE_URL}" > .env
+RUN echo "VITE_SITE_HOSTNAME=${VITE_SITE_HOSTNAME}" >> .env
+RUN echo "VITE_UMAMI_SCRIPT_URL=${VITE_UMAMI_SCRIPT_URL}" >> .env
 RUN echo "VITE_UMAMI_WEBSITE_ID=${VITE_UMAMI_WEBSITE_ID}" >> .env
 RUN pnpm build && pnpm prune --prod --ignore-scripts
 
