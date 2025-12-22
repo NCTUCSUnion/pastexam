@@ -6,9 +6,9 @@
   </picture>
   <h3>交大資工考古題系統</h3>
   <a href="https://github.com/NCTUCSUnion/pastexam/actions/workflows/main.yml"><img alt="CI/CD Pipeline" src="https://img.shields.io/github/actions/workflow/status/NCTUCSUnion/pastexam/main.yml?label=CI%2FCD%20Pipeline"></a>
-  <a href="https://github.com/NCTUCSUnion/pastexam/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/NCTUCSUnion/pastexam?color=mediumseagreen"></a>
-  <img alt="Users" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpastexam.nctucsunion.me%2Fapi%2Fstatistics&query=%24.data.totalUsers&label=users">
-  <img alt="Downloads" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpastexam.nctucsunion.me%2Fapi%2Fstatistics&query=%24.data.totalDownloads&label=downloads&color=darkcyan">
+  <a href="https://github.com/NCTUCSUnion/pastexam/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/NCTUCSUnion/pastexam?label=Release&color=mediumseagreen"></a>
+  <img alt="Users" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpastexam.nctucsunion.me%2Fapi%2Fstatistics&query=%24.data.totalUsers&label=Users">
+  <img alt="Downloads" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpastexam.nctucsunion.me%2Fapi%2Fstatistics&query=%24.data.totalDownloads&label=Downloads&color=darkcyan">
 </div>
 
 ---
