@@ -54,10 +54,10 @@
 | :--- | :--- |
 | **前端** | Vue 3、Vite、TypeScript、PrimeVue、Tailwind CSS |
 | **後端** | Python、FastAPI、SQLModel、Alembic、ARQ |
-| **資料庫／快取** | PostgreSQL、Redis |
+| **資料庫 / 快取** | PostgreSQL、Redis |
 | **物件儲存** | MinIO（S3 相容） |
 | **反向代理** | Nginx |
-| **DevOps／CI** | Docker Compose、GitHub Actions |
+| **DevOps / CI** | Docker Compose、GitHub Actions |
 
 ## 本地開發
 
