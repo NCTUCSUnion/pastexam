@@ -16,7 +16,7 @@
 ## 專案簡介
 <p>
   交大資工考古題系統由交大資工系學會開發與維護，旨在彙整並整理課程相關的歷年考試資料（題目、解答與參考內容），協助同學更有效率地進行考試準備。
-  因應使用人數成長與功能擴充需求，本系統重新設計並優化整體架構與使用體驗，使資料搜尋、線上預覽與討論交流更加直覺且流暢。
+  因應使用人數成長與功能擴充需求，本系統重新設計並優化整體架構與使用體驗，使資料搜尋、線上預覽與討論交流更加直覺、流暢。
 </p>
 
 <p align="center">
@@ -34,13 +34,19 @@
 
 ## 介面預覽
 ### 搜尋介面
-<img src="docs/screenshots/search.webp" width="100%" />
+<p align="center">
+  <img src="docs/screenshots/search.webp" width="100%" />
+</p>
 
 ### 文件預覽與討論區
-<img src="docs/screenshots/preview-forum.webp" width="100%" />
+<p align="center">
+  <img src="docs/screenshots/preview-forum.webp" width="100%" />
+</p>
 
 ### AI 模擬試題
-<img src="docs/screenshots/ai-exam.webp" width="100%" />
+<p align="center">
+  <img src="docs/screenshots/ai-exam.webp" width="100%" />
+</p>
 
 ## 使用技術
 
