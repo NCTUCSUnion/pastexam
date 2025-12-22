@@ -15,6 +15,16 @@
   <strong>交大資工考古題系統</strong>
   <br>
   <br>
+  <p align="center">
+    <picture>
+        <source media="(prefers-color-scheme: dark)"
+                srcset="https://raw.githubusercontent.com/NCTUCSUnion/pastexam/umami/umami-dark.png">
+        <img src="https://raw.githubusercontent.com/NCTUCSUnion/pastexam/umami/umami.png"
+            alt="Usage analytics"
+            width="820">
+    </picture>
+  </p>
+  <br>
   <a href="https://pastexam.nctucsunion.me/">Visit Website</a>
   &nbsp; | &nbsp;
   <a href="https://github.com/NCTUCSUnion/pastexam/issues">Report Bug</a>

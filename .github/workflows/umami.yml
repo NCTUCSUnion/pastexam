@@ -1,0 +1,118 @@
+name: Update Umami Top Screenshot
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  generate:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm i -D playwright
+          npx playwright install --with-deps chromium
+
+      - name: Run screenshot script
+        env:
+          UMAMI_SHARE_URL: ${{ secrets.UMAMI_SHARE_URL }}
+        run: |
+          mkdir -p dist
+          node <<'NODE'
+          import { chromium } from '@playwright/test'
+
+          const SHARE_URL = process.env.UMAMI_SHARE_URL
+          if (!SHARE_URL) {
+            console.error('UMAMI_SHARE_URL not set')
+            process.exit(1)
+          }
+
+          function with30Days(urlStr) {
+            const url = new URL(urlStr)
+            url.searchParams.set('date', '30day')
+            return url.toString()
+          }
+
+          async function capture({ theme, output }) {
+            const browser = await chromium.launch()
+            try {
+              const context = await browser.newContext({
+                viewport: { width: 1600, height: 1400 },
+                deviceScaleFactor: 2,
+              })
+
+              await context.addInitScript(
+                ({ theme }) => {
+                  localStorage.setItem('zen.theme', theme) // 'light' | 'dark'
+                },
+                { theme }
+              )
+
+              const page = await context.newPage()
+
+              const target = with30Days(SHARE_URL)
+              await page.goto(target, { waitUntil: 'networkidle' })
+              await page.waitForTimeout(2000)
+
+              const kpiGrid = page.locator('div[style*="grid-template-columns"][style*="minmax"]').first()
+
+              const chart = page
+                .locator('div[style*="min-height: 520px"]')
+                .filter({ has: page.locator('canvas') })
+                .first()
+
+              await kpiGrid.waitFor({ state: 'visible', timeout: 15000 })
+              await chart.waitFor({ state: 'visible', timeout: 15000 })
+
+              const kpiBox = await kpiGrid.boundingBox()
+              const chartBox = await chart.boundingBox()
+              if (!kpiBox || !chartBox) throw new Error('Bounding box failed')
+
+              const padding = 12
+              const x1 = Math.min(kpiBox.x, chartBox.x) - padding
+              const y1 = Math.min(kpiBox.y, chartBox.y) - padding
+              const x2 = Math.max(kpiBox.x + kpiBox.width, chartBox.x + chartBox.width) + padding
+              const y2 = Math.max(kpiBox.y + kpiBox.height, chartBox.y + chartBox.height) + padding
+
+              const vp = page.viewportSize()
+              const clip = {
+                x: Math.max(0, x1),
+                y: Math.max(0, y1),
+                width: Math.min(vp.width, x2) - Math.max(0, x1),
+                height: Math.min(vp.height, y2) - Math.max(0, y1),
+              }
+
+              await page.screenshot({
+                path: output,
+                clip,
+              })
+              console.log(`Saved ${output}`)
+            } finally {
+              await browser.close()
+            }
+          }
+
+          await capture({ theme: 'light', output: 'dist/umami.png' })
+          await capture({ theme: 'dark', output: 'dist/umami-dark.png' })
+          NODE
+
+      - name: Push png to output branch
+        uses: crazy-max/ghaction-github-pages@v3.1.0
+        with:
+          target_branch: umami
+          build_dir: dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
