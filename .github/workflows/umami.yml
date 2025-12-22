@@ -1,4 +1,4 @@
-name: Update Umami Top Screenshot
+name: Generate Umami Screenshot
 
 on:
   schedule:
@@ -23,7 +23,7 @@ jobs:
       - name: Install Playwright
         run: |
           npm init -y
-          npm i -D playwright
+          npm i -D @playwright/test
           npx playwright install --with-deps chromium
 
       - name: Run screenshot script
