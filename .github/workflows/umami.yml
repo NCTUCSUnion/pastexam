@@ -110,7 +110,7 @@ jobs:
           NODE
 
       - name: Push png to output branch
-        uses: crazy-max/ghaction-github-pages@v3.1.0
+        uses: crazy-max/ghaction-github-pages@v4.2.0
         with:
           target_branch: umami
           build_dir: dist
