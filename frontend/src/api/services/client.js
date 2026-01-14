@@ -1,6 +1,13 @@
 import axios from 'axios'
 import router from '../../router'
 import { getGlobalToast } from '../../utils/toast'
+import {
+  STORAGE_KEYS,
+  removeLocalItem,
+  removeSessionItem,
+  getSessionItem,
+  getLocalItem,
+} from '../../utils/storage'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
 let unauthorizedToastActive = false
@@ -10,8 +17,8 @@ export const WS_UNAUTHORIZED_CLOSE_CODE = 4401
 
 export const handleUnauthorized = ({ redirect = true } = {}) => {
   try {
-    sessionStorage.removeItem('authToken')
-    localStorage.removeItem('authToken')
+    removeSessionItem(STORAGE_KEYS.session.AUTH_TOKEN)
+    removeLocalItem(STORAGE_KEYS.local.AUTH_TOKEN)
   } catch {
     // ignore
   }
@@ -116,7 +123,8 @@ export const buildWebSocketUrl = (path, { baseURL, queryParams = {} } = {}) => {
 
 api.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem('authToken')
+    const token =
+      getSessionItem(STORAGE_KEYS.session.AUTH_TOKEN) || getLocalItem(STORAGE_KEYS.local.AUTH_TOKEN)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }

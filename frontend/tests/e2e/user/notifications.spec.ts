@@ -58,7 +58,7 @@ test.describe('User › Notifications', () => {
     const expectedTimestamp = new Date(ACTIVE_NOTIFICATION.updated_at).getTime()
     await expect
       .poll(async () => {
-        return page.evaluate(() => window.localStorage.getItem('notification_last_seen'))
+        return page.evaluate(() => window.localStorage.getItem('notification-last-seen'))
       })
       .toBe(String(expectedTimestamp))
   })
@@ -124,7 +124,7 @@ test.describe('User › Notifications', () => {
     const expectedTimestamp = new Date(ACTIVE_NOTIFICATION.updated_at).getTime()
     await expect
       .poll(async () => {
-        return page.evaluate(() => window.localStorage.getItem('notification_last_seen'))
+        return page.evaluate(() => window.localStorage.getItem('notification-last-seen'))
       })
       .toBe(String(expectedTimestamp))
   })

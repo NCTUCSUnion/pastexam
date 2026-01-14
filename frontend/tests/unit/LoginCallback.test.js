@@ -61,7 +61,7 @@ describe('LoginCallback view', () => {
 
     await flushPromises()
 
-    expect(sessionStorage.getItem('authToken')).toBe('test-token')
+    expect(sessionStorage.getItem('auth-token')).toBe('test-token')
     expect(routerMock.replace).toHaveBeenCalledWith('/archive')
   })
 
@@ -84,7 +84,7 @@ describe('LoginCallback view', () => {
     await flushPromises()
 
     expect(routerMock.push).not.toHaveBeenCalledWith('/archive')
-    expect(sessionStorage.getItem('authToken')).toBeNull()
+    expect(sessionStorage.getItem('auth-token')).toBeNull()
     expect(wrapper.text()).toContain('登入失敗')
     expect(wrapper.text()).toContain('驗證失敗')
   })

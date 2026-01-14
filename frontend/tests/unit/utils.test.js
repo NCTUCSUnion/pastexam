@@ -144,7 +144,7 @@ describe('utils/auth', () => {
     }
     const token = createToken(payload)
 
-    sessionStorage.setItem('authToken', token)
+    sessionStorage.setItem('auth-token', token)
 
     const { decodeToken, getCurrentUser, isAuthenticated } = await importModule()
 
@@ -162,7 +162,7 @@ describe('utils/auth', () => {
 
   it('handles invalid tokens gracefully', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    sessionStorage.setItem('authToken', 'invalid-token')
+    sessionStorage.setItem('auth-token', 'invalid-token')
 
     const pastPayload = {
       uid: 1,
@@ -179,7 +179,7 @@ describe('utils/auth', () => {
     expect(getCurrentUser()).toBeNull()
     expect(consoleErrorSpy).toHaveBeenCalled()
 
-    sessionStorage.setItem('authToken', expiredToken)
+    sessionStorage.setItem('auth-token', expiredToken)
     expect(isAuthenticated()).toBe(false)
 
     consoleErrorSpy.mockRestore()

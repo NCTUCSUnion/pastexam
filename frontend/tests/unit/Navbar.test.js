@@ -228,14 +228,14 @@ describe('Navbar methods', () => {
       isAuthenticated: true,
       userData: { name: 'Alice' },
     }
-    sessionStorage.setItem('authToken', 'abc')
-    localStorage.setItem('selectedSubject', 'xyz')
+    sessionStorage.setItem('auth-token', 'abc')
+    localStorage.setItem('selected-subject', 'xyz')
 
     await Navbar.methods.handleLogout.call(ctx)
     expect(logoutMock).toHaveBeenCalled()
     expect(trackEventMock).toHaveBeenCalledWith('logout', { success: true })
-    expect(sessionStorage.getItem('authToken')).toBeNull()
-    expect(localStorage.getItem('selectedSubject')).toBeNull()
+    expect(sessionStorage.getItem('auth-token')).toBeNull()
+    expect(localStorage.getItem('selected-subject')).toBeNull()
     expect(routerPush).toHaveBeenCalledWith('/')
   })
 
@@ -255,7 +255,7 @@ describe('Navbar methods', () => {
 
     expect(trackEventMock).toHaveBeenCalledWith('logout', { success: false })
     expect(routerPush).toHaveBeenCalledWith('/')
-    expect(sessionStorage.getItem('authToken')).toBeNull()
+    expect(sessionStorage.getItem('auth-token')).toBeNull()
   })
 
   it('opens notification center with auth guard', async () => {
@@ -540,7 +540,7 @@ describe('Navbar methods', () => {
 
   it('collects system info and formats timestamps', () => {
     sessionStorage.setItem(
-      'pastexam:issueContext',
+      'pastexam-issue-context',
       JSON.stringify({
         page: 'archive',
         course: { id: 101, name: '資料結構' },

@@ -80,4 +80,9 @@ export const EVENTS = {
 
   // Navbar events
   OPEN_MORE_ACTIONS_MENU: 'open-more-actions-menu',
+
+  // Discussion events
+  DISCUSSION_SEND_MESSAGE: 'discussion-send-message',
+  DISCUSSION_UPDATE_NICKNAME: 'discussion-update-nickname',
+  DISCUSSION_SET_DEFAULT_OPEN: 'discussion-set-default-open',
 }

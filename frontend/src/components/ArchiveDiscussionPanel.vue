@@ -1,8 +1,12 @@
 <template>
   <div class="discussion-panel flex flex-column" :style="{ width }">
-    <div class="discussion-header p-3 flex align-items-center justify-content-between">
+    <div
+      v-if="showHeader"
+      class="discussion-header p-3 flex align-items-center justify-content-between"
+    >
       <div class="font-semibold">討論區</div>
       <Button
+        v-if="showSettings"
         icon="pi pi-cog"
         severity="secondary"
         text
@@ -106,6 +110,17 @@
           <InputText v-model="nicknameDraft" placeholder="輸入暱稱" maxlength="15" class="w-full" />
           <small class="text-xs" style="color: var(--text-secondary)">{{ nicknameHint }}</small>
         </div>
+        <div class="flex flex-column gap-2">
+          <label class="font-semibold">其他</label>
+          <label class="flex align-items-center gap-2">
+            <Checkbox
+              v-model="desktopDefaultOpen"
+              :binary="true"
+              @change="handleDesktopDefaultOpenChange"
+            />
+            <span>預設開啟討論區</span>
+          </label>
+        </div>
       </div>
 
       <template #footer>
@@ -134,6 +149,11 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { discussionService, userService } from '../api'
 import { getCurrentUser } from '../utils/auth'
 import { formatRelativeTime } from '../utils/time'
+import { trackEvent, EVENTS } from '../utils/analytics'
+import { getBooleanPreference, setBooleanPreference } from '../utils/usePreferences'
+import { STORAGE_KEYS } from '../utils/storage'
+
+const DESKTOP_DEFAULT_OPEN_KEY = STORAGE_KEYS.local.DISCUSSION_DESKTOP_DEFAULT_OPEN
 
 const props = defineProps({
   courseId: {
@@ -152,7 +172,17 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  showHeader: {
+    type: Boolean,
+    default: true,
+  },
+  showSettings: {
+    type: Boolean,
+    default: true,
+  },
 })
+
+const emit = defineEmits(['desktop-default-open-change'])
 
 const messages = ref([])
 const loading = ref(false)
@@ -175,6 +205,7 @@ const profile = ref({ nickname: '', name: '' })
 const showNicknameDialog = ref(false)
 const nicknameDraft = ref('')
 const nicknameSaving = ref(false)
+const desktopDefaultOpen = ref(getBooleanPreference(DESKTOP_DEFAULT_OPEN_KEY, true))
 
 const MESSAGE_MAX_LENGTH = 200
 const MESSAGE_PREVIEW_LENGTH = 100
@@ -386,6 +417,11 @@ async function send() {
         content: rawContent,
       })
     )
+    trackEvent(EVENTS.DISCUSSION_SEND_MESSAGE, {
+      courseId: normalizeId(props.courseId),
+      archiveId: normalizeId(props.archiveId),
+      length: rawContent.length,
+    })
     draft.value = ''
   } catch {
     // ignore
@@ -462,12 +498,17 @@ async function loadMe() {
 
 function openNicknameDialog() {
   nicknameDraft.value = (profile.value.nickname || profile.value.name || '').trim()
+  desktopDefaultOpen.value = getBooleanPreference(DESKTOP_DEFAULT_OPEN_KEY, true)
   showNicknameDialog.value = true
 }
 
 function closeNicknameDialog() {
   showNicknameDialog.value = false
 }
+
+defineExpose({
+  openNicknameDialog,
+})
 
 async function saveNickname() {
   if (!currentUser.value) return
@@ -484,10 +525,15 @@ async function saveNickname() {
       m.user_id === currentUser.value.id ? { ...m, user_name: newNickname } : m
     )
 
+    trackEvent(EVENTS.DISCUSSION_UPDATE_NICKNAME, {
+      cleared: !nextNickname,
+      length: nextNickname.length,
+    })
+
     toast?.add?.({
       severity: 'success',
-      summary: '已更新暱稱',
-      detail: `暱稱已更新為「${newNickname}」`,
+      summary: '儲存成功',
+      detail: '討論區設定已儲存',
       life: 2500,
     })
     closeNicknameDialog()
@@ -503,6 +549,13 @@ async function saveNickname() {
   } finally {
     nicknameSaving.value = false
   }
+}
+
+function handleDesktopDefaultOpenChange() {
+  const next = Boolean(desktopDefaultOpen.value)
+  setBooleanPreference(DESKTOP_DEFAULT_OPEN_KEY, next)
+  emit('desktop-default-open-change', next)
+  trackEvent(EVENTS.DISCUSSION_SET_DEFAULT_OPEN, { enabled: next })
 }
 </script>
 

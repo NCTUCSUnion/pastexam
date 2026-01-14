@@ -1,4 +1,5 @@
 import { api, bindUnauthorizedWebSocket, buildWebSocketUrl } from './client'
+import { STORAGE_KEYS, getSessionItem, getLocalItem } from '../../utils/storage'
 
 export const discussionService = {
   listArchiveMessages(courseId, archiveId, { limit = 50, beforeId } = {}) {
@@ -15,7 +16,10 @@ export const discussionService = {
   },
 
   openArchiveDiscussionWebSocket(courseId, archiveId, { token } = {}) {
-    const authToken = token ?? sessionStorage.getItem('authToken')
+    const authToken =
+      token ??
+      getSessionItem(STORAGE_KEYS.session.AUTH_TOKEN) ??
+      getLocalItem(STORAGE_KEYS.local.AUTH_TOKEN)
     const url = buildWebSocketUrl(`/courses/${courseId}/archives/${archiveId}/discussion/ws`, {
       queryParams: authToken ? { token: authToken } : {},
     })

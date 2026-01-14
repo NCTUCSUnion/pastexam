@@ -333,7 +333,7 @@ describe('AdminView', () => {
     wrapper.vm.notifications = []
     await wrapper.vm.handleTabChange('2')
 
-    expect(localStorage.getItem('adminCurrentTab')).toBe('2')
+    expect(localStorage.getItem('admin-current-tab')).toBe('2')
     expect(trackEventMock).toHaveBeenCalledWith(
       'switch-tab',
       expect.objectContaining({ tab: 'notifications' })
@@ -406,7 +406,7 @@ describe('AdminView', () => {
     trackEventMock.mockClear()
     localStorage.clear()
     await wrapper.vm.handleTabChange('1')
-    expect(localStorage.getItem('adminCurrentTab')).toBe('1')
+    expect(localStorage.getItem('admin-current-tab')).toBe('1')
     expect(trackEventMock).toHaveBeenCalledWith('switch-tab', { tab: 'users' })
 
     wrapper.unmount()

@@ -225,7 +225,7 @@ describe('ArchiveView', () => {
     vi.runAllTimers()
     await flushPromises()
 
-    const initialIssueContextRaw = sessionStorage.getItem('pastexam:issueContext')
+    const initialIssueContextRaw = sessionStorage.getItem('pastexam-issue-context')
     expect(initialIssueContextRaw).toBeTruthy()
     const initialIssueContext = JSON.parse(initialIssueContextRaw)
     expect(initialIssueContext.page).toBe('archive')
@@ -244,7 +244,7 @@ describe('ArchiveView', () => {
     expect(vm.selectedSubject).toBe('Calculus I')
     expect(vm.groupedArchives.length).toBeGreaterThan(0)
 
-    const issueContextAfterSelect = JSON.parse(sessionStorage.getItem('pastexam:issueContext'))
+    const issueContextAfterSelect = JSON.parse(sessionStorage.getItem('pastexam-issue-context'))
     expect(issueContextAfterSelect.course).toEqual({ id: 'c1', name: 'Calculus I' })
 
     vm.filters.year = '2023'
@@ -257,7 +257,7 @@ describe('ArchiveView', () => {
     vi.runAllTimers()
     await flushPromises()
 
-    const issueContextAfterFilters = JSON.parse(sessionStorage.getItem('pastexam:issueContext'))
+    const issueContextAfterFilters = JSON.parse(sessionStorage.getItem('pastexam-issue-context'))
     expect(issueContextAfterFilters.filters).toEqual(
       expect.objectContaining({
         year: '2023',
@@ -280,7 +280,7 @@ describe('ArchiveView', () => {
     expect(vm.showPreview).toBe(true)
     expect(vm.selectedArchive.previewUrl).toContain('preview')
 
-    const issueContextAfterPreview = JSON.parse(sessionStorage.getItem('pastexam:issueContext'))
+    const issueContextAfterPreview = JSON.parse(sessionStorage.getItem('pastexam-issue-context'))
     expect(issueContextAfterPreview.preview).toEqual(
       expect.objectContaining({
         open: true,
@@ -299,7 +299,7 @@ describe('ArchiveView', () => {
     expect(vm.showPreview).toBe(false)
     await nextTick()
     const issueContextAfterClosePreview = JSON.parse(
-      sessionStorage.getItem('pastexam:issueContext')
+      sessionStorage.getItem('pastexam-issue-context')
     )
     expect(issueContextAfterClosePreview.preview?.open).toBe(false)
 
