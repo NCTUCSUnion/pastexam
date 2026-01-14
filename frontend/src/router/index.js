@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { decodeToken, getCurrentUser, isAuthenticated, setToken } from '../utils/auth.js'
+import { STORAGE_KEYS, removeSessionItem } from '../utils/storage'
 
 const routes = [
   {
@@ -50,7 +51,7 @@ router.beforeEach((to, from, next) => {
       return
     }
 
-    sessionStorage.removeItem('authToken')
+    removeSessionItem(STORAGE_KEYS.session.AUTH_TOKEN)
     next({ name: 'Home', replace: true })
     return
   }

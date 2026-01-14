@@ -559,6 +559,7 @@ import {
   notificationService,
 } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
+import { STORAGE_KEYS, getLocalItem, setLocalItem } from '../utils/storage'
 
 const confirm = useConfirm()
 const toast = useToast()
@@ -639,11 +640,11 @@ const notificationFormErrors = ref({})
 
 const currentUserId = computed(() => getCurrentUser()?.id)
 
-const TAB_STORAGE_KEY = 'adminCurrentTab'
+const TAB_STORAGE_KEY = STORAGE_KEYS.local.ADMIN_CURRENT_TAB
 
 const getInitialTab = () => {
   try {
-    const savedTab = localStorage.getItem(TAB_STORAGE_KEY)
+    const savedTab = getLocalItem(TAB_STORAGE_KEY)
     if (savedTab && ['0', '1', '2'].includes(savedTab)) {
       return savedTab
     }
@@ -1334,7 +1335,7 @@ const formatDateTime = (dateString) => {
 // Persist the current tab in localStorage
 const saveTabToStorage = (tabValue) => {
   try {
-    localStorage.setItem(TAB_STORAGE_KEY, tabValue)
+    setLocalItem(TAB_STORAGE_KEY, tabValue)
   } catch (e) {
     console.error('Failed to save tab to storage:', e)
   }

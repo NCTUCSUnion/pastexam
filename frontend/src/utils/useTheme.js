@@ -1,14 +1,16 @@
 import { ref, watch } from 'vue'
+import { STORAGE_KEYS, getLocalItem, setLocalItem } from './storage'
 
-const THEME_KEY = 'theme-preference'
-const isDarkTheme = ref(
-  localStorage.getItem(THEME_KEY) ? localStorage.getItem(THEME_KEY) === 'dark' : true
-)
+const initialThemeIsDark = (() => {
+  const raw = getLocalItem(STORAGE_KEYS.local.THEME_PREFERENCE)
+  return raw ? raw === 'dark' : true
+})()
+const isDarkTheme = ref(initialThemeIsDark)
 
 export function useTheme() {
   const toggleTheme = () => {
     isDarkTheme.value = !isDarkTheme.value
-    localStorage.setItem(THEME_KEY, isDarkTheme.value ? 'dark' : 'light')
+    setLocalItem(STORAGE_KEYS.local.THEME_PREFERENCE, isDarkTheme.value ? 'dark' : 'light')
   }
 
   watch(

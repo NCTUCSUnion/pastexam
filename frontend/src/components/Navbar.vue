@@ -293,6 +293,14 @@ import { isUnauthorizedError } from '../utils/http'
 import { useNotifications } from '../utils/useNotifications'
 import NotificationModal from './NotificationModal.vue'
 import NotificationCenterModal from './NotificationCenterModal.vue'
+import {
+  STORAGE_KEYS,
+  removeLocalItem,
+  removeSessionItem,
+  getLocalJson,
+  getLocalItem,
+  getSessionJson,
+} from '../utils/storage'
 
 export default {
   name: 'AppNavbar',
@@ -550,10 +558,10 @@ export default {
         trackEvent(EVENTS.LOGOUT, { success: false })
       }
 
-      sessionStorage.removeItem('authToken')
-      localStorage.removeItem('selectedSubject')
-      localStorage.removeItem('adminCurrentTab')
-      localStorage.removeItem('aiExamCurrentTask')
+      removeSessionItem(STORAGE_KEYS.session.AUTH_TOKEN)
+      removeLocalItem(STORAGE_KEYS.local.SELECTED_SUBJECT)
+      removeLocalItem(STORAGE_KEYS.local.ADMIN_CURRENT_TAB)
+      removeLocalItem(STORAGE_KEYS.local.AI_EXAM_CURRENT_TASK)
       this.isAuthenticated = false
       this.userData = null
 
@@ -676,21 +684,19 @@ export default {
       }
 
       try {
-        const raw = localStorage.getItem('selectedSubject')
-        context.selectedSubject = raw ? JSON.parse(raw) : null
+        context.selectedSubject = getLocalJson(STORAGE_KEYS.local.SELECTED_SUBJECT)
       } catch {
         context.selectedSubject = null
       }
 
       try {
-        context.adminCurrentTab = localStorage.getItem('adminCurrentTab')
+        context.adminCurrentTab = getLocalItem(STORAGE_KEYS.local.ADMIN_CURRENT_TAB)
       } catch {
         context.adminCurrentTab = null
       }
 
       try {
-        const raw = sessionStorage.getItem('pastexam:issueContext')
-        context.archiveContext = raw ? JSON.parse(raw) : null
+        context.archiveContext = getSessionJson(STORAGE_KEYS.session.ISSUE_CONTEXT)
       } catch {
         context.archiveContext = null
       }

@@ -389,6 +389,7 @@ import { aiExamService, courseService, archiveService } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 import { isUnauthorizedError } from '../utils/http'
+import { STORAGE_KEYS, getLocalJson, setLocalJson, removeLocalItem } from '../utils/storage'
 
 const PdfPreviewModal = defineAsyncComponent(() => import('./PdfPreviewModal.vue'))
 
@@ -415,7 +416,7 @@ const apiKeyStatus = ref({ has_api_key: false, api_key_masked: null })
 const apiKeyForm = ref({ key: '' })
 const apiKeyLoading = ref(false)
 
-const TASK_STORAGE_KEY = 'aiExamCurrentTask'
+const TASK_STORAGE_KEY = STORAGE_KEYS.local.AI_EXAM_CURRENT_TASK
 
 const form = ref({
   category: null,
@@ -937,15 +938,12 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
 
 const saveTaskToStorage = (taskId, displayInfo = {}) => {
   try {
-    localStorage.setItem(
-      TASK_STORAGE_KEY,
-      JSON.stringify({
-        taskId,
-        displayInfo, // Store only the presentation-ready fields
-        timestamp: Date.now(),
-        successToastShown: false,
-      })
-    )
+    setLocalJson(TASK_STORAGE_KEY, {
+      taskId,
+      displayInfo, // Store only the presentation-ready fields
+      timestamp: Date.now(),
+      successToastShown: false,
+    })
   } catch (e) {
     console.error('Failed to save task to storage:', e)
   }
@@ -956,16 +954,13 @@ const updateTaskInStorage = (taskId, updates = {}) => {
     const stored = loadTaskFromStorage()
     if (!stored || stored.taskId !== taskId) return
 
-    localStorage.setItem(
-      TASK_STORAGE_KEY,
-      JSON.stringify({
-        ...stored,
-        ...updates,
-        displayInfo: updates.displayInfo
-          ? { ...stored.displayInfo, ...updates.displayInfo }
-          : stored.displayInfo,
-      })
-    )
+    setLocalJson(TASK_STORAGE_KEY, {
+      ...stored,
+      ...updates,
+      displayInfo: updates.displayInfo
+        ? { ...stored.displayInfo, ...updates.displayInfo }
+        : stored.displayInfo,
+    })
   } catch (e) {
     console.error('Failed to update task in storage:', e)
   }
@@ -982,7 +977,7 @@ const hasShownSuccessToastForTask = (taskId) => {
 
 const clearTaskFromStorage = () => {
   try {
-    localStorage.removeItem(TASK_STORAGE_KEY)
+    removeLocalItem(TASK_STORAGE_KEY)
   } catch (e) {
     console.error('Failed to clear task from storage:', e)
   }
@@ -1014,10 +1009,7 @@ const resetModalState = ({ keepTask = false } = {}) => {
 
 const loadTaskFromStorage = () => {
   try {
-    const stored = localStorage.getItem(TASK_STORAGE_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
+    return getLocalJson(TASK_STORAGE_KEY)
   } catch (e) {
     console.error('Failed to load task from storage:', e)
   }

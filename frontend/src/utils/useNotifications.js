@@ -1,8 +1,7 @@
 import { reactive, ref, computed } from 'vue'
 import { notificationService } from '../api'
 import { isUnauthorizedError } from './http'
-
-const STORAGE_KEY = 'notification_last_seen'
+import { STORAGE_KEYS, getLocalItem, setLocalItem } from './storage'
 
 const state = reactive({
   active: [],
@@ -45,9 +44,8 @@ const latestUnseenNotification = computed(() => {
 })
 
 function loadLastSeenTimestamp() {
-  if (typeof window === 'undefined') return 0
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = getLocalItem(STORAGE_KEYS.local.NOTIFICATION_LAST_SEEN)
     if (!raw) return 0
     const parsed = parseInt(raw, 10)
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
@@ -59,9 +57,8 @@ function loadLastSeenTimestamp() {
 
 function persistLastSeenTimestamp(timestamp) {
   lastSeenTimestamp.value = timestamp
-  if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(STORAGE_KEY, String(timestamp))
+    setLocalItem(STORAGE_KEYS.local.NOTIFICATION_LAST_SEEN, String(timestamp))
   } catch (error) {
     console.error('Failed to persist notification last seen timestamp:', error)
   }

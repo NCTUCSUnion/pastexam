@@ -151,8 +151,9 @@ import { getCurrentUser } from '../utils/auth'
 import { formatRelativeTime } from '../utils/time'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { getBooleanPreference, setBooleanPreference } from '../utils/usePreferences'
+import { STORAGE_KEYS } from '../utils/storage'
 
-const DESKTOP_DEFAULT_OPEN_KEY = 'discussion-desktop-default-open'
+const DESKTOP_DEFAULT_OPEN_KEY = STORAGE_KEYS.local.DISCUSSION_DESKTOP_DEFAULT_OPEN
 
 const props = defineProps({
   courseId: {

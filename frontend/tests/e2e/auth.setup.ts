@@ -53,10 +53,10 @@ setup('authenticate as admin', async ({ page }) => {
   await page.waitForURL('**/archive', { timeout: 15000 })
   await expect(page).toHaveURL(/\/archive$/)
 
-  const token = await page.evaluate(() => window.sessionStorage.getItem('authToken'))
+  const token = await page.evaluate(() => window.sessionStorage.getItem('auth-token'))
   if (token) {
     await page.evaluate((value) => {
-      window.localStorage.setItem('authToken', value)
+      window.localStorage.setItem('auth-token', value)
     }, token)
   } else {
     throw new Error('Expected auth token after login but none was found')

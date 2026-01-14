@@ -82,7 +82,7 @@ describe('api client interceptors', () => {
     requestSuccess(config)
     expect(config.headers.Authorization).toBeUndefined()
 
-    sessionStorage.setItem('authToken', 'token-xyz')
+    sessionStorage.setItem('auth-token', 'token-xyz')
     const configWithToken = { headers: {} }
     expect(requestSuccess(configWithToken).headers.Authorization).toBe('Bearer token-xyz')
   })
@@ -108,7 +108,7 @@ describe('api client interceptors', () => {
   })
 
   it('handles general unauthorized responses', async () => {
-    sessionStorage.setItem('authToken', 'token-xyz')
+    sessionStorage.setItem('auth-token', 'token-xyz')
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
     vi.useFakeTimers()
 
@@ -119,7 +119,7 @@ describe('api client interceptors', () => {
 
     await expect(responseError(error)).rejects.toBe(error)
 
-    expect(sessionStorage.getItem('authToken')).toBeNull()
+    expect(sessionStorage.getItem('auth-token')).toBeNull()
     expect(error.isUnauthorized).toBe(true)
     expect(toastAddMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -135,8 +135,8 @@ describe('api client interceptors', () => {
   })
 
   it('handles unauthorized websocket close code', async () => {
-    sessionStorage.setItem('authToken', 'token-xyz')
-    localStorage.setItem('authToken', 'token-xyz')
+    sessionStorage.setItem('auth-token', 'token-xyz')
+    localStorage.setItem('auth-token', 'token-xyz')
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
 
     const { bindUnauthorizedWebSocket, WS_UNAUTHORIZED_CLOSE_CODE } =
@@ -152,8 +152,8 @@ describe('api client interceptors', () => {
     bindUnauthorizedWebSocket(ws)
     closeHandlers.forEach((handler) => handler({ code: WS_UNAUTHORIZED_CLOSE_CODE }))
 
-    expect(sessionStorage.getItem('authToken')).toBeNull()
-    expect(localStorage.getItem('authToken')).toBeNull()
+    expect(sessionStorage.getItem('auth-token')).toBeNull()
+    expect(localStorage.getItem('auth-token')).toBeNull()
     expect(dispatchSpy).toHaveBeenCalledWith(expect.any(CustomEvent))
     expect(routerPushMock).toHaveBeenCalledWith('/')
 

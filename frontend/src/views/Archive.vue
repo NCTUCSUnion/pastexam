@@ -445,6 +445,13 @@ import { getCurrentUser, isAuthenticated } from '../utils/auth'
 import { useTheme } from '../utils/useTheme'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { isUnauthorizedError } from '../utils/http'
+import {
+  STORAGE_KEYS,
+  getLocalJson,
+  setLocalJson,
+  removeLocalItem,
+  setSessionJson,
+} from '../utils/storage'
 
 const toast = inject('toast')
 const confirm = inject('confirm')
@@ -599,19 +606,13 @@ watch(searchQuery, (newValue) => {
   }
 })
 
-const ISSUE_CONTEXT_STORAGE_KEY = 'pastexam:issueContext'
+const ISSUE_CONTEXT_STORAGE_KEY = STORAGE_KEYS.session.ISSUE_CONTEXT
 
 function persistIssueContext() {
   try {
     if (typeof window === 'undefined') return
 
-    const selectedSubjectRaw = localStorage.getItem('selectedSubject')
-    let selectedSubjectStored = null
-    try {
-      selectedSubjectStored = selectedSubjectRaw ? JSON.parse(selectedSubjectRaw) : null
-    } catch {
-      selectedSubjectStored = null
-    }
+    const selectedSubjectStored = getLocalJson(STORAGE_KEYS.local.SELECTED_SUBJECT)
 
     const payload = {
       page: 'archive',
@@ -638,7 +639,7 @@ function persistIssueContext() {
       },
     }
 
-    sessionStorage.setItem(ISSUE_CONTEXT_STORAGE_KEY, JSON.stringify(payload))
+    setSessionJson(ISSUE_CONTEXT_STORAGE_KEY, payload)
   } catch {
     // ignore
   }
@@ -819,7 +820,7 @@ function filterBySubject(course) {
     archives.value = []
     expandedMenuItems.value = {}
     shouldResetPanels.value = true
-    localStorage.removeItem('selectedSubject')
+    removeLocalItem(STORAGE_KEYS.local.SELECTED_SUBJECT)
     return
   }
 
@@ -842,13 +843,7 @@ function filterBySubject(course) {
     // console.log("Expanding category:", categoryKey, expandedMenuItems.value);
   }
 
-  localStorage.setItem(
-    'selectedSubject',
-    JSON.stringify({
-      label: course.label,
-      id: course.id,
-    })
-  )
+  setLocalJson(STORAGE_KEYS.local.SELECTED_SUBJECT, { label: course.label, id: course.id })
 
   fetchArchives()
 }
@@ -1336,10 +1331,9 @@ onMounted(async () => {
   checkAuthentication()
   await fetchCourses()
 
-  const savedSubject = localStorage.getItem('selectedSubject')
-  if (savedSubject) {
+  const subjectData = getLocalJson(STORAGE_KEYS.local.SELECTED_SUBJECT)
+  if (subjectData) {
     try {
-      const subjectData = JSON.parse(savedSubject)
       // Verify the course still exists in the current course list
       const courseExists = Object.values(coursesList.value).some((category) =>
         category.some((course) => course.id === subjectData.id && course.name === subjectData.label)
@@ -1356,11 +1350,11 @@ onMounted(async () => {
 
         await fetchArchives()
       } else {
-        localStorage.removeItem('selectedSubject')
+        removeLocalItem(STORAGE_KEYS.local.SELECTED_SUBJECT)
       }
     } catch (error) {
       console.error('Error parsing saved subject:', error)
-      localStorage.removeItem('selectedSubject')
+      removeLocalItem(STORAGE_KEYS.local.SELECTED_SUBJECT)
     }
   }
 })

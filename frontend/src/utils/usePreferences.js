@@ -1,13 +1,9 @@
 import { ref } from 'vue'
-
-function canUseStorage() {
-  return typeof window !== 'undefined' && typeof localStorage !== 'undefined'
-}
+import { getLocalItem, setLocalItem } from './storage'
 
 export function getBooleanPreference(key, defaultValue = false) {
-  if (!canUseStorage()) return defaultValue
   try {
-    const raw = localStorage.getItem(key)
+    const raw = getLocalItem(key)
     if (raw === null) return defaultValue
     if (raw === '1' || raw === 'true') return true
     if (raw === '0' || raw === 'false') return false
@@ -18,9 +14,8 @@ export function getBooleanPreference(key, defaultValue = false) {
 }
 
 export function setBooleanPreference(key, value) {
-  if (!canUseStorage()) return
   try {
-    localStorage.setItem(key, value ? '1' : '0')
+    setLocalItem(key, value ? '1' : '0')
   } catch {
     // ignore
   }

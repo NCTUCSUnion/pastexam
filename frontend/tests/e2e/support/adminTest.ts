@@ -9,9 +9,9 @@ const adminTest = base.extend({
     })
 
     await context.addInitScript(() => {
-      const token = window.localStorage.getItem('authToken')
+      const token = window.localStorage.getItem('auth-token')
       if (token) {
-        window.sessionStorage.setItem('authToken', token)
+        window.sessionStorage.setItem('auth-token', token)
       }
     })
 

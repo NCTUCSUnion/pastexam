@@ -30,6 +30,7 @@
 <script>
 import { useTheme } from '../utils/useTheme'
 import { getCodeBgSvg } from '../utils/svgBg'
+import { STORAGE_KEYS, setSessionItem } from '../utils/storage'
 
 export default {
   data() {
@@ -64,7 +65,7 @@ export default {
         throw new Error('No authentication token received')
       }
 
-      sessionStorage.setItem('authToken', token)
+      setSessionItem(STORAGE_KEYS.session.AUTH_TOKEN, token)
       this.$router.replace('/archive')
     } catch (error) {
       console.error('Login callback error:', error)

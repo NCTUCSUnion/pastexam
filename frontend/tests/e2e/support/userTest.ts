@@ -14,8 +14,8 @@ const userTest = base.extend({
     })
 
     await context.addInitScript((value: string) => {
-      window.sessionStorage.setItem('authToken', value)
-      window.localStorage.setItem('authToken', value)
+      window.sessionStorage.setItem('auth-token', value)
+      window.localStorage.setItem('auth-token', value)
     }, token)
 
     await use(context)

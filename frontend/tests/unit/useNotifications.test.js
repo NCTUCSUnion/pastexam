@@ -101,7 +101,7 @@ describe('useNotifications composable', () => {
     expect(composable.state.modalVisible).toBe(false)
     const expectedTimestamp = new Date('2025-11-01T10:00:00Z').getTime()
     expect(composable.lastSeenTimestamp.value).toBe(expectedTimestamp)
-    expect(localStorage.getItem('notification_last_seen')).toBe(String(expectedTimestamp))
+    expect(localStorage.getItem('notification-last-seen')).toBe(String(expectedTimestamp))
   })
 
   it('loads all notifications when opening center', async () => {

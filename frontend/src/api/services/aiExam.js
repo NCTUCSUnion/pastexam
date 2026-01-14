@@ -1,4 +1,5 @@
 import { api, bindUnauthorizedWebSocket, buildWebSocketUrl } from './client'
+import { STORAGE_KEYS, getSessionItem, getLocalItem } from '../../utils/storage'
 
 export const aiExamService = {
   generateMockExam(params) {
@@ -10,7 +11,10 @@ export const aiExamService = {
   },
 
   openTaskStatusWebSocket(taskId, { token } = {}) {
-    const authToken = token ?? sessionStorage.getItem('authToken')
+    const authToken =
+      token ??
+      getSessionItem(STORAGE_KEYS.session.AUTH_TOKEN) ??
+      getLocalItem(STORAGE_KEYS.local.AUTH_TOKEN)
     const url = buildWebSocketUrl(`/ai-exam/ws/task/${taskId}`, {
       queryParams: authToken ? { token: authToken } : {},
     })

@@ -1,4 +1,6 @@
-const TOKEN_KEY = 'authToken'
+import { STORAGE_KEYS, getSessionItem, setSessionItem, removeSessionItem } from './storage'
+
+const TOKEN_KEY = STORAGE_KEYS.session.AUTH_TOKEN
 
 export function decodeToken(token) {
   if (!token) return null
@@ -21,7 +23,7 @@ export function decodeToken(token) {
 }
 
 export function getCurrentUser() {
-  const token = sessionStorage.getItem('authToken')
+  const token = getSessionItem(TOKEN_KEY)
   if (!token) return null
 
   const decoded = decodeToken(token)
@@ -38,7 +40,7 @@ export function getCurrentUser() {
 }
 
 export function isAuthenticated() {
-  const token = sessionStorage.getItem('authToken')
+  const token = getSessionItem(TOKEN_KEY)
   if (!token) return false
 
   const decoded = decodeToken(token)
@@ -51,13 +53,13 @@ export function isAuthenticated() {
 }
 
 export function setToken(token) {
-  sessionStorage.setItem(TOKEN_KEY, token)
+  setSessionItem(TOKEN_KEY, token)
 }
 
 export function getToken() {
-  return sessionStorage.getItem(TOKEN_KEY)
+  return getSessionItem(TOKEN_KEY)
 }
 
 export function removeToken() {
-  sessionStorage.removeItem(TOKEN_KEY)
+  removeSessionItem(TOKEN_KEY)
 }

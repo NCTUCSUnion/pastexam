@@ -181,8 +181,9 @@ import '@tato30/vue-pdf/style.css'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 import ArchiveDiscussionPanel from './ArchiveDiscussionPanel.vue'
 import { getBooleanPreference } from '../utils/usePreferences'
+import { STORAGE_KEYS } from '../utils/storage'
 
-const DESKTOP_DEFAULT_OPEN_KEY = 'discussion-desktop-default-open'
+const DESKTOP_DEFAULT_OPEN_KEY = STORAGE_KEYS.local.DISCUSSION_DESKTOP_DEFAULT_OPEN
 
 const props = defineProps({
   visible: {
