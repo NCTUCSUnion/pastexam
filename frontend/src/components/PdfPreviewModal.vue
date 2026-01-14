@@ -99,7 +99,12 @@
           class="discussion-wrapper"
           :class="{ 'is-open': discussionOpen, 'is-closed': !discussionOpen }"
         >
-          <ArchiveDiscussionPanel :courseId="courseId" :archiveId="archiveId" width="100%" />
+          <ArchiveDiscussionPanel
+            :courseId="courseId"
+            :archiveId="archiveId"
+            width="100%"
+            @desktop-default-open-change="handleDesktopDefaultOpenChange"
+          />
         </div>
       </div>
     </div>
@@ -163,6 +168,7 @@
         class="discussion-modal-panel"
         :showHeader="false"
         :showSettings="false"
+        @desktop-default-open-change="handleDesktopDefaultOpenChange"
       />
     </div>
   </Dialog>
@@ -174,6 +180,9 @@ import { VuePDF, usePDF } from '@tato30/vue-pdf'
 import '@tato30/vue-pdf/style.css'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 import ArchiveDiscussionPanel from './ArchiveDiscussionPanel.vue'
+import { getBooleanPreference } from '../utils/usePreferences'
+
+const DESKTOP_DEFAULT_OPEN_KEY = 'discussion-desktop-default-open'
 
 const props = defineProps({
   visible: {
@@ -243,7 +252,7 @@ const localVisible = computed({
 
 const isMaximized = ref(false)
 const isMobile = ref(false)
-const discussionOpen = ref(true)
+const discussionOpen = ref(false)
 const discussionModalVisible = ref(false)
 const discussionPanelRef = ref(null)
 const discussionEnabled = computed(
@@ -337,7 +346,9 @@ function onHide() {
   pdfLoading.value = false
   pdfError.value = false
   isMaximized.value = false
-  discussionOpen.value = true
+  discussionOpen.value = isMobile.value
+    ? false
+    : getBooleanPreference(DESKTOP_DEFAULT_OPEN_KEY, true)
   discussionModalVisible.value = false
   emit('hide')
 }
@@ -366,6 +377,11 @@ function openDiscussionSettings() {
   discussionPanelRef.value?.openNicknameDialog?.()
 }
 
+function handleDesktopDefaultOpenChange(isOpen) {
+  if (isMobile.value) return
+  discussionOpen.value = Boolean(isOpen)
+}
+
 function updateIsMobile() {
   const prev = isMobile.value
   const next =
@@ -374,6 +390,11 @@ function updateIsMobile() {
       : false
 
   isMobile.value = next
+  if (next) {
+    discussionOpen.value = false
+  } else if (prev && !next) {
+    discussionOpen.value = getBooleanPreference(DESKTOP_DEFAULT_OPEN_KEY, true)
+  }
   if (prev && !next) {
     discussionModalVisible.value = false
   }
@@ -381,6 +402,9 @@ function updateIsMobile() {
 
 onMounted(() => {
   updateIsMobile()
+  discussionOpen.value = isMobile.value
+    ? false
+    : getBooleanPreference(DESKTOP_DEFAULT_OPEN_KEY, true)
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', updateIsMobile, { passive: true })
   }

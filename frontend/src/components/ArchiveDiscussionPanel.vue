@@ -110,6 +110,17 @@
           <InputText v-model="nicknameDraft" placeholder="輸入暱稱" maxlength="15" class="w-full" />
           <small class="text-xs" style="color: var(--text-secondary)">{{ nicknameHint }}</small>
         </div>
+        <div class="flex flex-column gap-2">
+          <label class="font-semibold">其他</label>
+          <label class="flex align-items-center gap-2">
+            <Checkbox
+              v-model="desktopDefaultOpen"
+              :binary="true"
+              @change="handleDesktopDefaultOpenChange"
+            />
+            <span>預設開啟討論區</span>
+          </label>
+        </div>
       </div>
 
       <template #footer>
@@ -138,6 +149,10 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { discussionService, userService } from '../api'
 import { getCurrentUser } from '../utils/auth'
 import { formatRelativeTime } from '../utils/time'
+import { trackEvent, EVENTS } from '../utils/analytics'
+import { getBooleanPreference, setBooleanPreference } from '../utils/usePreferences'
+
+const DESKTOP_DEFAULT_OPEN_KEY = 'discussion-desktop-default-open'
 
 const props = defineProps({
   courseId: {
@@ -166,6 +181,8 @@ const props = defineProps({
   },
 })
 
+const emit = defineEmits(['desktop-default-open-change'])
+
 const messages = ref([])
 const loading = ref(false)
 const connected = ref(false)
@@ -187,6 +204,7 @@ const profile = ref({ nickname: '', name: '' })
 const showNicknameDialog = ref(false)
 const nicknameDraft = ref('')
 const nicknameSaving = ref(false)
+const desktopDefaultOpen = ref(getBooleanPreference(DESKTOP_DEFAULT_OPEN_KEY, true))
 
 const MESSAGE_MAX_LENGTH = 200
 const MESSAGE_PREVIEW_LENGTH = 100
@@ -398,6 +416,11 @@ async function send() {
         content: rawContent,
       })
     )
+    trackEvent(EVENTS.DISCUSSION_SEND_MESSAGE, {
+      courseId: normalizeId(props.courseId),
+      archiveId: normalizeId(props.archiveId),
+      length: rawContent.length,
+    })
     draft.value = ''
   } catch {
     // ignore
@@ -474,6 +497,7 @@ async function loadMe() {
 
 function openNicknameDialog() {
   nicknameDraft.value = (profile.value.nickname || profile.value.name || '').trim()
+  desktopDefaultOpen.value = getBooleanPreference(DESKTOP_DEFAULT_OPEN_KEY, true)
   showNicknameDialog.value = true
 }
 
@@ -500,10 +524,15 @@ async function saveNickname() {
       m.user_id === currentUser.value.id ? { ...m, user_name: newNickname } : m
     )
 
+    trackEvent(EVENTS.DISCUSSION_UPDATE_NICKNAME, {
+      cleared: !nextNickname,
+      length: nextNickname.length,
+    })
+
     toast?.add?.({
       severity: 'success',
-      summary: '已更新暱稱',
-      detail: `暱稱已更新為「${newNickname}」`,
+      summary: '儲存成功',
+      detail: '討論區設定已儲存',
       life: 2500,
     })
     closeNicknameDialog()
@@ -519,6 +548,13 @@ async function saveNickname() {
   } finally {
     nicknameSaving.value = false
   }
+}
+
+function handleDesktopDefaultOpenChange() {
+  const next = Boolean(desktopDefaultOpen.value)
+  setBooleanPreference(DESKTOP_DEFAULT_OPEN_KEY, next)
+  emit('desktop-default-open-change', next)
+  trackEvent(EVENTS.DISCUSSION_SET_DEFAULT_OPEN, { enabled: next })
 }
 </script>
 
