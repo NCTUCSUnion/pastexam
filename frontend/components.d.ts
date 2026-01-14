@@ -60,4 +60,7 @@ declare module 'vue' {
     Toolbar: typeof import('primevue/toolbar')['default']
     UploadArchiveDialog: typeof import('./src/components/UploadArchiveDialog.vue')['default']
   }
+  export interface GlobalDirectives {
+    Tooltip: typeof import('primevue/tooltip')['default']
+  }
 }

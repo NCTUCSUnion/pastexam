@@ -21,8 +21,9 @@
         severity="secondary"
         text
         rounded
-        :aria-label="discussionOpen ? '關閉討論區' : '開啟討論區'"
-        @click="toggleDiscussion"
+        :aria-label="isMobile ? '開啟討論區' : discussionOpen ? '關閉討論區' : '開啟討論區'"
+        style="width: 2.5rem; height: 2.5rem; padding: 0"
+        @click="handleDiscussionClick"
       />
       <Button
         :icon="maximized ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"
@@ -30,6 +31,7 @@
         text
         rounded
         :aria-label="maximized ? '還原' : '最大化'"
+        style="width: 2.5rem; height: 2.5rem; padding: 0"
         @click="maximizeCallback"
       />
     </template>
@@ -41,7 +43,7 @@
             {{ title }}
           </div>
           <div
-            v-if="metaTextItems.length"
+            v-if="metaTextItems.length && !isMobile"
             class="text-sm mt-1 flex flex-wrap gap-3"
             style="color: var(--text-secondary)"
           >
@@ -93,11 +95,11 @@
         </div>
 
         <div
-          v-if="discussionEnabled"
+          v-if="discussionEnabled && !isMobile"
           class="discussion-wrapper"
           :class="{ 'is-open': discussionOpen, 'is-closed': !discussionOpen }"
         >
-          <ArchiveDiscussionPanel :courseId="courseId" :archiveId="archiveId" width="380px" />
+          <ArchiveDiscussionPanel :courseId="courseId" :archiveId="archiveId" width="100%" />
         </div>
       </div>
     </div>
@@ -113,10 +115,61 @@
       />
     </template>
   </Dialog>
+
+  <Dialog
+    v-if="discussionEnabled"
+    :visible="discussionModalVisible"
+    @update:visible="discussionModalVisible = $event"
+    :modal="true"
+    :draggable="false"
+    :dismissableMask="true"
+    :closeOnEscape="true"
+    :style="{ width: 'min(520px, 95vw)', height: 'min(90vh, 90dvh)' }"
+    :contentStyle="{ flex: '1 1 auto' }"
+    :autoFocus="false"
+  >
+    <template #header>
+      <div class="flex align-items-center gap-2.5">
+        <i class="pi pi-comments text-2xl" />
+        <div class="text-xl leading-tight">討論區</div>
+      </div>
+    </template>
+    <template #closebutton="{ closeCallback }">
+      <Button
+        icon="pi pi-cog"
+        severity="secondary"
+        text
+        rounded
+        aria-label="暱稱設定"
+        style="width: 2.5rem; height: 2.5rem; padding: 0"
+        @click="openDiscussionSettings"
+      />
+      <Button
+        icon="pi pi-times"
+        severity="secondary"
+        text
+        rounded
+        aria-label="關閉"
+        style="width: 2.5rem; height: 2.5rem; padding: 0"
+        @click="closeCallback"
+      />
+    </template>
+    <div class="h-full min-h-0">
+      <ArchiveDiscussionPanel
+        ref="discussionPanelRef"
+        :courseId="courseId"
+        :archiveId="archiveId"
+        width="100%"
+        class="discussion-modal-panel"
+        :showHeader="false"
+        :showSettings="false"
+      />
+    </div>
+  </Dialog>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { VuePDF, usePDF } from '@tato30/vue-pdf'
 import '@tato30/vue-pdf/style.css'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
@@ -189,7 +242,10 @@ const localVisible = computed({
 })
 
 const isMaximized = ref(false)
+const isMobile = ref(false)
 const discussionOpen = ref(true)
+const discussionModalVisible = ref(false)
+const discussionPanelRef = ref(null)
 const discussionEnabled = computed(
   () => props.showDiscussion && Boolean(props.courseId) && Boolean(props.archiveId)
 )
@@ -282,6 +338,7 @@ function onHide() {
   pdfError.value = false
   isMaximized.value = false
   discussionOpen.value = true
+  discussionModalVisible.value = false
   emit('hide')
 }
 
@@ -296,6 +353,44 @@ function handleUnmaximize() {
 function toggleDiscussion() {
   discussionOpen.value = !discussionOpen.value
 }
+
+function handleDiscussionClick() {
+  if (isMobile.value) {
+    discussionModalVisible.value = true
+    return
+  }
+  toggleDiscussion()
+}
+
+function openDiscussionSettings() {
+  discussionPanelRef.value?.openNicknameDialog?.()
+}
+
+function updateIsMobile() {
+  const prev = isMobile.value
+  const next =
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(max-width: 768px)').matches
+      : false
+
+  isMobile.value = next
+  if (prev && !next) {
+    discussionModalVisible.value = false
+  }
+}
+
+onMounted(() => {
+  updateIsMobile()
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', updateIsMobile, { passive: true })
+  }
+})
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', updateIsMobile)
+  }
+})
 
 watch(
   pdfContainerRef,
@@ -386,7 +481,7 @@ function handleDownload() {
 }
 
 .discussion-wrapper.is-open {
-  width: 380px;
+  width: min(380px, 40%);
   margin-left: 1rem;
   opacity: 1;
   pointer-events: auto;
@@ -405,13 +500,23 @@ function handleDownload() {
   }
 }
 
+.discussion-modal-panel {
+  height: 100%;
+}
+
+.discussion-modal-panel :deep(.discussion-panel) {
+  height: 100%;
+  max-width: none;
+  border-radius: 0;
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   :deep(.p-dialog .p-dialog-header) {
     font-size: 1rem;
   }
 
-  :deep(.p-dialog .p-button) {
+  :deep(.p-dialog .p-dialog-footer .p-button) {
     font-size: 0.875rem;
     padding: 0.5rem 0.75rem;
   }

@@ -1,8 +1,12 @@
 <template>
   <div class="discussion-panel flex flex-column" :style="{ width }">
-    <div class="discussion-header p-3 flex align-items-center justify-content-between">
+    <div
+      v-if="showHeader"
+      class="discussion-header p-3 flex align-items-center justify-content-between"
+    >
       <div class="font-semibold">討論區</div>
       <Button
+        v-if="showSettings"
         icon="pi pi-cog"
         severity="secondary"
         text
@@ -149,6 +153,14 @@ const props = defineProps({
     default: '360px',
   },
   enabled: {
+    type: Boolean,
+    default: true,
+  },
+  showHeader: {
+    type: Boolean,
+    default: true,
+  },
+  showSettings: {
     type: Boolean,
     default: true,
   },
@@ -468,6 +480,10 @@ function openNicknameDialog() {
 function closeNicknameDialog() {
   showNicknameDialog.value = false
 }
+
+defineExpose({
+  openNicknameDialog,
+})
 
 async function saveNickname() {
   if (!currentUser.value) return
