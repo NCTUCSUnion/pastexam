@@ -14,6 +14,25 @@
     @unmaximize="handleUnmaximize"
     @hide="onHide"
   >
+    <template #maximizebutton="{ maximized, maximizeCallback }">
+      <Button
+        v-if="discussionEnabled"
+        :icon="discussionOpen ? 'pi pi-comments' : 'pi pi-comment'"
+        severity="secondary"
+        text
+        rounded
+        :aria-label="discussionOpen ? '關閉討論區' : '開啟討論區'"
+        @click="toggleDiscussion"
+      />
+      <Button
+        :icon="maximized ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"
+        severity="secondary"
+        text
+        rounded
+        :aria-label="maximized ? '還原' : '最大化'"
+        @click="maximizeCallback"
+      />
+    </template>
     <template #header>
       <div class="flex align-items-center gap-2.5">
         <i class="pi pi-file-pdf text-2xl" />
@@ -73,13 +92,13 @@
           </div>
         </div>
 
-        <ArchiveDiscussionPanel
-          v-if="discussionEnabled && !isMaximized"
-          :courseId="courseId"
-          :archiveId="archiveId"
-          width="380px"
-          class="ml-4"
-        />
+        <div
+          v-if="discussionEnabled"
+          class="discussion-wrapper"
+          :class="{ 'is-open': discussionOpen, 'is-closed': !discussionOpen }"
+        >
+          <ArchiveDiscussionPanel :courseId="courseId" :archiveId="archiveId" width="380px" />
+        </div>
       </div>
     </div>
 
@@ -170,6 +189,7 @@ const localVisible = computed({
 })
 
 const isMaximized = ref(false)
+const discussionOpen = ref(true)
 const discussionEnabled = computed(
   () => props.showDiscussion && Boolean(props.courseId) && Boolean(props.archiveId)
 )
@@ -261,6 +281,7 @@ function onHide() {
   pdfLoading.value = false
   pdfError.value = false
   isMaximized.value = false
+  discussionOpen.value = true
   emit('hide')
 }
 
@@ -270,6 +291,10 @@ function handleMaximize() {
 
 function handleUnmaximize() {
   isMaximized.value = false
+}
+
+function toggleDiscussion() {
+  discussionOpen.value = !discussionOpen.value
 }
 
 watch(
@@ -339,6 +364,45 @@ function handleDownload() {
 .pdf-page {
   width: 100%;
   max-width: 100%;
+}
+
+.discussion-wrapper {
+  min-width: 0;
+  flex: 0 0 auto;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  transition:
+    width 220ms ease,
+    margin-left 220ms ease,
+    opacity 220ms ease;
+}
+
+.discussion-wrapper :deep(.discussion-panel) {
+  height: 100%;
+  min-height: 0;
+}
+
+.discussion-wrapper.is-open {
+  width: 380px;
+  margin-left: 1rem;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.discussion-wrapper.is-closed {
+  width: 0;
+  margin-left: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discussion-wrapper {
+    transition: none;
+  }
 }
 
 /* Mobile responsive adjustments */
