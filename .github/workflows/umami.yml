@@ -40,9 +40,9 @@ jobs:
             process.exit(1)
           }
 
-          function with30Days(urlStr) {
+          function with90Days(urlStr) {
             const url = new URL(urlStr)
-            url.searchParams.set('date', '30day')
+            url.searchParams.set('date', '90day')
             return url.toString()
           }
 
@@ -63,7 +63,7 @@ jobs:
 
               const page = await context.newPage()
 
-              const target = with30Days(SHARE_URL)
+              const target = with90Days(SHARE_URL)
               await page.goto(target, { waitUntil: 'networkidle' })
               await page.waitForTimeout(2000)
 
