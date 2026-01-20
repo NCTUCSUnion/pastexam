@@ -65,7 +65,7 @@ updates:
           - "patch"
 
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/backend"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -74,7 +74,37 @@ updates:
     commit-message:
       prefix: "chore"
     groups:
-      docker-minor-patch:
+      docker-backend-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Asia/Taipei"
+    commit-message:
+      prefix: "chore"
+    groups:
+      docker-frontend-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Asia/Taipei"
+    commit-message:
+      prefix: "chore"
+    groups:
+      docker-compose-minor-patch:
         update-types:
           - "minor"
           - "patch"
