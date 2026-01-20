@@ -93,18 +93,3 @@ updates:
         update-types:
           - "minor"
           - "patch"
-
-  - package-ecosystem: "docker"
-    directory: "/docker"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "07:00"
-      timezone: "Asia/Taipei"
-    commit-message:
-      prefix: "chore"
-    groups:
-      docker-compose-minor-patch:
-        update-types:
-          - "minor"
-          - "patch"
