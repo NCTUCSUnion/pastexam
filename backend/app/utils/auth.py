@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.db.session import get_session
 from app.models.models import User, UserRoles
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated=["bcrypt"])
 redis_client = redis.from_url(settings.REDIS_URL)
 
 oauth2_scheme = HTTPBearer()
