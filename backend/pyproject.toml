@@ -3,7 +3,7 @@ name = "pastexam-backend"
 version = "0.1.0"
 description = "Past Exam API Backend"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.16.4",
     "arq>=0.25.0",
