@@ -75,7 +75,7 @@
             <ProgressSpinner strokeWidth="4" />
           </div>
 
-          <div v-else-if="pdf" class="flex-1 pdf-container" ref="pdfContainerRef">
+          <div v-else-if="pdf && renderPdf" class="flex-1 pdf-container" ref="pdfContainerRef">
             <div class="pdf-pages">
               <VuePDF
                 v-for="page in pages"
@@ -175,7 +175,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { VuePDF, usePDF } from '@tato30/vue-pdf'
 import '@tato30/vue-pdf/style.css'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
@@ -295,9 +295,10 @@ const downloading = ref(false)
 const pdfLoading = ref(false)
 const pdfError = ref(false)
 let activeLoadId = 0
+const renderPdf = ref(false)
 let resizeObserver = null
+let resizeDebounceTimer = null
 const ResizeObserverCtor = typeof ResizeObserver !== 'undefined' ? ResizeObserver : null
-
 const pdfContainerRef = ref(null)
 const resizeKey = ref(0)
 
@@ -314,6 +315,81 @@ watch(
   },
   { immediate: true }
 )
+
+watch(
+  () => props.visible,
+  async (visible) => {
+    renderPdf.value = false
+    if (!visible) return
+
+    // PrimeVue Dialog teleports + transitions; defer mounting the PDF renderer until the
+    // content is actually attached to the DOM to avoid null `parentNode` errors.
+    await nextTick()
+    requestAnimationFrame(() => {
+      if (props.visible) renderPdf.value = true
+    })
+  },
+  { immediate: true }
+)
+
+watch(
+  pdfContainerRef,
+  (el) => {
+    if (resizeObserver) {
+      resizeObserver.disconnect()
+      resizeObserver = null
+    }
+    if (resizeDebounceTimer) {
+      clearTimeout(resizeDebounceTimer)
+      resizeDebounceTimer = null
+    }
+    if (!ResizeObserverCtor) return
+    if (!el) return
+
+    const scheduleResizeKeyUpdate = (nextWidth) => {
+      if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer)
+      resizeDebounceTimer = setTimeout(() => {
+        if (!renderPdf.value) return
+        if (!el.isConnected) return
+        if (resizeKey.value === nextWidth) return
+        resizeKey.value = nextWidth
+      }, 80)
+    }
+
+    resizeObserver = new ResizeObserverCtor((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      if (!renderPdf.value) return
+      if (!el.isConnected) return
+
+      const nextWidth = Math.round(entry.contentRect.width)
+      if (!nextWidth) return
+      scheduleResizeKeyUpdate(nextWidth)
+    })
+    resizeObserver.observe(el)
+
+    // PrimeVue Dialog transitions can delay layout; capture a stable initial width.
+    requestAnimationFrame(() => {
+      if (!renderPdf.value) return
+      if (!el.isConnected) return
+      const nextWidth = Math.round(el.getBoundingClientRect().width)
+      if (!nextWidth) return
+      scheduleResizeKeyUpdate(nextWidth)
+    })
+  },
+  { immediate: true }
+)
+
+onBeforeUnmount(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+  if (resizeDebounceTimer) {
+    clearTimeout(resizeDebounceTimer)
+    resizeDebounceTimer = null
+  }
+})
 
 watch(
   pdf,
@@ -414,30 +490,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', updateIsMobile)
-  }
-})
-
-watch(
-  pdfContainerRef,
-  (el) => {
-    if (resizeObserver) {
-      resizeObserver.disconnect()
-    }
-    if (!ResizeObserverCtor) return
-    if (!el) return
-    resizeObserver = new ResizeObserverCtor((entries) => {
-      const entry = entries[0]
-      if (!entry) return
-      resizeKey.value = Math.round(entry.contentRect.width)
-    })
-    resizeObserver.observe(el)
-  },
-  { immediate: true }
-)
-
-onBeforeUnmount(() => {
-  if (resizeObserver) {
-    resizeObserver.disconnect()
   }
 })
 

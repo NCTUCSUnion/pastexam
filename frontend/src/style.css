@@ -61,6 +61,14 @@ body {
   color: var(--text-primary);
 }
 
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 .pi:before {
   -webkit-backface-visibility: visible !important;
   backface-visibility: visible !important;
