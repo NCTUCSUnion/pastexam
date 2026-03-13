@@ -1110,12 +1110,12 @@ packages:
     engines: {node: '>=0.8.0'}
     hasBin: true
 
-  undici@6.23.0:
-    resolution: {integrity: sha512-VfQPToRA5FZs/qJxLIinmU59u0r7LXqoJkCzinq3ckNJp3vKEh7jTWN589YQ5+aoAC/TGRLyJLCPKcLQbM8r9g==}
+  undici@6.24.0:
+    resolution: {integrity: sha512-lVLNosgqo5EkGqh5XUDhGfsMSoO8K0BAN0TyJLvwNRSl4xWGZlCVYsAIpa/OpA3TvmnM01GWcoKmc3ZWo5wKKA==}
     engines: {node: '>=18.17'}
 
-  undici@7.21.0:
-    resolution: {integrity: sha512-Hn2tCQpoDt1wv23a68Ctc8Cr/BHpUSfaPYrkajTXOS9IKpxVRx/X5m1K2YkbK2ipgZgxXSgsUinl3x+2YdSSfg==}
+  undici@7.24.1:
+    resolution: {integrity: sha512-5xoBibbmnjlcR3jdqtY2Lnx7WbrD/tHlT01TmvqZUFVc9Q1w4+j5hbnapTqbcXITMH1ovjq/W7BkqBilHiVAaA==}
     engines: {node: '>=20.18.1'}
 
   unicode-emoji-modifier-base@1.0.0:
@@ -1216,7 +1216,7 @@ snapshots:
   '@actions/http-client@4.0.0':
     dependencies:
       tunnel: 0.0.6
-      undici: 6.23.0
+      undici: 6.24.0
 
   '@actions/io@3.0.2': {}
 
@@ -1338,7 +1338,7 @@ snapshots:
       p-filter: 4.1.0
       semantic-release: 25.0.3
       tinyglobby: 0.2.15
-      undici: 7.21.0
+      undici: 7.24.1
       url-join: 5.0.0
     transitivePeerDependencies:
       - supports-color
@@ -2239,9 +2239,9 @@ snapshots:
   uglify-js@3.19.3:
     optional: true
 
-  undici@6.23.0: {}
+  undici@6.24.0: {}
 
-  undici@7.21.0: {}
+  undici@7.24.1: {}
 
   unicode-emoji-modifier-base@1.0.0: {}
 
