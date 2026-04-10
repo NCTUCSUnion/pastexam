@@ -50,6 +50,7 @@ async def test_statistics_endpoint_handles_errors(monkeypatch, client):
     assert response.status_code == 200
     payload = response.json()
     assert payload["success"] is False
+    assert payload["error"] == "Failed to fetch statistics."
     assert payload["data"]["totalUsers"] == 0
 
 
@@ -163,4 +164,5 @@ async def test_get_system_statistics_direct_handles_exception(
         monkeypatch.setattr(session, "execute", boom)
         stats = await get_system_statistics(db=session)
         assert stats["success"] is False
+        assert stats["error"] == "Failed to fetch statistics."
         assert stats["data"]["totalUsers"] == 0
