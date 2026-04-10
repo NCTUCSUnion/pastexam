@@ -8,7 +8,9 @@ services:
     # ports:
     #   - "5173:80"
     networks:
-      - app_network
+      app_network:
+        aliases:
+          - frontend
 
   backend:
     image: ghcr.io/nctucsunion/pastexam:backend
@@ -26,7 +28,9 @@ services:
     env_file:
       - ../backend/.env
     networks:
-      - app_network
+      app_network:
+        aliases:
+          - backend
 
   worker:
     image: ghcr.io/nctucsunion/pastexam:backend
@@ -84,7 +88,9 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - app_network
+      app_network:
+        aliases:
+          - minio
 
   redis:
     image: redis:7.4.5-alpine3.21
