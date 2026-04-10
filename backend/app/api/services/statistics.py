@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import logging
 
 from fastapi import APIRouter, Depends
 from sqlmodel import func, select
@@ -8,6 +9,7 @@ from app.db.session import get_session
 from app.models.models import Archive, Course, User
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/statistics")
@@ -66,11 +68,11 @@ async def get_system_statistics(db: AsyncSession = Depends(get_session)):
             },
         }
 
-    except Exception as e:
-        print(f"Error fetching statistics: {e}")
+    except Exception:
+        logger.exception("Error fetching statistics")
         return {
             "success": False,
-            "error": str(e),
+            "error": "Failed to fetch statistics.",
             "data": {
                 "totalUsers": 0,
                 "totalDownloads": 0,
