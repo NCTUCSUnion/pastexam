@@ -19,12 +19,16 @@ redis_client = redis.from_url(settings.REDIS_URL)
 oauth2_scheme = HTTPBearer()
 
 
+def _truncate_password(password: str) -> str:
+    return password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
+
+
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(_truncate_password(password))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(_truncate_password(plain_password), hashed_password)
 
 
 def blacklist_token(token: str, expire_seconds: int = 7200):
