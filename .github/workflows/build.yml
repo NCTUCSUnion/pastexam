@@ -10,9 +10,6 @@ permissions:
 jobs:
   frontend:
     runs-on: ubuntu-latest
-    env:
-      HUSKY: 0
-      npm_config_strict_dep_builds: false
 
     steps:
       - name: Checkout repository
