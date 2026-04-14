@@ -61,5 +61,10 @@
       "pnpm exec eslint --ext .js,.ts,.vue src tests",
       "pnpm exec prettier --write ."
     ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
