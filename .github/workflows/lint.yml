@@ -9,6 +9,8 @@ permissions:
 jobs:
   frontend:
     runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
 
     steps:
       - name: Checkout repository
