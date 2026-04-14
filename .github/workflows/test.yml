@@ -59,6 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HUSKY: 0
+      npm_config_strict_dep_builds: false
 
     steps:
       - name: Checkout repository
@@ -96,6 +97,7 @@ jobs:
     needs: [backend, frontend-unit]
     env:
       HUSKY: 0
+      npm_config_strict_dep_builds: false
 
     steps:
       - name: Checkout repository

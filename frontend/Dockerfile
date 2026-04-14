@@ -4,6 +4,7 @@ WORKDIR /app
 RUN npm i -g pnpm@9.0.0
 
 ENV HUSKY=0
+ENV npm_config_strict_dep_builds=false
 ARG VITE_API_BASE_URL
 ARG VITE_SITE_HOSTNAME
 ARG VITE_UMAMI_SCRIPT_URL
