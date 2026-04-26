@@ -16,7 +16,7 @@ dependencies = [
     "itsdangerous>=2.2.0",
     "minio>=7.2.15",
     "passlib>=1.7.4",
-    "psycopg2-binary>=2.9.10",
+    "psycopg2-binary>=2.9.12",
     "pydantic-settings>=2.14.0",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.26",
@@ -32,5 +32,5 @@ dev = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
-    "ruff>=0.15.11",
+    "ruff>=0.15.12",
 ]
