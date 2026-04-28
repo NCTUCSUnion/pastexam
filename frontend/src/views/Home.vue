@@ -179,7 +179,7 @@ const statistics = computed(() => [
 
 let charIndex = 0
 let typingInterval
-let statsInterval
+let statsInterval = null
 let animationIntervals = {}
 
 onMounted(async () => {
