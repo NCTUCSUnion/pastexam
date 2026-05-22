@@ -381,7 +381,7 @@ async def archive_discussion_ws(
             )
             await _broadcast_discussion(archive_id, payload)
     except WebSocketDisconnect:
-        pass
+        return
     finally:
         sockets = _discussion_connections_by_archive.get(archive_id)
         if sockets:
