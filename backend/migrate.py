@@ -12,8 +12,6 @@ Usage:
 
 import sys
 import subprocess
-import os
-from pathlib import Path
 
 def run_alembic(args):
     """Run alembic command with proper environment"""
