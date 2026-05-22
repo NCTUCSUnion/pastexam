@@ -198,7 +198,7 @@ async def test_generate_exam_content_cleans_up_on_failure(monkeypatch):
         "load_default_prompt_template",
         lambda: "Prompt {professor}",
     )
-    monkeypatch.setattr(worker, "get_minio_client", lambda: FakeMinio())
+    monkeypatch.setattr(worker, "get_minio_client", FakeMinio)
 
     failing_client = FakeGenAIClient(should_fail=True)
     monkeypatch.setattr(worker.genai, "Client", lambda api_key: failing_client)
