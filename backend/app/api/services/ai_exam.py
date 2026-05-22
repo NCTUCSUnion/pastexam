@@ -18,19 +18,6 @@ from app.models.models import (
 from app.utils.auth import get_current_user
 from app.utils.auth_ws import get_ws_token_payload
 
-# logger = logging.getLogger(__name__)
-# logger.setLevel(logging.INFO)
-
-# if not logger.handlers:
-#     console_handler = logging.StreamHandler()
-#     console_handler.setLevel(logging.INFO)
-#     formatter = logging.Formatter(
-#         '%(asctime)s - %(levelname)s - %(message)s',
-#         datefmt='%Y-%m-%d %H:%M:%S'
-#     )
-#     console_handler.setFormatter(formatter)
-#     logger.addHandler(console_handler)
-
 router = APIRouter()
 
 _STATUS_MAP = {
@@ -274,10 +261,6 @@ async def submit_generate_task(
     """Submit AI exam generation task"""
     from app.worker import get_redis_pool
 
-    # logger.info(
-    #     f"[API] Task submitted by user {current_user.user_id} "
-    #     f"with {len(request.archive_ids)} archives"
-    # )
     if not request.archive_ids or len(request.archive_ids) == 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -337,8 +320,6 @@ async def submit_generate_task(
             ex=86400,  # 24 hours TTL
         )
 
-        # logger.info(f"[API] Task enqueued: {job.job_id}")
-
         return TaskSubmitResponse(
             task_id=job.job_id,
             status="pending",
@@ -348,7 +329,6 @@ async def submit_generate_task(
     except HTTPException:
         raise
     except Exception as e:
-        # logger.error(f"[API] Failed to submit task: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to submit task: {str(e)}",
@@ -390,7 +370,6 @@ async def delete_task(
     except HTTPException:
         raise
     except Exception as e:
-        # logger.error(f"[API] Failed to delete task: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete task: {str(e)}",
@@ -427,7 +406,6 @@ async def get_api_key_status(
     except HTTPException:
         raise
     except Exception as e:
-        # logger.error(f"[API] Failed to get API key status: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get API key status: {str(e)}",
@@ -475,8 +453,6 @@ async def update_api_key(
     except HTTPException:
         raise
     except Exception as e:
-        # logger.error(f"[API] Failed to update API key: {str(e)}")
-
         # Check if it's an API key validation error
         if "API key" in str(e) or "authentication" in str(e).lower():
             raise HTTPException(
