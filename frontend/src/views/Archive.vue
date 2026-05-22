@@ -814,16 +814,6 @@ async function fetchCourses() {
 }
 
 function filterBySubject(course) {
-  if (!course || !course.id) {
-    selectedSubject.value = null
-    selectedCourse.value = null
-    archives.value = []
-    expandedMenuItems.value = {}
-    shouldResetPanels.value = true
-    removeLocalItem(STORAGE_KEYS.local.SELECTED_SUBJECT)
-    return
-  }
-
   trackEvent(EVENTS.SELECT_COURSE, {
     courseName: course.label,
     courseId: course.id,

@@ -56,16 +56,16 @@ class FakeGenAIClient:
         client = self
 
         class Files:
-            def upload(self_inner, *, file, config):
+            def upload(self, *, file, config):
                 data = file.read()
                 client.uploads.append(data)
                 return SimpleNamespace(name=f"uploaded-{len(client.uploads)}")
 
-            def delete(self_inner, *, name):
+            def delete(self, *, name):
                 client.deleted.append(name)
 
         class Models:
-            def generate_content(self_inner, *, model, contents, config):
+            def generate_content(self, *, model, contents, config):
                 client.last_contents = contents
                 if client.should_fail:
                     raise RuntimeError("generation failed")
@@ -198,7 +198,7 @@ async def test_generate_exam_content_cleans_up_on_failure(monkeypatch):
         "load_default_prompt_template",
         lambda: "Prompt {professor}",
     )
-    monkeypatch.setattr(worker, "get_minio_client", lambda: FakeMinio())
+    monkeypatch.setattr(worker, "get_minio_client", FakeMinio)
 
     failing_client = FakeGenAIClient(should_fail=True)
     monkeypatch.setattr(worker.genai, "Client", lambda api_key: failing_client)

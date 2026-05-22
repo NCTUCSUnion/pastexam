@@ -181,7 +181,11 @@ Answers may contain errors. Please verify the correctness yourself.
                 try:
                     client.files.delete(name=uploaded_file.name)
                 except Exception:
-                    pass
+                    logger.warning(
+                        "Failed to delete uploaded Gemini file during cleanup: %s",
+                        uploaded_file.name,
+                        exc_info=True,
+                    )
             raise
 
 
