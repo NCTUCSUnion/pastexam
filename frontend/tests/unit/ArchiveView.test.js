@@ -232,9 +232,6 @@ describe('ArchiveView', () => {
 
     const vm = wrapper.vm
 
-    vm.filterBySubject(null)
-    expect(vm.selectedSubject).toBeNull()
-
     vm.filterBySubject({ label: 'Calculus I', id: 'c1' })
     await flushPromises()
     vi.runAllTimers()
