@@ -19,7 +19,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "@tato30/vue-pdf": "^2.0.2",
     "axios": "^1.16.1",
-    "dompurify": "^3.4.4",
+    "dompurify": "^3.4.5",
     "highlight.js": "^11.11.1",
     "marked": "^18.0.3",
     "pdf-lib": "^1.17.1",
