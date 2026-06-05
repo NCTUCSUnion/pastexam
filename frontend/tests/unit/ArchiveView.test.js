@@ -130,29 +130,30 @@ vi.mock('@/utils/http', () => ({
   isUnauthorizedError: isUnauthorizedErrorMock,
 }))
 
+const slotDivTemplate = '<div><slot /></div>'
 const componentStubs = {
-  InputText: { template: '<div><slot /></div>' },
-  Button: { template: '<div><slot /></div>' },
-  PanelMenu: { template: '<div><slot /></div>' },
-  Drawer: { template: '<div><slot /></div>' },
-  Tag: { template: '<div><slot /></div>' },
-  Toolbar: { template: '<div><slot /></div>' },
-  Select: { template: '<div><slot /></div>' },
-  Checkbox: { template: '<div><slot /></div>' },
+  InputText: { template: slotDivTemplate },
+  Button: { template: slotDivTemplate },
+  PanelMenu: { template: slotDivTemplate },
+  Drawer: { template: slotDivTemplate },
+  Tag: { template: slotDivTemplate },
+  Toolbar: { template: slotDivTemplate },
+  Select: { template: slotDivTemplate },
+  Checkbox: { template: slotDivTemplate },
   ProgressSpinner: { template: '<div class="spinner"><slot /></div>' },
-  Accordion: { template: '<div><slot /></div>' },
-  AccordionPanel: { template: '<div><slot /></div>' },
-  AccordionHeader: { template: '<div><slot /></div>' },
-  AccordionContent: { template: '<div><slot /></div>' },
-  DataTable: { template: '<div><slot /></div>' },
+  Accordion: { template: slotDivTemplate },
+  AccordionPanel: { template: slotDivTemplate },
+  AccordionHeader: { template: slotDivTemplate },
+  AccordionContent: { template: slotDivTemplate },
+  DataTable: { template: slotDivTemplate },
   Column: { template: '<template />' },
-  Tabs: { template: '<div><slot /></div>' },
-  TabList: { template: '<div><slot /></div>' },
-  TabPanels: { template: '<div><slot /></div>' },
-  TabPanel: { template: '<div><slot /></div>' },
-  Dialog: { template: '<div><slot /></div>' },
-  AutoComplete: { template: '<div><slot /></div>' },
-  DatePicker: { template: '<div><slot /></div>' },
+  Tabs: { template: slotDivTemplate },
+  TabList: { template: slotDivTemplate },
+  TabPanels: { template: slotDivTemplate },
+  TabPanel: { template: slotDivTemplate },
+  Dialog: { template: slotDivTemplate },
+  AutoComplete: { template: slotDivTemplate },
+  DatePicker: { template: slotDivTemplate },
   Divider: { template: '<div></div>' },
 }
 
@@ -407,7 +408,7 @@ describe('ArchiveView', () => {
     toastAddMock.mockClear()
     deleteArchiveMock.mockRejectedValueOnce(new Error('delete'))
     isUnauthorizedErrorMock.mockReturnValueOnce(false)
-    await wrapper.vm.deleteArchive({ ...baseArchives[0], id: baseArchives[0].id, year: '2023' })
+    await wrapper.vm.deleteArchive({ ...baseArchives[0], year: '2023' })
     expect(toastAddMock).toHaveBeenCalledWith(
       expect.objectContaining({ detail: '發生錯誤，請稍後再試' })
     )
@@ -415,7 +416,7 @@ describe('ArchiveView', () => {
     toastAddMock.mockClear()
     getArchiveDownloadUrlMock.mockRejectedValueOnce(new Error('preview-download'))
     isUnauthorizedErrorMock.mockReturnValueOnce(false)
-    wrapper.vm.selectedArchive = { ...baseArchives[0], id: baseArchives[0].id }
+    wrapper.vm.selectedArchive = { ...baseArchives[0] }
     wrapper.vm.selectedCourse = 'c1'
     wrapper.vm.selectedSubject = 'Calculus I'
     await wrapper.vm.handlePreviewDownload(() => {})
