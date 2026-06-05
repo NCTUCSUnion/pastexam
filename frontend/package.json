@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@eslint/json": "^1.2.0",
+    "@eslint/json": "^2.0.0",
     "@playwright/test": "^1.60.0",
     "@primevue/auto-import-resolver": "^4.5.5",
     "@vitejs/plugin-vue": "^6.0.7",
