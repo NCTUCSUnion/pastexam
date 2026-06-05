@@ -21,7 +21,7 @@ dependencies = [
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.32",
     "pyyaml>=6.0.2",
-    "redis[hiredis]>=7.4.0",
+    "redis[hiredis]>=8.0.0",
     "sqlmodel>=0.0.24",
     "uvicorn[standard]>=0.49.0",
 ]
