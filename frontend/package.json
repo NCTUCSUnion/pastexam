@@ -15,7 +15,7 @@
     "prepare": "cd .. && husky frontend/.husky"
   },
   "dependencies": {
-    "@primeuix/themes": "^2.0.3",
+    "@primeuix/themes": "^3.0.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tato30/vue-pdf": "^2.1.0",
     "axios": "^1.19.0",
