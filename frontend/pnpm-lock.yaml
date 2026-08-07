@@ -64,8 +64,8 @@ importers:
         specifier: ^1.62.1
         version: 1.62.1
       '@primevue/auto-import-resolver':
-        specifier: ^4.5.5
-        version: 4.5.5
+        specifier: ^5.0.0
+        version: 5.0.0
       '@vitejs/plugin-vue':
         specifier: ^6.0.8
         version: 6.0.8(vite@7.3.5(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3))
@@ -708,8 +708,8 @@ packages:
     resolution: {integrity: sha512-pZ5f+vj7wSzRhC7KoEQRU5fvYAe+RP9+m39CTscZ3UywCD1Y2o6Fe1rRgklMPSkzUcty2jzkA0zMYkiJBD1hgg==}
     engines: {node: '>=12.11.0'}
 
-  '@primevue/auto-import-resolver@4.5.5':
-    resolution: {integrity: sha512-1LWftK+1c/pLgMyW81xqsCLESm2a8GGlLz0eg13oFBVmJdXBs9nmzF+SIhvtkRDROB8TCMwlOpyqVCi1Yw89UQ==}
+  '@primevue/auto-import-resolver@5.0.0':
+    resolution: {integrity: sha512-mjxgfCIbMsCu37b/jYbKUAQdd5MUTUP/4OaoOW4+6ePkO9nksEXuYlmmRoX9VA0iIeo+obdvzugGIeo/IX0PTg==}
     engines: {node: '>=12.11.0'}
 
   '@primevue/core@4.5.5':
@@ -722,8 +722,8 @@ packages:
     resolution: {integrity: sha512-eteOhTdAOXEYE9qW1AOrBBgDxQ2szHJxSkEK1XVdV2TKxGM5FQf03Ovms0VDyZTc16XBIgvwYjXJQS0BPbhPaA==}
     engines: {node: '>=12.11.0'}
 
-  '@primevue/metadata@4.5.5':
-    resolution: {integrity: sha512-ZYLu9m3Nm5BmL0woqCJX84EZfLBepJn+T19v5oj3PlsMpUVNnDAsm2jgYdT6/b3RkdOuccxk4Pg/0EvlATOAhA==}
+  '@primevue/metadata@5.0.0':
+    resolution: {integrity: sha512-wOsEeI7JALdQY/gTc6TVINvm9XOEttTaKST4GGQP0+zkwpkoy53UNldYvVJ7f799W0puzsj7nOb5V06aydplyg==}
     engines: {node: '>=12.11.0'}
 
   '@rolldown/pluginutils@1.0.1':
@@ -3079,9 +3079,9 @@ snapshots:
 
   '@primeuix/utils@0.6.4': {}
 
-  '@primevue/auto-import-resolver@4.5.5':
+  '@primevue/auto-import-resolver@5.0.0':
     dependencies:
-      '@primevue/metadata': 4.5.5
+      '@primevue/metadata': 5.0.0
 
   '@primevue/core@4.5.5(vue@3.5.40(typescript@6.0.3))':
     dependencies:
@@ -3096,7 +3096,7 @@ snapshots:
     transitivePeerDependencies:
       - vue
 
-  '@primevue/metadata@4.5.5': {}
+  '@primevue/metadata@5.0.0': {}
 
   '@rolldown/pluginutils@1.0.1': {}
 
