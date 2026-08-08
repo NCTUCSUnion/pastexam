@@ -37,11 +37,9 @@
                 />
               </div>
 
-              <ProgressSpinner
-                v-if="coursesLoading"
-                class="w-full flex justify-content-center mt-4"
-                strokeWidth="4"
-              />
+              <div v-if="coursesLoading" class="flex justify-content-center mt-4">
+                <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
+              </div>
               <DataTable
                 v-else
                 :value="filteredCourses"
@@ -120,11 +118,9 @@
                 />
               </div>
 
-              <ProgressSpinner
-                v-if="usersLoading"
-                class="w-full flex justify-content-center mt-4"
-                strokeWidth="4"
-              />
+              <div v-if="usersLoading" class="flex justify-content-center mt-4">
+                <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
+              </div>
               <DataTable
                 v-else
                 :value="filteredUsers"
@@ -220,11 +216,9 @@
                 />
               </div>
 
-              <ProgressSpinner
-                v-if="notificationsLoading"
-                class="w-full flex justify-content-center mt-4"
-                strokeWidth="4"
-              />
+              <div v-if="notificationsLoading" class="flex justify-content-center mt-4">
+                <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
+              </div>
               <DataTable
                 v-else
                 :value="filteredNotifications"

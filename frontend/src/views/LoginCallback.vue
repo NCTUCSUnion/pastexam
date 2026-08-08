@@ -20,7 +20,7 @@
         </Card>
       </div>
       <div v-else class="loading-container">
-        <ProgressSpinner strokeWidth="4" class="mb-4" />
+        <ProgressSpinner class="app-progress-spinner mb-4" strokeWidth="8" aria-label="驗證中" />
         <p>驗證中...</p>
       </div>
     </div>

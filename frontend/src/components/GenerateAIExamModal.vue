@@ -32,7 +32,7 @@
         v-if="currentStep === 'loading'"
         class="flex flex-column align-items-center justify-content-center p-6"
       >
-        <ProgressSpinner strokeWidth="4" />
+        <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
         <p class="mt-4 text-lg font-semibold">載入中...</p>
       </div>
 
@@ -163,7 +163,7 @@
         v-else-if="currentStep === 'generating'"
         class="flex flex-column align-items-center justify-content-center p-6"
       >
-        <ProgressSpinner strokeWidth="4" />
+        <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="生成中" />
         <p class="mt-4 text-lg font-semibold">正在分析考古題並生成模擬試題</p>
         <p class="text-sm text-500 mt-2">這可能需要 2-5 分鐘，您可以關閉視窗稍後再回來查看結果</p>
         <div
