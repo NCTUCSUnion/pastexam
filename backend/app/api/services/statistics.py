@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
 import logging
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends
 from sqlmodel import func, select
@@ -36,7 +36,7 @@ async def get_system_statistics(db: AsyncSession = Depends(get_session)):
         )
         total_downloads = result.scalar()
 
-        two_hours_ago = datetime.now(timezone.utc) - timedelta(hours=2)
+        two_hours_ago = datetime.now(UTC) - timedelta(hours=2)
         result = await db.execute(
             select(func.count(User.id)).where(
                 User.deleted_at.is_(None),
@@ -46,7 +46,7 @@ async def get_system_statistics(db: AsyncSession = Depends(get_session)):
         )
         online_users = result.scalar()
 
-        today_start = datetime.now(timezone.utc).replace(
+        today_start = datetime.now(UTC).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
         result = await db.execute(

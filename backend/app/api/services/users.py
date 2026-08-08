@@ -1,5 +1,4 @@
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
@@ -21,7 +20,7 @@ router = APIRouter()
 NICKNAME_MAX_LENGTH = 15
 
 
-@router.get("/admin/users", response_model=List[UserRead])
+@router.get("/admin/users", response_model=list[UserRead])
 async def get_users(
     current_user: UserRoles = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -216,7 +215,7 @@ async def delete_user(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    user.deleted_at = datetime.now(timezone.utc)
+    user.deleted_at = datetime.now(UTC)
     await db.commit()
 
     return {"detail": "User deleted successfully"}

@@ -4,7 +4,7 @@ import uuid
 import pytest
 from fastapi import HTTPException
 from httpx import AsyncClient
-from sqlalchemy import delete, select, func
+from sqlalchemy import delete, func, select
 from starlette.datastructures import UploadFile
 
 from app.api.services.archives import upload_archive

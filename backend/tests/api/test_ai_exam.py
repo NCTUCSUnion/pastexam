@@ -206,7 +206,7 @@ async def test_submit_generate_task_enqueues_job(
             ("generate_ai_exam_task", {**payload, "user_id": user.id})
         ]
 
-        metadata_key = f"task_metadata:{task_id}".encode("utf-8")
+        metadata_key = f"task_metadata:{task_id}".encode()
         assert metadata_key in fake_redis.metadata
         metadata = json.loads(fake_redis.metadata[metadata_key].decode("utf-8"))
         assert metadata["user_id"] == user.id
@@ -518,7 +518,7 @@ async def test_delete_task_success(
         response = await client.delete(f"/ai-exam/task/{task_id}")
         assert response.status_code == 200
         assert response.json()["success"] is True
-        assert f"task_metadata:{task_id}".encode("utf-8") not in fake_redis.metadata
+        assert f"task_metadata:{task_id}".encode() not in fake_redis.metadata
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 

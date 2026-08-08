@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi import HTTPException
@@ -70,7 +70,7 @@ async def _create_archive(
             uploader_id=uploader_id,
         )
         if deleted:
-            archive.deleted_at = datetime.now(timezone.utc)
+            archive.deleted_at = datetime.now(UTC)
         session.add(archive)
         await session.commit()
         await session.refresh(archive)

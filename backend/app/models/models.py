@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum as PyEnum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, String, Text
@@ -31,44 +31,44 @@ class NotificationSeverity(str, PyEnum):
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    oauth_provider: Optional[str] = Field(default=None)
-    oauth_sub: Optional[str] = Field(default=None)
+    id: int | None = Field(default=None, primary_key=True)
+    oauth_provider: str | None = Field(default=None)
+    oauth_sub: str | None = Field(default=None)
     email: str = Field(unique=True, index=True)
     name: str = Field(unique=True, index=True)
-    nickname: Optional[str] = Field(default=None, index=True)
+    nickname: str | None = Field(default=None, index=True)
     is_admin: bool = Field(default=False)
-    password_hash: Optional[str] = Field(default=None)
+    password_hash: str | None = Field(default=None)
     is_local: bool = Field(default=False)
-    gemini_api_key: Optional[str] = Field(default=None)
-    deleted_at: Optional[datetime] = Field(
+    gemini_api_key: str | None = Field(default=None)
+    deleted_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
-    last_login: Optional[datetime] = Field(
+    last_login: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
-    last_logout: Optional[datetime] = Field(
+    last_logout: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
 
-    archives: List["Archive"] = Relationship(back_populates="uploader")
+    archives: list["Archive"] = Relationship(back_populates="uploader")
 
 
 class Course(SQLModel, table=True):
     __tablename__ = "courses"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     category: CourseCategory
-    deleted_at: Optional[datetime] = Field(
+    deleted_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
 
-    archives: List["Archive"] = Relationship(back_populates="course")
+    archives: list["Archive"] = Relationship(back_populates="course")
 
 
 class Archive(SQLModel, table=True):
     __tablename__ = "archives"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     name: str
     academic_year: int
@@ -79,7 +79,7 @@ class Archive(SQLModel, table=True):
 
     object_name: str
 
-    uploader_id: Optional[int] = Field(default=None, foreign_key="users.id")
+    uploader_id: int | None = Field(default=None, foreign_key="users.id")
     uploader: Optional["User"] = Relationship(back_populates="archives")
 
     course_id: int = Field(foreign_key="courses.id")
@@ -88,74 +88,74 @@ class Archive(SQLModel, table=True):
     created_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
-            default=lambda: datetime.now(timezone.utc),
+            default=lambda: datetime.now(UTC),
             nullable=False,
         )
     )
     updated_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
-            default=lambda: datetime.now(timezone.utc),
+            default=lambda: datetime.now(UTC),
             nullable=False,
         )
     )
-    deleted_at: Optional[datetime] = Field(
+    deleted_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
 
 
 class ArchiveDiscussionMessage(SQLModel, table=True):
     __tablename__ = "archive_discussion_messages"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     archive_id: int = Field(foreign_key="archives.id", index=True)
     user_id: int = Field(foreign_key="users.id", index=True)
     content: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
-            default=lambda: datetime.now(timezone.utc),
+            default=lambda: datetime.now(UTC),
             nullable=False,
         )
     )
-    deleted_at: Optional[datetime] = Field(
+    deleted_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
 
 
 class Meme(SQLModel, table=True):
     __tablename__ = "memes"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     content: str
     language: str
 
 
 class Notification(SQLModel, table=True):
     __tablename__ = "notifications"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     title: str = Field(sa_column=Column(String(150), nullable=False))
     body: str = Field(sa_column=Column(Text, nullable=False))
     severity: NotificationSeverity = Field(default=NotificationSeverity.INFO)
     is_active: bool = Field(default=True)
-    deleted_at: Optional[datetime] = Field(
+    deleted_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
-    starts_at: Optional[datetime] = Field(
+    starts_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
-    ends_at: Optional[datetime] = Field(
+    ends_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
     created_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
-            default=lambda: datetime.now(timezone.utc),
+            default=lambda: datetime.now(UTC),
             nullable=False,
         )
     )
     updated_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
-            default=lambda: datetime.now(timezone.utc),
+            default=lambda: datetime.now(UTC),
             nullable=False,
         )
     )
@@ -165,10 +165,10 @@ class UserRead(BaseModel):
     id: int
     email: str
     name: str
-    nickname: Optional[str] = None
+    nickname: str | None = None
     is_admin: bool
     is_local: bool
-    last_login: Optional[datetime]
+    last_login: datetime | None
 
     class Config:
         from_attributes = True
@@ -182,10 +182,10 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    name: Optional[str] = None
-    email: Optional[str] = None
-    password: Optional[str] = None
-    is_admin: Optional[bool] = None
+    name: str | None = None
+    email: str | None = None
+    password: str | None = None
+    is_admin: bool | None = None
 
 
 class UserNicknameUpdate(BaseModel):
@@ -214,8 +214,8 @@ class NotificationBase(BaseModel):
     body: str
     severity: NotificationSeverity = NotificationSeverity.INFO
     is_active: bool = True
-    starts_at: Optional[datetime] = None
-    ends_at: Optional[datetime] = None
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
 
 
 class NotificationCreate(NotificationBase):
@@ -223,12 +223,12 @@ class NotificationCreate(NotificationBase):
 
 
 class NotificationUpdate(BaseModel):
-    title: Optional[str] = None
-    body: Optional[str] = None
-    severity: Optional[NotificationSeverity] = None
-    is_active: Optional[bool] = None
-    starts_at: Optional[datetime] = None
-    ends_at: Optional[datetime] = None
+    title: str | None = None
+    body: str | None = None
+    severity: NotificationSeverity | None = None
+    is_active: bool | None = None
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
 
 
 class NotificationRead(NotificationBase):
@@ -249,13 +249,13 @@ class CourseInfo(BaseModel):
 
 
 class CoursesByCategory(BaseModel):
-    freshman: List[CourseInfo] = []
-    sophomore: List[CourseInfo] = []
-    junior: List[CourseInfo] = []
-    senior: List[CourseInfo] = []
-    graduate: List[CourseInfo] = []
-    interdisciplinary: List[CourseInfo] = []
-    general: List[CourseInfo] = []
+    freshman: list[CourseInfo] = []
+    sophomore: list[CourseInfo] = []
+    junior: list[CourseInfo] = []
+    senior: list[CourseInfo] = []
+    graduate: list[CourseInfo] = []
+    interdisciplinary: list[CourseInfo] = []
+    general: list[CourseInfo] = []
 
     class Config:
         from_attributes = True
@@ -269,7 +269,7 @@ class ArchiveRead(BaseModel):
     professor: str
     has_answers: bool
     created_at: datetime
-    uploader_id: Optional[int] = None
+    uploader_id: int | None = None
     download_count: int = 0
 
     class Config:
@@ -294,8 +294,8 @@ class CourseCreate(BaseModel):
 
 
 class CourseUpdate(BaseModel):
-    name: Optional[str] = None
-    category: Optional[CourseCategory] = None
+    name: str | None = None
+    category: CourseCategory | None = None
 
 
 class CourseRead(BaseModel):
@@ -308,18 +308,18 @@ class CourseRead(BaseModel):
 
 
 class ArchiveUpdateCourse(BaseModel):
-    course_id: Optional[int] = None
-    course_name: Optional[str] = None
-    course_category: Optional[CourseCategory] = None
+    course_id: int | None = None
+    course_name: str | None = None
+    course_category: CourseCategory | None = None
 
 
 # AI Exam related models
 
 
 class GenerateExamRequest(BaseModel):
-    archive_ids: List[int]
-    prompt: Optional[str] = None
-    temperature: Optional[float] = 0.7
+    archive_ids: list[int]
+    prompt: str | None = None
+    temperature: float | None = 0.7
 
 
 class TaskSubmitResponse(BaseModel):
@@ -331,25 +331,25 @@ class TaskSubmitResponse(BaseModel):
 class TaskStatusResponse(BaseModel):
     task_id: str
     status: str  # pending, in_progress, complete, failed, not_found
-    result: Optional[dict] = None
-    error: Optional[str] = None
-    created_at: Optional[str] = None
-    completed_at: Optional[str] = None
+    result: dict | None = None
+    error: str | None = None
+    created_at: str | None = None
+    completed_at: str | None = None
 
 
 class GenerateExamResponse(BaseModel):
     success: bool
     generated_content: str
-    archives_used: List[dict]
+    archives_used: list[dict]
 
 
 # API Key related models
 
 
 class ApiKeyUpdate(BaseModel):
-    gemini_api_key: Optional[str] = None
+    gemini_api_key: str | None = None
 
 
 class ApiKeyResponse(BaseModel):
     has_api_key: bool
-    api_key_masked: Optional[str] = None
+    api_key_masked: str | None = None

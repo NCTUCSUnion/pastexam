@@ -1,9 +1,10 @@
 from fastapi import FastAPI
+
 # from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.core.config import settings
 from app.api.api import api_router
+from app.core.config import settings
 from app.db.init_db import init_db
 
 app = FastAPI(title="Past Exam API", docs_url=None, redoc_url=None)

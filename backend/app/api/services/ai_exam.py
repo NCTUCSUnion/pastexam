@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from arq.jobs import Job, JobStatus
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
@@ -134,7 +134,7 @@ async def stream_task_status(
         last_sent_status = job_status
 
         while True:
-            if exp_ts is not None and exp_ts < datetime.now(timezone.utc).timestamp():
+            if exp_ts is not None and exp_ts < datetime.now(UTC).timestamp():
                 await websocket.close(code=4401)
                 return
 
@@ -331,7 +331,7 @@ async def submit_generate_task(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit task: {str(e)}",
+            detail=f"Failed to submit task: {e!s}",
         )
 
 
@@ -372,7 +372,7 @@ async def delete_task(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete task: {str(e)}",
+            detail=f"Failed to delete task: {e!s}",
         )
 
 
@@ -408,7 +408,7 @@ async def get_api_key_status(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get API key status: {str(e)}",
+            detail=f"Failed to get API key status: {e!s}",
         )
 
 
@@ -457,10 +457,10 @@ async def update_api_key(
         if "API key" in str(e) or "authentication" in str(e).lower():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid API Key: {str(e)}",
+                detail=f"Invalid API Key: {e!s}",
             )
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to update API key: {str(e)}",
+                detail=f"Failed to update API key: {e!s}",
             )

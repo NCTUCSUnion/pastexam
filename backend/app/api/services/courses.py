@@ -1,6 +1,5 @@
 import json
-from datetime import datetime, timedelta, timezone
-from typing import List
+from datetime import UTC, datetime, timedelta
 
 from fastapi import (
     APIRouter,
@@ -73,7 +72,7 @@ async def get_categorized_courses(
     return categorized_courses
 
 
-@router.get("/{course_id}/archives", response_model=List[ArchiveRead])
+@router.get("/{course_id}/archives", response_model=list[ArchiveRead])
 async def get_course_archives(
     course_id: int,
     current_user: User = Depends(get_current_user),
@@ -207,7 +206,7 @@ async def _fetch_archive_discussion_messages(
     *,
     limit: int = 50,
     before_id: int | None = None,
-) -> List[ArchiveDiscussionMessageRead]:
+) -> list[ArchiveDiscussionMessageRead]:
     safe_limit = max(1, min(int(limit or 50), 100))
 
     stmt = (
@@ -243,7 +242,7 @@ async def _fetch_archive_discussion_messages(
 
 @router.get(
     "/{course_id}/archives/{archive_id}/discussion/messages",
-    response_model=List[ArchiveDiscussionMessageRead],
+    response_model=list[ArchiveDiscussionMessageRead],
 )
 async def list_archive_discussion_messages(
     course_id: int,
@@ -310,7 +309,7 @@ async def archive_discussion_ws(
 
         while True:
             raw = await websocket.receive_text()
-            if exp_ts is not None and exp_ts < datetime.now(timezone.utc).timestamp():
+            if exp_ts is not None and exp_ts < datetime.now(UTC).timestamp():
                 await websocket.close(code=4401)
                 return
             try:
@@ -345,7 +344,7 @@ async def archive_discussion_ws(
                 archive_id=archive_id,
                 user_id=user.id,
                 content=content,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             db.add(message)
             await db.commit()
@@ -417,7 +416,7 @@ async def delete_archive_discussion_message(
     if not current_user.is_admin and message.user_id != current_user.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
 
-    message.deleted_at = datetime.now(timezone.utc)
+    message.deleted_at = datetime.now(UTC)
     db.add(message)
     await db.commit()
 
@@ -472,7 +471,7 @@ async def update_archive(
     if academic_year is not None:
         archive.academic_year = academic_year
 
-    archive.updated_at = datetime.now(timezone.utc)
+    archive.updated_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(archive)
@@ -569,7 +568,7 @@ async def update_archive_course(
         )
 
     archive.course_id = new_course.id
-    archive.updated_at = datetime.now(timezone.utc)
+    archive.updated_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(archive)
@@ -612,7 +611,7 @@ async def delete_archive(
             detail="You don't have permission to delete this archive",
         )
 
-    archive.deleted_at = datetime.now(timezone.utc)
+    archive.deleted_at = datetime.now(UTC)
     await db.commit()
 
     return {"message": "Archive deleted successfully"}
@@ -748,7 +747,7 @@ async def delete_course(
     archives = archives_result.scalars().all()
 
     # Soft delete all associated archives and the course
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now(UTC)
     for archive in archives:
         archive.deleted_at = current_time
 
@@ -765,7 +764,7 @@ async def delete_course(
     }
 
 
-@router.get("/admin/courses", response_model=List[CourseRead])
+@router.get("/admin/courses", response_model=list[CourseRead])
 async def list_all_courses(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
