@@ -14,6 +14,7 @@ const app = createApp(App)
 
 app.use(router)
 app.use(PrimeVue, {
+  license: import.meta.env.VITE_PRIMEUI_LICENSE_KEY,
   theme: {
     preset: Aura,
     options: {
