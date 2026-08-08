@@ -188,7 +188,7 @@ async def _broadcast_discussion(archive_id: int, payload: dict):
     for ws in list(sockets):
         try:
             await ws.send_json(payload)
-        except Exception:
+        except Exception:  # noqa: BLE001 - a disconnected socket is removed
             dead.append(ws)
 
     if dead:
@@ -314,7 +314,7 @@ async def archive_discussion_ws(
                 return
             try:
                 data = json.loads(raw)
-            except Exception:
+            except json.JSONDecodeError:
                 continue
 
             if not isinstance(data, dict):

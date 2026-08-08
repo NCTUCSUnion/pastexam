@@ -108,7 +108,7 @@ async def stream_task_status(
                         return res
                     else:
                         raise TypeError("Task result must be a dict")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - ARQ result failures are retried
                     last_err = e
                 await asyncio.sleep(0.05)
             if last_err:
@@ -118,7 +118,7 @@ async def stream_task_status(
         if job_status == "complete":
             response.result = await _get_job_result()
             response.completed_at = (
-                metadata.get("completed_at") or datetime.utcnow().isoformat()
+                metadata.get("completed_at") or datetime.now(UTC).isoformat()
             )
             await websocket.send_json(response.dict())
             await websocket.close(code=1000)
@@ -153,7 +153,7 @@ async def stream_task_status(
                         if status_enum is None
                         else _STATUS_MAP.get(status_enum, "unknown")
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001 - status polling is best-effort
                     current_status = last_sent_status
 
                 if current_status and current_status != last_sent_status:
@@ -161,7 +161,7 @@ async def stream_task_status(
 
                     if current_status == "complete":
                         result = await _get_job_result()
-                        completed_at = datetime.utcnow().isoformat()
+                        completed_at = datetime.now(UTC).isoformat()
                         metadata["completed_at"] = completed_at
                         metadata["status"] = "complete"
                         await redis.set(
@@ -228,7 +228,7 @@ async def stream_task_status(
 
                     result = await _get_job_result()
 
-                    completed_at = datetime.utcnow().isoformat()
+                    completed_at = datetime.now(UTC).isoformat()
                     metadata["completed_at"] = completed_at
                     metadata["status"] = "complete"
                     await redis.set(
@@ -248,7 +248,7 @@ async def stream_task_status(
                     )
                     await websocket.close(code=1000)
                     return
-    except Exception:
+    except Exception:  # noqa: BLE001 - close the WebSocket on an unexpected failure
         await websocket.close(code=1011)
         return
 
@@ -311,7 +311,7 @@ async def submit_generate_task(
         metadata = {
             "user_id": current_user.user_id,
             "archive_ids": request.archive_ids,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "status": "pending",
         }
         await redis.set(
@@ -328,7 +328,7 @@ async def submit_generate_task(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - translate unexpected backend failures
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to submit task: {e!s}",
@@ -369,7 +369,7 @@ async def delete_task(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - translate unexpected backend failures
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete task: {e!s}",
@@ -405,7 +405,7 @@ async def get_api_key_status(
         return ApiKeyResponse(has_api_key=has_api_key, api_key_masked=api_key_masked)
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - translate unexpected database failures
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get API key status: {e!s}",
@@ -452,7 +452,7 @@ async def update_api_key(
         return ApiKeyResponse(has_api_key=has_api_key, api_key_masked=api_key_masked)
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - translate validation and database failures
         # Check if it's an API key validation error
         if "API key" in str(e) or "authentication" in str(e).lower():
             raise HTTPException(

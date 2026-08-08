@@ -1,3 +1,4 @@
+import asyncio
 import os
 import subprocess
 import unicodedata
@@ -25,11 +26,13 @@ async def init_db():
     # Run Alembic migrations instead of create_all
     try:
         # Run alembic upgrade head to apply all migrations
-        result = subprocess.run(
+        result = await asyncio.to_thread(
+            subprocess.run,
             ["uv", "run", "alembic", "upgrade", "head"],
             cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             capture_output=True,
             text=True,
+            check=False,
         )
         if result.returncode != 0:
             print(f"Alembic migration failed: {result.stderr}")
@@ -39,7 +42,7 @@ async def init_db():
                 await conn.commit()
         else:
             print("Database migrations applied successfully")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - migration failure falls back to create_all
         print(f"Error running migrations: {e}")
         # Fallback to create_all
         async with engine.begin() as conn:

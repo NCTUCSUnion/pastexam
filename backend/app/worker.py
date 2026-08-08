@@ -1,8 +1,9 @@
 import io
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
+from typing import ClassVar
 
 from arq import create_pool
 from arq.connections import RedisSettings
@@ -220,7 +221,7 @@ async def generate_ai_exam_task(ctx, task_data: dict):
         if not redis or not task_id:
             return
         try:
-            fields = {"status": status, "ts": datetime.utcnow().isoformat()}
+            fields = {"status": status, "ts": datetime.now(UTC).isoformat()}
             if error:
                 fields["error"] = error
             stream_key = f"ai_exam:task_events:{task_id}"
@@ -253,7 +254,7 @@ class WorkerSettings:
     """ARQ worker settings"""
 
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
-    functions = [generate_ai_exam_task]
+    functions: ClassVar[list] = [generate_ai_exam_task]
 
     max_jobs = 5  # Max concurrent jobs
     job_timeout = 600  # Job timeout in seconds
