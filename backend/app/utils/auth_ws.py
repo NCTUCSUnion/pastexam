@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import WebSocket
 from jose import JWTError, jwt
@@ -41,7 +41,7 @@ async def get_ws_token_payload(websocket: WebSocket) -> dict | None:
         )
 
         exp = payload.get("exp")
-        if exp is None or exp < datetime.now(timezone.utc).timestamp():
+        if exp is None or exp < datetime.now(UTC).timestamp():
             return None
 
         user_id: int | None = payload.get("uid")

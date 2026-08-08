@@ -74,6 +74,11 @@ html.dark {
   backface-visibility: visible !important;
 }
 
+.app-progress-spinner {
+  width: 64px !important;
+  height: 64px !important;
+}
+
 .code-background {
   position: relative;
   background-position: 0 0;

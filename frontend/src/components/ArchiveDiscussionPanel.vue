@@ -20,7 +20,7 @@
 
     <div ref="messagesRef" class="flex-1 overflow-auto p-3 flex flex-column gap-2">
       <div v-if="loading" class="flex-1 flex align-items-center justify-content-center">
-        <ProgressSpinner strokeWidth="4" />
+        <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
       </div>
       <div v-else-if="messages.length === 0" class="text-sm" style="color: var(--text-secondary)">
         還沒有人發起討論，來當第一個吧！

@@ -70,12 +70,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "pnpm"
 
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: pnpm install --frozen-lockfile
+
+      - name: Prepare frontend env
+        working-directory: ./frontend
+        env:
+          VITE_PRIMEUI_LICENSE_KEY: ${{ secrets.PRIMEUI_LICENSE_KEY }}
+        run: |
+          cp .env.example .env
+          printf 'VITE_PRIMEUI_LICENSE_KEY=%s\n' "$VITE_PRIMEUI_LICENSE_KEY" >> .env
 
       - name: Run frontend unit tests with coverage
         working-directory: ./frontend
@@ -105,7 +113,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "pnpm"
 
       - name: Install frontend dependencies
@@ -126,7 +134,11 @@ jobs:
           EOF
 
       - name: Prepare frontend env
-        run: cp frontend/.env.example frontend/.env
+        env:
+          VITE_PRIMEUI_LICENSE_KEY: ${{ secrets.PRIMEUI_LICENSE_KEY }}
+        run: |
+          cp frontend/.env.example frontend/.env
+          printf 'VITE_PRIMEUI_LICENSE_KEY=%s\n' "$VITE_PRIMEUI_LICENSE_KEY" >> frontend/.env
 
       - name: Prepare docker env
         run: cp docker/.env.example docker/.env

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import redis
 from fastapi import Depends, HTTPException, status
@@ -85,7 +85,7 @@ async def get_current_user(
         )
 
         exp = payload.get("exp")
-        if exp is None or exp < datetime.now(timezone.utc).timestamp():
+        if exp is None or exp < datetime.now(UTC).timestamp():
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired",

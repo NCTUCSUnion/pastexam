@@ -100,7 +100,7 @@ test.describe('Admin Dashboard › Notifications', () => {
     await expect(dialog).toBeVisible()
 
     const previousDeleteCount = deleteIds.length
-    await clickWhenVisible(dialog.getByLabel('刪除'))
+    await clickWhenVisible(dialog.getByRole('button', { name: '刪除' }))
     await expect
       .poll(() => deleteIds.length, { message: '等待刪除 API 完成' })
       .toBe(previousDeleteCount + 1)

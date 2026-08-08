@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -19,7 +19,7 @@ from app.models.models import (
 
 @pytest.fixture
 def statistics_now(monkeypatch):
-    frozen_now = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    frozen_now = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
 
     class FrozenDatetime(datetime):
         @classmethod
@@ -120,14 +120,14 @@ async def test_statistics_endpoint_has_basic_fields(client):
     payload = response.json()
     assert payload["success"] is True
     data = payload["data"]
-    for key in {
+    for key in (
         "totalUsers",
         "totalDownloads",
         "onlineUsers",
         "totalArchives",
         "totalCourses",
         "activeToday",
-    }:
+    ):
         assert key in data
 
 

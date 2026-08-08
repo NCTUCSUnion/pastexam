@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -61,15 +61,14 @@ async def test_discussion_ws_sends_history_and_ignores_blank(
         "app.api.services.courses.get_ws_token_payload", fake_ws_payload
     )
 
-    with TestClient(app) as ws_client:
-        with ws_client.websocket_connect(
-            f"/courses/{course_id}/archives/{archive_id}/discussion/ws"
-        ) as ws:
-            first = ws.receive_json()
-            assert first["type"] == "history"
-            assert first["messages"] == []
+    with TestClient(app) as ws_client, ws_client.websocket_connect(
+        f"/courses/{course_id}/archives/{archive_id}/discussion/ws"
+    ) as ws:
+        first = ws.receive_json()
+        assert first["type"] == "history"
+        assert first["messages"] == []
 
-            ws.send_text(json.dumps({"type": "send", "content": "   "}))
+        ws.send_text(json.dumps({"type": "send", "content": "   "}))
 
     async with session_maker() as session:
         result = await session.execute(
@@ -119,13 +118,12 @@ async def test_discussion_ws_accepts_padded_message_within_limit(
     content = "a" * 200
     raw = f"  {content}  "
 
-    with TestClient(app) as ws_client:
-        with ws_client.websocket_connect(
-            f"/courses/{course_id}/archives/{archive_id}/discussion/ws"
-        ) as ws:
-            ws.receive_json()  # history
-            ws.send_text(json.dumps({"type": "send", "content": raw}))
-            msg = ws.receive_json()
+    with TestClient(app) as ws_client, ws_client.websocket_connect(
+        f"/courses/{course_id}/archives/{archive_id}/discussion/ws"
+    ) as ws:
+        ws.receive_json()  # history
+        ws.send_text(json.dumps({"type": "send", "content": raw}))
+        msg = ws.receive_json()
 
     assert msg["type"] == "message"
     assert msg["message"]["content"] == content
@@ -176,13 +174,12 @@ async def test_discussion_ws_rejects_message_too_long(
         "app.api.services.courses.get_ws_token_payload", fake_ws_payload
     )
 
-    with TestClient(app) as ws_client:
-        with ws_client.websocket_connect(
-            f"/courses/{course_id}/archives/{archive_id}/discussion/ws"
-        ) as ws:
-            ws.receive_json()  # history
-            ws.send_text(json.dumps({"type": "send", "content": "a" * 201}))
-            err = ws.receive_json()
+    with TestClient(app) as ws_client, ws_client.websocket_connect(
+        f"/courses/{course_id}/archives/{archive_id}/discussion/ws"
+    ) as ws:
+        ws.receive_json()  # history
+        ws.send_text(json.dumps({"type": "send", "content": "a" * 201}))
+        err = ws.receive_json()
 
     assert err["type"] == "error"
     assert err["code"] == "message_too_long"
@@ -227,7 +224,7 @@ async def test_discussion_delete_requires_owner_or_admin(
             archive_id=archive.id,
             user_id=owner.id,
             content="hello",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         session.add(message)
         await session.commit()

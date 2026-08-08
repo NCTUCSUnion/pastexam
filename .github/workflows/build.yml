@@ -40,6 +40,7 @@ jobs:
             VITE_SITE_HOSTNAME=${{ secrets.FRONTEND_SITE_HOSTNAME }}
             VITE_UMAMI_SCRIPT_URL=${{ secrets.FRONTEND_UMAMI_SCRIPT_URL }}
             VITE_UMAMI_WEBSITE_ID=${{ secrets.FRONTEND_UMAMI_WEBSITE_ID }}
+            VITE_PRIMEUI_LICENSE_KEY=${{ secrets.PRIMEUI_LICENSE_KEY }}
           cache-from: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache
           cache-to: type=registry,ref=ghcr.io/nctucsunion/pastexam:frontend-buildcache,mode=max
 

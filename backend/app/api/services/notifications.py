@@ -1,5 +1,4 @@
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
@@ -19,7 +18,7 @@ router = APIRouter()
 
 
 def _apply_time_filters(statement):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return (
         statement.where(Notification.deleted_at.is_(None))
         .where(Notification.is_active.is_(True))
@@ -28,7 +27,7 @@ def _apply_time_filters(statement):
     )
 
 
-@router.get("/active", response_model=List[NotificationRead])
+@router.get("/active", response_model=list[NotificationRead])
 async def get_active_notifications(
     db: AsyncSession = Depends(get_session),
 ):
@@ -41,7 +40,7 @@ async def get_active_notifications(
     ]
 
 
-@router.get("", response_model=List[NotificationRead])
+@router.get("", response_model=list[NotificationRead])
 async def list_public_notifications(
     db: AsyncSession = Depends(get_session),
 ):
@@ -54,7 +53,7 @@ async def list_public_notifications(
     ]
 
 
-@router.get("/admin/notifications", response_model=List[NotificationRead])
+@router.get("/admin/notifications", response_model=list[NotificationRead])
 async def list_admin_notifications(
     db: AsyncSession = Depends(get_session),
     current_user: UserRoles = Depends(get_current_user),
@@ -92,7 +91,7 @@ async def create_notification(
         )
 
     notification = Notification(**notification_data.model_dump())
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     notification.created_at = now
     notification.updated_at = now
 
@@ -129,7 +128,7 @@ async def update_notification(
     for field, value in update_data.items():
         setattr(notification, field, value)
 
-    notification.updated_at = datetime.now(timezone.utc)
+    notification.updated_at = datetime.now(UTC)
 
     db.add(notification)
     await db.commit()
@@ -161,7 +160,7 @@ async def delete_notification(
             status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found"
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     notification.deleted_at = now
     notification.updated_at = now
     await db.commit()

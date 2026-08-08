@@ -6,7 +6,9 @@ from fastapi import HTTPException
 from app.core.config import settings
 
 
-async def oauth_callback(code: str, state: str = None, stored_state: str = None):
+async def oauth_callback(
+    code: str, state: str | None = None, stored_state: str | None = None
+):
     """
     Verify CSRF token and handle OAuth callback for NYCU OAuth
     """

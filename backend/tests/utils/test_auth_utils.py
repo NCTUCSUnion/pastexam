@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -97,7 +97,7 @@ async def test_get_current_user_success(monkeypatch, session_maker):
             "uid": user_id,
             "exp": int(
                 (
-                    datetime.now(timezone.utc)
+                    datetime.now(UTC)
                     + timedelta(minutes=5)
                 ).timestamp()
             ),
@@ -152,7 +152,7 @@ async def test_get_current_user_missing_user(monkeypatch, session_maker):
             "uid": 999999,
             "exp": int(
                 (
-                    datetime.now(timezone.utc)
+                    datetime.now(UTC)
                     + timedelta(minutes=5)
                 ).timestamp()
             ),

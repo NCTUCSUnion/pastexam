@@ -1,5 +1,7 @@
-from minio import Minio
 from datetime import timedelta
+
+from minio import Minio
+
 from app.core.config import settings
 
 _minio_client = None

@@ -109,7 +109,7 @@ test.describe('Admin Dashboard › Courses', () => {
           response.url().includes('/api/courses/admin/courses') &&
           response.request().method() === 'GET'
       ),
-      clickWhenVisible(dialog.getByLabel('刪除')),
+      clickWhenVisible(dialog.getByRole('button', { name: '刪除' })),
     ])
 
     expect(deleteIds.length).toBeGreaterThan(0)

@@ -1,17 +1,16 @@
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from urllib.parse import parse_qs, urlparse
 
 import pytest
-from sqlalchemy import delete, select
-from urllib.parse import urlparse, parse_qs
-
 from fastapi import HTTPException
+from sqlalchemy import delete, select
 
+from app.api.services import auth as auth_service
 from app.main import app
 from app.models.models import User, UserRoles
 from app.utils.auth import get_current_user
-from app.api.services import auth as auth_service
 
 
 @pytest.mark.asyncio

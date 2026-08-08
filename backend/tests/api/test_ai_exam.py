@@ -1,8 +1,9 @@
 import asyncio
 import json
 import threading
-from datetime import datetime
+from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import ClassVar
 
 import pytest
 from fastapi.testclient import TestClient
@@ -98,7 +99,7 @@ class FakeRedis:
         def parse_id(val: str) -> int:
             try:
                 return int(str(val).split("-", 1)[0])
-            except Exception:
+            except ValueError:
                 return 0
 
         last_num = parse_id(last_id)
@@ -206,7 +207,7 @@ async def test_submit_generate_task_enqueues_job(
             ("generate_ai_exam_task", {**payload, "user_id": user.id})
         ]
 
-        metadata_key = f"task_metadata:{task_id}".encode("utf-8")
+        metadata_key = f"task_metadata:{task_id}".encode()
         assert metadata_key in fake_redis.metadata
         metadata = json.loads(fake_redis.metadata[metadata_key].decode("utf-8"))
         assert metadata["user_id"] == user.id
@@ -283,7 +284,7 @@ async def test_get_task_status_returns_result(
         return {"uid": user.id, "exp": 4102444800}
 
     task_id = "task-123"
-    created_at = datetime.utcnow().isoformat()
+    created_at = datetime.now(UTC).isoformat()
 
     await fake_redis.set(
         f"task_metadata:{task_id}",
@@ -303,9 +304,11 @@ async def test_get_task_status_returns_result(
         monkeypatch.setattr(
             "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
         )
-        with TestClient(app) as ws_client:
-            with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
-                body = ws.receive_json()
+        with (
+            TestClient(app) as ws_client,
+            ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws,
+        ):
+            body = ws.receive_json()
         assert body["task_id"] == task_id
         assert body["status"] == "complete"
         assert body["created_at"] == created_at
@@ -333,7 +336,7 @@ async def test_get_task_status_reports_not_found_when_job_missing(
         json.dumps(
             {
                 "user_id": user.id,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
         ),
     )
@@ -346,9 +349,11 @@ async def test_get_task_status_reports_not_found_when_job_missing(
         monkeypatch.setattr(
             "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
         )
-        with TestClient(app) as ws_client:
-            with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
-                body = ws.receive_json()
+        with (
+            TestClient(app) as ws_client,
+            ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws,
+        ):
+            body = ws.receive_json()
         assert body["status"] == "not_found"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
@@ -371,7 +376,7 @@ async def test_task_status_stream_emits_in_progress_transition(
     )
 
     task_id = "job-transition"
-    created_at = datetime.utcnow().isoformat()
+    created_at = datetime.now(UTC).isoformat()
     await fake_redis.set(
         f"task_metadata:{task_id}",
         json.dumps({"user_id": user.id, "created_at": created_at}),
@@ -379,32 +384,34 @@ async def test_task_status_stream_emits_in_progress_transition(
 
     fake_redis.job_statuses[task_id] = JobStatus.queued
 
-    with TestClient(app) as ws_client:
-        with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
-            first = ws.receive_json()
-            assert first["status"] == "pending"
+    with (
+        TestClient(app) as ws_client,
+        ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws,
+    ):
+        first = ws.receive_json()
+        assert first["status"] == "pending"
 
-            await fake_redis.xadd(
-                f"ai_exam:task_events:{task_id}",
-                {"status": "in_progress"},
-            )
-            second = ws.receive_json()
-            assert second["status"] == "in_progress"
+        await fake_redis.xadd(
+            f"ai_exam:task_events:{task_id}",
+            {"status": "in_progress"},
+        )
+        second = ws.receive_json()
+        assert second["status"] == "in_progress"
 
-            fake_redis.job_statuses[task_id] = JobStatus.complete
-            fake_redis.results[task_id] = {
-                "success": True,
-                "generated_content": "Example",
-            }
-            await fake_redis.xadd(
-                f"ai_exam:task_events:{task_id}",
-                {
-                    "status": "complete",
-                },
-            )
-            final = ws.receive_json()
-            assert final["status"] == "complete"
-            assert final["result"]["generated_content"] == "Example"
+        fake_redis.job_statuses[task_id] = JobStatus.complete
+        fake_redis.results[task_id] = {
+            "success": True,
+            "generated_content": "Example",
+        }
+        await fake_redis.xadd(
+            f"ai_exam:task_events:{task_id}",
+            {
+                "status": "complete",
+            },
+        )
+        final = ws.receive_json()
+        assert final["status"] == "complete"
+        assert final["result"]["generated_content"] == "Example"
 
 
 @pytest.mark.asyncio
@@ -416,7 +423,7 @@ async def test_get_task_status_handles_result_error(
 ):
     user = await make_user()
     task_id = "job-error"
-    created_at = datetime.utcnow().isoformat()
+    created_at = datetime.now(UTC).isoformat()
 
     await fake_redis.set(
         f"task_metadata:{task_id}",
@@ -432,9 +439,11 @@ async def test_get_task_status_handles_result_error(
         monkeypatch.setattr(
             "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
         )
-        with TestClient(app) as ws_client:
-            with ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws:
-                body = ws.receive_json()
+        with (
+            TestClient(app) as ws_client,
+            ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws,
+        ):
+            body = ws.receive_json()
         assert body["status"] == "complete"
         assert body["result"] is None
         assert body["completed_at"] is not None
@@ -465,7 +474,7 @@ async def test_update_api_key_persists_value(
             return SimpleNamespace(text="ok")
 
     class FakeClient:
-        instances = []
+        instances: ClassVar[list] = []
 
         def __init__(self, api_key):
             self.api_key = api_key
@@ -518,7 +527,7 @@ async def test_delete_task_success(
         response = await client.delete(f"/ai-exam/task/{task_id}")
         assert response.status_code == 200
         assert response.json()["success"] is True
-        assert f"task_metadata:{task_id}".encode("utf-8") not in fake_redis.metadata
+        assert f"task_metadata:{task_id}".encode() not in fake_redis.metadata
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -582,10 +591,12 @@ async def test_get_task_status_not_found(
         monkeypatch.setattr(
             "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
         )
-        with TestClient(app) as ws_client:
-            with pytest.raises(WebSocketDisconnect) as exc:
-                with ws_client.websocket_connect("/ai-exam/ws/task/missing") as ws:
-                    ws.receive_json()
+        with (
+            TestClient(app) as ws_client,
+            pytest.raises(WebSocketDisconnect) as exc,
+            ws_client.websocket_connect("/ai-exam/ws/task/missing") as ws,
+        ):
+            ws.receive_json()
         assert exc.value.code == 1008
     finally:
         app.dependency_overrides.pop(get_current_user, None)
@@ -612,10 +623,12 @@ async def test_get_task_status_forbidden(
         monkeypatch.setattr(
             "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
         )
-        with TestClient(app) as ws_client:
-            with pytest.raises(WebSocketDisconnect) as exc:
-                with ws_client.websocket_connect("/ai-exam/ws/task/job-secret") as ws:
-                    ws.receive_json()
+        with (
+            TestClient(app) as ws_client,
+            pytest.raises(WebSocketDisconnect) as exc,
+            ws_client.websocket_connect("/ai-exam/ws/task/job-secret") as ws,
+        ):
+            ws.receive_json()
         assert exc.value.code == 1008
     finally:
         app.dependency_overrides.pop(get_current_user, None)
@@ -641,10 +654,12 @@ async def test_get_task_status_handles_exception(
             "app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload
         )
         monkeypatch.setattr("app.worker.get_redis_pool", raise_error)
-        with TestClient(app) as ws_client:
-            with pytest.raises(WebSocketDisconnect) as exc:
-                with ws_client.websocket_connect("/ai-exam/ws/task/any") as ws:
-                    ws.receive_json()
+        with (
+            TestClient(app) as ws_client,
+            pytest.raises(WebSocketDisconnect) as exc,
+            ws_client.websocket_connect("/ai-exam/ws/task/any") as ws,
+        ):
+            ws.receive_json()
         assert exc.value.code == 1011
     finally:
         app.dependency_overrides.pop(get_current_user, None)
@@ -777,7 +792,7 @@ async def test_update_api_key_handles_other_errors(
 
     async def failing_execute(self, statement, *args, **kwargs):
         if isinstance(statement, Update):
-            raise RuntimeError("db down")
+            raise RuntimeError("db down")  # noqa: TRY004 - simulate a database failure
         return await original_execute(self, statement, *args, **kwargs)
 
     app.dependency_overrides[get_current_user] = fake_get_current_user

@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -35,7 +35,7 @@ async def login(
         )
 
     # Update last_login timestamp
-    user.last_login = datetime.now(timezone.utc)
+    user.last_login = datetime.now(UTC)
     await db.commit()
     await db.refresh(user)
 
@@ -45,7 +45,7 @@ async def login(
         "name": user.name,
         "is_admin": user.is_admin,
         "exp": int(
-            datetime.now(timezone.utc).timestamp()
+            datetime.now(UTC).timestamp()
             + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         ),
     }
@@ -86,7 +86,7 @@ async def auth_callback_endpoint(
     if not info.get("sub") or not info.get("email"):
         raise HTTPException(status_code=400, detail="Invalid OAuth response")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     result = await db.execute(
         select(User).where(
@@ -121,7 +121,7 @@ async def auth_callback_endpoint(
         "name": user.name,
         "is_admin": user.is_admin,
         "exp": int(
-            datetime.now(timezone.utc).timestamp()
+            datetime.now(UTC).timestamp()
             + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         ),
     }
@@ -147,7 +147,7 @@ async def logout(
     )
     user = result.scalar_one_or_none()
     if user:
-        user.last_logout = datetime.now(timezone.utc)
+        user.last_logout = datetime.now(UTC)
         await db.commit()
 
     # Blacklist the token

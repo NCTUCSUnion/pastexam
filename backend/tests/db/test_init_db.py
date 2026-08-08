@@ -2,9 +2,10 @@ import subprocess
 from contextlib import asynccontextmanager
 
 import pytest
+
 from app.core.config import settings
 from app.db import init_db
-from app.models.models import Course, Meme, User, CourseCategory
+from app.models.models import Course, CourseCategory, Meme, User
 
 
 class FakeScalarResult:
@@ -160,7 +161,6 @@ async def test_init_db_fallback_when_migration_fails(monkeypatch):
 
         async def run_sync(self, fn):
             self.tracker["create_all"] += 1
-            return None
 
         async def commit(self):
             return None

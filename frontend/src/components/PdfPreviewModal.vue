@@ -72,7 +72,7 @@
             v-else-if="loading || pdfLoading"
             class="flex-1 flex align-items-center justify-content-center"
           >
-            <ProgressSpinner strokeWidth="4" />
+            <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
           </div>
 
           <div v-else-if="pdf && renderPdf" class="flex-1 pdf-container" ref="pdfContainerRef">
@@ -90,7 +90,7 @@
           </div>
 
           <div v-else class="flex-1 flex align-items-center justify-content-center">
-            <ProgressSpinner strokeWidth="4" />
+            <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
           </div>
         </div>
 
