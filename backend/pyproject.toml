@@ -5,19 +5,19 @@ description = "Past Exam API Backend"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "alembic>=1.19.0",
+    "alembic>=1.19.1",
     "arq>=0.25.0",
     "asyncpg>=0.30.0",
     "bcrypt>=4.3.0",
     "fastapi[standard]>=0.141.1",
-    "google-genai>=2.16.0",
-    "greenlet>=3.5.4",
+    "google-genai>=2.18.1",
+    "greenlet>=3.5.5",
     "httpx>=0.28.1",
     "itsdangerous>=2.2.0",
     "minio>=7.2.15",
     "passlib>=1.7.4",
     "psycopg2-binary>=2.9.12",
-    "pydantic-settings>=2.14.2",
+    "pydantic-settings>=2.15.0",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.32",
     "pyyaml>=6.0.2",
@@ -32,7 +32,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.0.0",
-    "ruff>=0.16.1",
+    "ruff>=0.16.3",
 ]
 
 [tool.ruff.lint.flake8-bugbear]
