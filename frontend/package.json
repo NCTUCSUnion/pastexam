@@ -54,7 +54,7 @@
     "vite-plugin-eslint": "^1.8.1",
     "vite-plugin-sitemap": "^0.8.2",
     "vite-plugin-vue-devtools": "^8.2.1",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.0"
   },
   "lint-staged": {
     "*.{js,jsx,vue}": [
