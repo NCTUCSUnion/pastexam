@@ -746,6 +746,7 @@ describe('Navbar methods', () => {
 
     expect(unauthWrapper.find('[data-icon="pi pi-sign-in"]').exists()).toBe(true)
     expect(unauthWrapper.find('[data-icon="pi pi-sign-out"]').exists()).toBe(false)
+    expect(unauthWrapper.findComponent({ name: 'NotificationCenterModal' }).exists()).toBe(false)
 
     unauthWrapper.unmount()
 
@@ -767,8 +768,9 @@ describe('Navbar methods', () => {
 
     expect(authWrapper.find('[data-icon="pi pi-sign-in"]').exists()).toBe(false)
     expect(authWrapper.find('[data-icon="pi pi-sign-out"]').exists()).toBe(true)
-    expect(authWrapper.find('.notification-modal').exists()).toBe(true)
-    expect(authWrapper.find('.notification-center').exists()).toBe(true)
+    // Lazily loaded modals are stubbed by shallowMount, so match them by name
+    expect(authWrapper.findComponent({ name: 'NotificationModal' }).exists()).toBe(true)
+    expect(authWrapper.findComponent({ name: 'NotificationCenterModal' }).exists()).toBe(true)
 
     const menuProps = authWrapper.getComponent({ name: 'MenuStub' }).props('model')
     expect(Array.isArray(menuProps)).toBe(true)
