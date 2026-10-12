@@ -30,7 +30,7 @@ jobs:
         run: cp docker/.env.example docker/.env
 
       - name: Start core services
-        run: docker compose -f docker/docker-compose.dev.yml up -d db redis minio
+        run: docker compose -f docker/docker-compose.dev.yml up -d db redis rustfs
 
       - name: Run migrations
         run: docker compose -f docker/docker-compose.dev.yml run --rm backend uv run alembic upgrade head

@@ -54,7 +54,7 @@
 | **前端** | Vue 3、Vite、TypeScript、PrimeVue、Tailwind CSS |
 | **後端** | Python、FastAPI、SQLModel、Alembic、ARQ |
 | **資料庫 / 快取** | PostgreSQL、Redis |
-| **物件儲存** | MinIO（S3 相容） |
+| **物件儲存** | RustFS（S3 相容） |
 | **反向代理** | Nginx |
 | **DevOps / CI** | Docker Compose、GitHub Actions |
 
@@ -68,7 +68,7 @@ cd pastexam
 
 ### 2. 設定環境變數
 ```bash
-# Docker Compose（Postgres / MinIO）使用的環境變數
+# Docker Compose（Postgres / RustFS）使用的環境變數
 cp docker/.env.example .env
 
 # 後端與前端各自的環境變數

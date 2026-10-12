@@ -33,13 +33,13 @@ if [ -f "$BACKUP_DIR/postgres-volume-$BACKUP_DATE.tar.gz" ]; then
     echo "PostgreSQL volume restore completed"
 fi
 
-# Restore MinIO Volume
-if [ -f "$BACKUP_DIR/minio-volume-$BACKUP_DATE.tar.gz" ]; then
-    echo "Restoring MinIO volume..."
-    docker volume rm pastexam-minio-data 2>/dev/null || true
-    docker volume create pastexam-minio-data
-    docker run --rm -v pastexam-minio-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine:3.22 tar xzf /backup/minio-volume-$BACKUP_DATE.tar.gz -C /data
-    echo "MinIO volume restore completed"
+# Restore RustFS Volume
+if [ -f "$BACKUP_DIR/rustfs-volume-$BACKUP_DATE.tar.gz" ]; then
+    echo "Restoring RustFS volume..."
+    docker volume rm pastexam-rustfs-data 2>/dev/null || true
+    docker volume create pastexam-rustfs-data
+    docker run --rm -v pastexam-rustfs-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine:3.22 tar xzf /backup/rustfs-volume-$BACKUP_DATE.tar.gz -C /data
+    echo "RustFS volume restore completed"
 fi
 
 echo "Restore completed! You can now start the services"

@@ -3,7 +3,7 @@ from datetime import timedelta
 from app.utils import storage
 
 
-class FakeMinio:
+class FakeStorage:
     def __init__(self, *, exists=False):
         self.exists = exists
         self.called_make_bucket = False
@@ -16,24 +16,24 @@ class FakeMinio:
 
     def presigned_get_object(self, bucket_name, object_name, expires):
         return (
-            f"http://{storage.settings.MINIO_ENDPOINT}/{bucket_name}/"
+            f"http://{storage.settings.RUSTFS_ENDPOINT}/{bucket_name}/"
             f"{object_name}?expires={int(expires.total_seconds())}"
         )
 
 
-def test_get_minio_client_creates_bucket(monkeypatch):
-    fake = FakeMinio()
-    monkeypatch.setattr(storage, "_minio_client", None)
+def test_get_storage_client_creates_bucket(monkeypatch):
+    fake = FakeStorage()
+    monkeypatch.setattr(storage, "_storage_client", None)
     monkeypatch.setattr(storage, "Minio", lambda *args, **kwargs: fake)
 
-    client = storage.get_minio_client()
+    client = storage.get_storage_client()
     assert client is fake
     assert fake.called_make_bucket is True
 
 
 def test_presigned_get_url_rewrites_endpoint(monkeypatch):
-    fake = FakeMinio(exists=True)
-    monkeypatch.setattr(storage, "_minio_client", fake)
+    fake = FakeStorage(exists=True)
+    monkeypatch.setattr(storage, "_storage_client", fake)
 
     url = storage.presigned_get_url(
         "path/to/file.pdf",

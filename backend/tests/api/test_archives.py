@@ -32,13 +32,13 @@ async def test_upload_archive_creates_course_and_archive(
     fake_pdf = io.BytesIO(b"%PDF-1.4 test content")
     unique_course = f"Test Course {unique}"
 
-    class FakeMinio:
+    class FakeStorage:
         def put_object(self, **kwargs):
             return None
 
     monkeypatch.setattr(
-        "app.api.services.archives.get_minio_client",
-        lambda: FakeMinio(),
+        "app.api.services.archives.get_storage_client",
+        lambda: FakeStorage(),
     )
 
     try:
@@ -138,13 +138,13 @@ async def test_upload_archive_reuses_existing_course(
         await session.commit()
         await session.refresh(course)
 
-    class FakeMinio:
+    class FakeStorage:
         def put_object(self, **kwargs):
             return None
 
     monkeypatch.setattr(
-        "app.api.services.archives.get_minio_client",
-        lambda: FakeMinio(),
+        "app.api.services.archives.get_storage_client",
+        lambda: FakeStorage(),
     )
 
     async def fake_get_current_user():
@@ -203,13 +203,13 @@ async def test_upload_archive_rejects_large_file(
 
     app.dependency_overrides[get_current_user] = fake_get_current_user
 
-    class FakeMinio:
+    class FakeStorage:
         def put_object(self, **kwargs):
             raise AssertionError("should not upload oversized file")
 
     monkeypatch.setattr(
-        "app.api.services.archives.get_minio_client",
-        lambda: FakeMinio(),
+        "app.api.services.archives.get_storage_client",
+        lambda: FakeStorage(),
     )
 
     try:
@@ -258,13 +258,13 @@ async def test_upload_archive_handles_storage_failure(
 
     app.dependency_overrides[get_current_user] = fake_get_current_user
 
-    class FailingMinio:
+    class FailingStorage:
         def put_object(self, **kwargs):
-            raise RuntimeError("minio unavailable")
+            raise RuntimeError("storage unavailable")
 
     monkeypatch.setattr(
-        "app.api.services.archives.get_minio_client",
-        lambda: FailingMinio(),
+        "app.api.services.archives.get_storage_client",
+        lambda: FailingStorage(),
     )
 
     try:
@@ -310,7 +310,7 @@ async def test_upload_archive_function_covers_creation_and_reuse(
     second_id = None
     course_id = None
 
-    class RecordingMinio:
+    class RecordingStorage:
         def __init__(self):
             self.calls = []
 
@@ -318,8 +318,8 @@ async def test_upload_archive_function_covers_creation_and_reuse(
             self.calls.append(kwargs)
 
     monkeypatch.setattr(
-        "app.api.services.archives.get_minio_client",
-        lambda: RecordingMinio(),
+        "app.api.services.archives.get_storage_client",
+        lambda: RecordingStorage(),
     )
 
     async with session_maker() as session:
@@ -471,13 +471,13 @@ async def test_upload_archive_function_handles_storage_error(
 ):
     user = await make_user()
 
-    class FailingMinio:
+    class FailingStorage:
         def put_object(self, **kwargs):
             raise RuntimeError("storage down")
 
     monkeypatch.setattr(
-        "app.api.services.archives.get_minio_client",
-        lambda: FailingMinio(),
+        "app.api.services.archives.get_storage_client",
+        lambda: FailingStorage(),
     )
 
     upload = UploadFile(filename="fail.pdf", file=io.BytesIO(b"%PDF fail"))
