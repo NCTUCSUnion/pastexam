@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 
-import redis.asyncio as aioredis
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -12,9 +11,10 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_session
 from app.models.models import User, UserRoles
+from app.utils.activity import record_activity
+from app.utils.redis import get_redis
 
 pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated=["bcrypt"])
-redis_client = aioredis.from_url(settings.REDIS_URL)
 
 oauth2_scheme = HTTPBearer()
 
@@ -28,11 +28,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 async def blacklist_token(token: str, expire_seconds: int = 7200):
-    await redis_client.setex(f"blacklist:{token}", expire_seconds, "1")
+    await get_redis().setex(f"blacklist:{token}", expire_seconds, "1")
 
 
 async def is_token_blacklisted(token: str) -> bool:
-    result = await redis_client.get(f"blacklist:{token}")
+    result = await get_redis().get(f"blacklist:{token}")
     return result is not None
 
 
@@ -103,6 +103,7 @@ async def get_current_user(
         if not user:
             raise credentials_exception
 
+        await record_activity(user_id)
         return UserRoles(user_id=user_id, is_admin=user.is_admin)
     except JWTError:
         raise credentials_exception

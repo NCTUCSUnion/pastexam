@@ -31,7 +31,7 @@ async def test_password_hash_roundtrip():
 @pytest.mark.asyncio
 async def test_blacklist_and_check_token(monkeypatch):
     fake_redis = FakeRedis()
-    monkeypatch.setattr(auth_utils, "redis_client", fake_redis)
+    monkeypatch.setattr(auth_utils, "get_redis", lambda: fake_redis)
 
     token = "token-abc"
     await auth_utils.blacklist_token(token, expire_seconds=10)
@@ -77,7 +77,7 @@ async def test_authenticate_user_validates_credentials(session_maker):
 @pytest.mark.asyncio
 async def test_get_current_user_success(monkeypatch, session_maker):
     fake_redis = FakeRedis()
-    monkeypatch.setattr(auth_utils, "redis_client", fake_redis)
+    monkeypatch.setattr(auth_utils, "get_redis", lambda: fake_redis)
     suffix = uuid.uuid4().hex[:8]
 
     async with session_maker() as session:
@@ -128,7 +128,7 @@ async def test_get_current_user_success(monkeypatch, session_maker):
 async def test_get_current_user_blacklisted(monkeypatch, session_maker):
     fake_redis = FakeRedis()
     fake_redis.store["blacklist:blocked"] = "1"
-    monkeypatch.setattr(auth_utils, "redis_client", fake_redis)
+    monkeypatch.setattr(auth_utils, "get_redis", lambda: fake_redis)
 
     credentials = HTTPAuthorizationCredentials(
         scheme="Bearer",
@@ -146,7 +146,7 @@ async def test_get_current_user_blacklisted(monkeypatch, session_maker):
 @pytest.mark.asyncio
 async def test_get_current_user_missing_user(monkeypatch, session_maker):
     fake_redis = FakeRedis()
-    monkeypatch.setattr(auth_utils, "redis_client", fake_redis)
+    monkeypatch.setattr(auth_utils, "get_redis", lambda: fake_redis)
 
     token = auth_utils.jwt.encode(
         {

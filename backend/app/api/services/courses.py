@@ -11,6 +11,7 @@ from fastapi import (
     status,
 )
 from fastapi.encoders import jsonable_encoder
+from sqlalchemy import update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -155,9 +156,13 @@ async def get_archive_download_url(
             status_code=status.HTTP_404_NOT_FOUND, detail="Archive not found"
         )
 
-    archive.download_count += 1
+    # Increment in SQL so concurrent downloads are not lost
+    await db.execute(
+        update(Archive)
+        .where(Archive.id == archive.id)
+        .values(download_count=Archive.download_count + 1)
+    )
     await db.commit()
-    await db.refresh(archive)
 
     return {"url": presigned_get_url(archive.object_name, expires=timedelta(hours=1))}
 
