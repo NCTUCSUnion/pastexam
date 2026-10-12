@@ -59,8 +59,8 @@ class DiscussionHub:
     async def close(self) -> None:
         if self._listener is not None:
             self._listener.cancel()
-            with suppress(asyncio.CancelledError, Exception):
-                await self._listener
+            # Wait for the cancelled listener to finish without re-raising
+            await asyncio.gather(self._listener, return_exceptions=True)
         if self._client is not None:
             with suppress(Exception):
                 await self._client.aclose()
