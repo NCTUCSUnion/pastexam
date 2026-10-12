@@ -33,12 +33,11 @@ from app.models.models import (
 )
 from app.utils.auth import get_current_user
 from app.utils.auth_ws import get_ws_token_payload
+from app.utils.discussion_hub import discussion_hub
 from app.utils.storage import presigned_get_url
 
 router = APIRouter()
 
-# In-memory connection registry (single-process broadcast).
-_discussion_connections_by_archive: dict[int, set[WebSocket]] = {}
 DISCUSSION_MESSAGE_MAX_LENGTH = 200
 
 
@@ -179,27 +178,6 @@ async def _ensure_archive_exists_for_discussion(
     return archive
 
 
-async def _broadcast_discussion(archive_id: int, payload: dict):
-    sockets = _discussion_connections_by_archive.get(archive_id)
-    if not sockets:
-        return
-
-    dead: list[WebSocket] = []
-    for ws in list(sockets):
-        try:
-            await ws.send_json(payload)
-        except Exception:  # noqa: BLE001 - a disconnected socket is removed
-            dead.append(ws)
-
-    if dead:
-        sockets = _discussion_connections_by_archive.get(archive_id)
-        if sockets:
-            for ws in dead:
-                sockets.discard(ws)
-            if not sockets:
-                _discussion_connections_by_archive.pop(archive_id, None)
-
-
 async def _fetch_archive_discussion_messages(
     archive_id: int,
     db: AsyncSession,
@@ -296,8 +274,7 @@ async def archive_discussion_ws(
         await websocket.close(code=1008)
         return
 
-    sockets = _discussion_connections_by_archive.setdefault(archive_id, set())
-    sockets.add(websocket)
+    await discussion_hub.connect(archive_id, websocket)
 
     try:
         history = await _fetch_archive_discussion_messages(
@@ -378,15 +355,11 @@ async def archive_discussion_ws(
                     ),
                 }
             )
-            await _broadcast_discussion(archive_id, payload)
+            await discussion_hub.publish(archive_id, payload)
     except WebSocketDisconnect:
         return
     finally:
-        sockets = _discussion_connections_by_archive.get(archive_id)
-        if sockets:
-            sockets.discard(websocket)
-            if not sockets:
-                _discussion_connections_by_archive.pop(archive_id, None)
+        discussion_hub.disconnect(archive_id, websocket)
 
 
 @router.delete("/{course_id}/archives/{archive_id}/discussion/{message_id}")
@@ -420,7 +393,7 @@ async def delete_archive_discussion_message(
     db.add(message)
     await db.commit()
 
-    await _broadcast_discussion(
+    await discussion_hub.publish(
         archive_id, jsonable_encoder({"type": "delete", "message_id": message_id})
     )
     return {"success": True}
