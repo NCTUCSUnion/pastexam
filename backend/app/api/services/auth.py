@@ -154,5 +154,5 @@ async def logout(
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
-        blacklist_token(token)
+        await blacklist_token(token)
     return {"message": "Successfully logged out"}

@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-import redis
+import redis.asyncio as aioredis
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -14,7 +14,7 @@ from app.db.session import get_session
 from app.models.models import User, UserRoles
 
 pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated=["bcrypt"])
-redis_client = redis.from_url(settings.REDIS_URL)
+redis_client = aioredis.from_url(settings.REDIS_URL)
 
 oauth2_scheme = HTTPBearer()
 
@@ -27,12 +27,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def blacklist_token(token: str, expire_seconds: int = 7200):
-    redis_client.setex(f"blacklist:{token}", expire_seconds, "1")
+async def blacklist_token(token: str, expire_seconds: int = 7200):
+    await redis_client.setex(f"blacklist:{token}", expire_seconds, "1")
 
 
-def is_token_blacklisted(token: str) -> bool:
-    result = redis_client.get(f"blacklist:{token}")
+async def is_token_blacklisted(token: str) -> bool:
+    result = await redis_client.get(f"blacklist:{token}")
     return result is not None
 
 
@@ -65,7 +65,7 @@ async def get_current_user(
     Extract user_id from Bearer <token> in header and verify user's admin
     status from database.
     """
-    if is_token_blacklisted(token.credentials):
+    if await is_token_blacklisted(token.credentials):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has been invalidated",

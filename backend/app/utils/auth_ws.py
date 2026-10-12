@@ -30,7 +30,7 @@ async def get_ws_token_payload(websocket: WebSocket) -> dict | None:
     if not token:
         return None
 
-    if is_token_blacklisted(token):
+    if await is_token_blacklisted(token):
         return None
 
     try:

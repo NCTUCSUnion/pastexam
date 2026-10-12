@@ -1,3 +1,4 @@
+import asyncio
 import io
 import os
 import uuid
@@ -42,18 +43,6 @@ async def upload_archive(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    query = select(Course).where(
-        Course.name == subject, Course.category == category, Course.deleted_at.is_(None)
-    )
-    result = await db.execute(query)
-    course = result.scalar_one_or_none()
-
-    if not course:
-        course = Course(name=subject, category=category)
-        db.add(course)
-        await db.commit()
-        await db.refresh(course)
-
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Only PDF files are allowed"
@@ -69,15 +58,28 @@ async def upload_archive(
             detail="File size exceeds 10MB limit",
         )
 
+    query = select(Course).where(
+        Course.name == subject, Course.category == category, Course.deleted_at.is_(None)
+    )
+    result = await db.execute(query)
+    course = result.scalar_one_or_none()
+
+    if not course:
+        # Flush only to get an id; the course is committed together with the archive
+        course = Course(name=subject, category=category)
+        db.add(course)
+        await db.flush()
+
     _, file_extension = os.path.splitext(file.filename)
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     object_name = f"archives/{course.id}/{unique_filename}"
 
     try:
-        storage_client = get_storage_client()
+        storage_client = await asyncio.to_thread(get_storage_client)
         file_data = io.BytesIO(file_content)
 
-        storage_client.put_object(
+        await asyncio.to_thread(
+            storage_client.put_object,
             bucket_name=settings.RUSTFS_BUCKET_NAME,
             object_name=object_name,
             data=file_data,
@@ -117,6 +119,7 @@ async def upload_archive(
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001 - translate storage and database failures
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload file: {e!s}",
