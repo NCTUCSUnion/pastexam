@@ -15,7 +15,7 @@
 
 ## 簡介
 
-交大資工考古題系統是由國立陽明交通大學資訊工程學系學會（[NCTUCSUnion](https://github.com/NCTUCSUnion)）開發與維護的考古題平台，提供系上同學瀏覽、下載與分享歷年考試題目及解答。使用者需以陽明交通大學單一入口帳號（[NYCU OAuth](https://id.nycu.edu.tw/)）登入。
+交大資工考古題系統是由[交大資工系學會](https://github.com/NCTUCSUnion)開發與維護的考古題平台，提供系上同學瀏覽、下載與分享歷年考試題目及解答。使用者需以陽明交通大學單一入口帳號（[NYCU OAuth](https://id.nycu.edu.tw/)）登入。
 
 <p align="center">
   <picture>
