@@ -166,7 +166,7 @@
           </Toolbar>
 
           <div v-if="loading" class="flex justify-content-center mt-4">
-            <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
+            <ProgressSpinner class="app-progress-spinner" :strokeWidth="8" aria-label="載入中" />
           </div>
 
           <div v-else>

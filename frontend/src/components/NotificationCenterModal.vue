@@ -16,7 +16,7 @@
         </div>
       </template>
       <div v-if="loading" class="flex justify-content-center py-5">
-        <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
+        <ProgressSpinner class="app-progress-spinner" :strokeWidth="8" aria-label="載入中" />
       </div>
       <div v-else>
         <div
