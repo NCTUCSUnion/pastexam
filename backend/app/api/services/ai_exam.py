@@ -20,6 +20,13 @@ from app.utils.auth_ws import get_ws_token_payload
 
 router = APIRouter()
 
+# Longer than the worker's job timeout plus queueing; the job status is always rechecked
+ACTIVE_TASK_TTL_SECONDS = 60 * 60
+
+
+def _active_task_key(user_id: int) -> str:
+    return f"ai_task_active:{user_id}"
+
 
 def _validate_gemini_api_key(api_key: str) -> None:
     """Raise if Google rejects the key; listing models does not depend on any
@@ -279,27 +286,14 @@ async def submit_generate_task(
     try:
         redis = await get_redis_pool()
 
-        # Check if user already has an active job
-        active_jobs = []
-        async for key in redis.scan_iter(match="task_metadata:*"):
-            metadata_str = await redis.get(key)
-            if not metadata_str:
-                continue
-
-            metadata = json.loads(metadata_str.decode("utf-8"))
-            if metadata.get("user_id") == current_user.user_id:
-                task_id = key.decode().replace("task_metadata:", "")
-                job = Job(task_id, redis)
-                job_status_enum = await job.status()
-
-                if job_status_enum in [
-                    JobStatus.queued,
-                    JobStatus.deferred,
-                    JobStatus.in_progress,
-                ]:
-                    active_jobs.append(task_id)
-
-        if active_jobs:
+        # Only the user's latest task can still be running; its status decides
+        active_key = _active_task_key(current_user.user_id)
+        active_task_id = await redis.get(active_key)
+        if active_task_id and await Job(active_task_id.decode(), redis).status() in (
+            JobStatus.queued,
+            JobStatus.deferred,
+            JobStatus.in_progress,
+        ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=(
@@ -328,6 +322,7 @@ async def submit_generate_task(
             json.dumps(metadata),
             ex=86400,  # 24 hours TTL
         )
+        await redis.set(active_key, job.job_id, ex=ACTIVE_TASK_TTL_SECONDS)
 
         return TaskSubmitResponse(
             task_id=job.job_id,
@@ -373,6 +368,11 @@ async def delete_task(
 
         await redis.delete(metadata_key)
         await redis.delete(f"arq:result:{task_id}")
+
+        active_key = _active_task_key(current_user.user_id)
+        active_task_id = await redis.get(active_key)
+        if active_task_id and active_task_id.decode() == task_id:
+            await redis.delete(active_key)
 
         return {"success": True, "message": "Task deleted successfully"}
 
