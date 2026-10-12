@@ -1,3 +1,3 @@
-from jose import jwt
+import jwt
 
-__all__ = ['jwt']
+__all__ = ["jwt"]
