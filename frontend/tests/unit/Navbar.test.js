@@ -207,8 +207,17 @@ describe('Navbar methods', () => {
     await Navbar.methods.handleLocalLogin.call(ctx)
 
     expect(trackEventMock).toHaveBeenCalledWith('login-local', { success: false })
-    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ summary: '登入失敗' }))
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: '登入失敗', detail: '帳號或密碼錯誤' })
+    )
     expect(ctx.loading).toBe(false)
+
+    toastAddMock.mockClear()
+    localLoginMock.mockRejectedValueOnce({ response: { status: 429 } })
+    await Navbar.methods.handleLocalLogin.call(ctx)
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: '登入失敗', detail: '登入失敗次數過多，請稍後再試' })
+    )
   })
 
   it('opens login dialog and tracks dialog event', () => {

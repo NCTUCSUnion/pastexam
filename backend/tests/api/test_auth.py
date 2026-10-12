@@ -34,7 +34,7 @@ async def test_local_login_success(client, make_user):
 async def test_local_login_failure(client):
     response = await client.post(
         "/auth/login",
-        data={"username": "unknown", "password": "wrong"},
+        data={"username": f"unknown-{uuid.uuid4().hex[:8]}", "password": "wrong"},
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid credentials"

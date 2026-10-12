@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.db.session import get_session
 from app.models.models import Archive, Course, CourseCategory, User
 from app.utils.auth import get_current_user
+from app.utils.rate_limit import get_retry_after, record_hit
 from app.utils.storage import get_storage_client
 
 router = APIRouter()
@@ -42,6 +43,17 @@ async def upload_archive(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
+
+    # Admins upload in bulk, so only regular users are limited
+    upload_key = f"upload:{current_user.user_id}"
+    if not current_user.is_admin:
+        retry_after = await get_retry_after(upload_key, settings.UPLOAD_LIMIT_PER_HOUR)
+        if retry_after is not None:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Upload limit reached, please try again later",
+                headers={"Retry-After": str(retry_after)},
+            )
 
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -101,6 +113,9 @@ async def upload_archive(
         db.add(archive)
         await db.commit()
         await db.refresh(archive)
+
+        if not current_user.is_admin:
+            await record_hit(upload_key, 60 * 60)
 
         return {
             "success": True,

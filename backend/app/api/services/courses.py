@@ -15,6 +15,7 @@ from sqlalchemy import update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
 from app.db.session import get_session
 from app.models.models import (
     Archive,
@@ -35,6 +36,7 @@ from app.models.models import (
 from app.utils.auth import get_current_user
 from app.utils.auth_ws import get_ws_token_payload
 from app.utils.discussion_hub import discussion_hub
+from app.utils.rate_limit import consume
 from app.utils.storage import presigned_get_url
 
 router = APIRouter()
@@ -317,6 +319,23 @@ async def archive_discussion_ws(
                             "type": "error",
                             "code": "message_too_long",
                             "detail": f"訊息超出 {DISCUSSION_MESSAGE_MAX_LENGTH} 字",
+                        }
+                    )
+                )
+                continue
+
+            retry_after = await consume(
+                f"discussion:{user.id}",
+                settings.DISCUSSION_MESSAGE_LIMIT_PER_MINUTE,
+                60,
+            )
+            if retry_after is not None:
+                await websocket.send_json(
+                    jsonable_encoder(
+                        {
+                            "type": "error",
+                            "code": "rate_limited",
+                            "detail": f"訊息傳送太頻繁，請 {retry_after} 秒後再試",
                         }
                     )
                 )
