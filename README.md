@@ -90,3 +90,9 @@ cd frontend && pnpm install && pnpm test --run                                  
 ## 授權
 
 本專案採用 [MIT License](LICENSE) 授權。
+
+---
+
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/NCTUCSUnion">NCTUCSUnion</a>
+</p>
