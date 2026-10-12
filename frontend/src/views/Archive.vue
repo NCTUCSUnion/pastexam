@@ -263,6 +263,7 @@
           </div>
 
           <PdfPreviewModal
+            v-if="previewMounted"
             :visible="showPreview"
             @update:visible="showPreview = $event"
             :courseId="selectedCourse"
@@ -281,6 +282,7 @@
           />
 
           <UploadArchiveDialog
+            v-if="uploadDialogMounted"
             v-model="showUploadDialog"
             :coursesList="coursesList"
             @upload-success="handleUploadSuccess"
@@ -309,7 +311,7 @@
                   @update:modelValue="(val) => (editForm.professor = val)"
                   :suggestions="availableEditProfessors"
                   @complete="searchEditProfessor"
-                  @item-select="onEditProfessorSelect"
+                  @option-select="onEditProfessorSelect"
                   @focus="() => searchEditProfessor({ query: '' })"
                   @click="() => searchEditProfessor({ query: '' })"
                   optionLabel="name"
@@ -389,7 +391,7 @@
                     v-model="editForm.targetCourse"
                     :suggestions="availableCoursesForTransfer"
                     @complete="searchTargetCourse"
-                    @item-select="onTargetCourseSelect"
+                    @option-select="onTargetCourseSelect"
                     @focus="() => searchTargetCourse({ query: '' })"
                     @click="() => searchTargetCourse({ query: '' })"
                     optionLabel="label"
@@ -435,10 +437,9 @@ defineOptions({
   name: 'ArchiveView',
 })
 
-import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, watch, inject, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import { courseService, archiveService } from '../api'
-import PdfPreviewModal from '../components/PdfPreviewModal.vue'
-import UploadArchiveDialog from '../components/UploadArchiveDialog.vue'
+import { useMountOnce } from '../utils/useMountOnce'
 import { getCurrentUser, isAuthenticated } from '../utils/auth'
 import { useTheme } from '../utils/useTheme'
 import { trackEvent, EVENTS } from '../utils/analytics'
@@ -450,6 +451,11 @@ import {
   removeLocalItem,
   setSessionJson,
 } from '../utils/storage'
+
+const PdfPreviewModal = defineAsyncComponent(() => import('../components/PdfPreviewModal.vue'))
+const UploadArchiveDialog = defineAsyncComponent(
+  () => import('../components/UploadArchiveDialog.vue')
+)
 
 const toast = inject('toast')
 const confirm = inject('confirm')
@@ -525,10 +531,12 @@ watch(
 )
 
 const showPreview = ref(false)
+const previewMounted = useMountOnce(showPreview)
 const selectedArchive = ref(null)
 const selectedSubject = ref(null)
 const selectedCourse = ref(null)
 const showUploadDialog = ref(false)
+const uploadDialogMounted = useMountOnce(showUploadDialog)
 const uploadFormProfessors = ref([])
 const expandedPanels = ref([])
 const expandedMenuItems = ref({})
@@ -1277,19 +1285,19 @@ const handleEdit = async () => {
       targetCategory: editForm.value.shouldTransfer ? editForm.value.targetCategory : null,
     })
 
+    const transferred = editForm.value.shouldTransfer
+
     shouldResetPanels.value = true
     await fetchArchives()
 
     // If transfer was performed, refresh the course list to show the new course
-    if (editForm.value.shouldTransfer) {
+    if (transferred) {
       await fetchCourses()
     }
 
     closeEditDialog()
 
-    const successMessage = editForm.value.shouldTransfer
-      ? '考古題已更新並轉移到新課程'
-      : '考古題資訊已更新'
+    const successMessage = transferred ? '考古題已更新並轉移到新課程' : '考古題資訊已更新'
 
     toast.add({
       severity: 'success',

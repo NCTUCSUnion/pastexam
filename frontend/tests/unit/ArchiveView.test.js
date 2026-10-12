@@ -87,6 +87,7 @@ vi.mock('@/api', () => ({
 }))
 
 vi.mock('@/components/PdfPreviewModal.vue', () => ({
+  __esModule: true,
   default: {
     template: '<div><slot /></div>',
     props: ['visible', 'previewUrl', 'courseId', 'archiveId', 'loading', 'error'],
@@ -95,6 +96,7 @@ vi.mock('@/components/PdfPreviewModal.vue', () => ({
 }))
 
 vi.mock('@/components/UploadArchiveDialog.vue', () => ({
+  __esModule: true,
   default: {
     template: '<div></div>',
     props: ['visible'],

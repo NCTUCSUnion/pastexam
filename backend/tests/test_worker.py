@@ -37,7 +37,7 @@ class FakeObject:
         self.released = True
 
 
-class FakeMinio:
+class FakeStorage:
     def __init__(self):
         self.requests: list[tuple[str, str]] = []
 
@@ -112,8 +112,8 @@ async def test_generate_exam_content_success(monkeypatch):
         "{archives_count} {archives_details}",
     )
 
-    fake_minio = FakeMinio()
-    monkeypatch.setattr(worker, "get_minio_client", lambda: fake_minio)
+    fake_storage = FakeStorage()
+    monkeypatch.setattr(worker, "get_storage_client", lambda: fake_storage)
 
     fake_client = FakeGenAIClient()
     monkeypatch.setattr(worker.genai, "Client", lambda api_key: fake_client)
@@ -130,8 +130,8 @@ async def test_generate_exam_content_success(monkeypatch):
     assert len(result["archives_used"]) == 1
     assert fake_client.uploads
     assert fake_client.deleted == ["uploaded-1"]
-    assert fake_minio.requests == [
-        (worker.settings.MINIO_BUCKET_NAME, "archives/1.pdf")
+    assert fake_storage.requests == [
+        (worker.settings.RUSTFS_BUCKET_NAME, "archives/1.pdf")
     ]
 
 
@@ -198,7 +198,7 @@ async def test_generate_exam_content_cleans_up_on_failure(monkeypatch):
         "load_default_prompt_template",
         lambda: "Prompt {professor}",
     )
-    monkeypatch.setattr(worker, "get_minio_client", FakeMinio)
+    monkeypatch.setattr(worker, "get_storage_client", FakeStorage)
 
     failing_client = FakeGenAIClient(should_fail=True)
     monkeypatch.setattr(worker.genai, "Client", lambda api_key: failing_client)

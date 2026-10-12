@@ -15,7 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 from app.db.init_db import engine
 from app.models.models import Archive, Course
-from app.utils.storage import get_minio_client
+from app.utils.storage import get_storage_client
 
 # logging.basicConfig(level=logging.INFO)
 # logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ async def generate_exam_content(
             raise ValueError("Archives not found")
 
         client = genai.Client(api_key=api_key)
-        minio_client = get_minio_client()
+        storage_client = get_storage_client()
 
         uploaded_files = []
         archives_info = []
@@ -97,8 +97,8 @@ async def generate_exam_content(
             #     len(archives_with_courses),
             # )
             for idx, (archive, course) in enumerate(archives_with_courses, 1):
-                response = minio_client.get_object(
-                    bucket_name=settings.MINIO_BUCKET_NAME,
+                response = storage_client.get_object(
+                    bucket_name=settings.RUSTFS_BUCKET_NAME,
                     object_name=archive.object_name,
                 )
                 pdf_data = response.read()

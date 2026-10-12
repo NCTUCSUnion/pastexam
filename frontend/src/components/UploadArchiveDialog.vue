@@ -53,7 +53,7 @@
                   v-model="form.subject"
                   :suggestions="availableSubjects"
                   @complete="searchSubject"
-                  @item-select="onSubjectSelect"
+                  @option-select="onSubjectSelect"
                   @focus="() => searchSubject({ query: '' })"
                   @click="() => searchSubject({ query: '' })"
                   optionLabel="name"
@@ -79,7 +79,7 @@
                   @update:modelValue="(val) => (form.professor = val)"
                   :suggestions="availableProfessors"
                   @complete="searchProfessor"
-                  @item-select="onProfessorSelect"
+                  @option-select="onProfessorSelect"
                   @focus="() => searchProfessor({ query: '' })"
                   @click="() => searchProfessor({ query: '' })"
                   optionLabel="name"
@@ -335,6 +335,7 @@
     </Dialog>
 
     <PdfPreviewModal
+      v-if="uploadPreviewMounted"
       :visible="showUploadPreview"
       @update:visible="showUploadPreview = $event"
       :previewUrl="uploadPreviewUrl"
@@ -355,13 +356,15 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, defineAsyncComponent } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { courseService, archiveService } from '../api'
-import PdfPreviewModal from './PdfPreviewModal.vue'
 import { PDFDocument } from 'pdf-lib'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { isUnauthorizedError } from '../utils/http'
+import { useMountOnce } from '../utils/useMountOnce'
+
+const PdfPreviewModal = defineAsyncComponent(() => import('./PdfPreviewModal.vue'))
 
 const props = defineProps({
   modelValue: {
@@ -397,6 +400,7 @@ const uploadFormProfessors = ref([])
 const isFilenameValid = ref(false)
 
 const showUploadPreview = ref(false)
+const uploadPreviewMounted = useMountOnce(showUploadPreview)
 const uploadPreviewUrl = ref('')
 const uploadPreviewLoading = ref(false)
 const uploadPreviewError = ref(false)

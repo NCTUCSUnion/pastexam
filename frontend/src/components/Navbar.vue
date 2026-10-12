@@ -110,7 +110,7 @@
       @open-center="() => openNotificationCenter('notification-modal')"
     />
     <NotificationCenterModal
-      v-if="isAuthenticated"
+      v-if="isAuthenticated && notificationCenterMounted"
       :visible="notificationStore.state.centerVisible"
       :notifications="notificationStore.state.all"
       :loading="notificationStore.state.loadingAll"
@@ -274,6 +274,7 @@
     </Dialog>
 
     <GenerateAIExamModal
+      v-if="aiExamDialogMounted"
       :visible="aiExamDialogVisible"
       @update:visible="aiExamDialogVisible = $event"
       :coursesList="coursesList"
@@ -282,17 +283,15 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue'
 import { getCurrentUser, isAuthenticated, setToken } from '../utils/auth.js'
 import { useTheme } from '../utils/useTheme'
 import { authService } from '../api'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { trackEvent, EVENTS } from '../utils/analytics'
-import GenerateAIExamModal from './GenerateAIExamModal.vue'
 import { isUnauthorizedError } from '../utils/http'
 import { useNotifications } from '../utils/useNotifications'
-import NotificationModal from './NotificationModal.vue'
-import NotificationCenterModal from './NotificationCenterModal.vue'
 import {
   STORAGE_KEYS,
   removeLocalItem,
@@ -305,9 +304,9 @@ import {
 export default {
   name: 'AppNavbar',
   components: {
-    GenerateAIExamModal,
-    NotificationModal,
-    NotificationCenterModal,
+    GenerateAIExamModal: defineAsyncComponent(() => import('./GenerateAIExamModal.vue')),
+    NotificationModal: defineAsyncComponent(() => import('./NotificationModal.vue')),
+    NotificationCenterModal: defineAsyncComponent(() => import('./NotificationCenterModal.vue')),
   },
   emits: ['toggle-sidebar'],
   data() {
@@ -333,6 +332,8 @@ export default {
         { label: '其他問題', value: 'question' },
       ],
       aiExamDialogVisible: false,
+      aiExamDialogMounted: false,
+      notificationCenterMounted: false,
       coursesList: null,
     }
   },
@@ -355,18 +356,6 @@ export default {
     if (this.isAuthenticated) {
       void this.initializeNotifications()
     }
-
-    setInterval(() => {
-      const focusedElements = document.querySelectorAll(
-        '.p-menubar .p-focus, .p-menubar .p-highlight, .p-menubar [tabindex="0"]'
-      )
-      focusedElements.forEach((el) => {
-        el.classList.remove('p-focus', 'p-highlight')
-        if (el.tabIndex >= 0) {
-          el.blur()
-        }
-      })
-    }, 500)
 
     if (typeof window !== 'undefined') {
       const namespaceKey = '__pastexam'
@@ -400,6 +389,18 @@ export default {
             el.classList.remove('p-focus', 'p-highlight')
           })
         })
+      },
+    },
+    aiExamDialogVisible: {
+      immediate: true,
+      handler(value) {
+        if (value) this.aiExamDialogMounted = true
+      },
+    },
+    'notificationStore.state.centerVisible': {
+      immediate: true,
+      handler(value) {
+        if (value) this.notificationCenterMounted = true
       },
     },
     isAuthenticated(newValue) {
