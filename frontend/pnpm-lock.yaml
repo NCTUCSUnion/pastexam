@@ -32,9 +32,6 @@ importers:
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
-      primeflex:
-        specifier: ^4.0.0
-        version: 4.0.0
       primeicons:
         specifier: ^8.0.2
         version: 8.0.2
@@ -2044,9 +2041,6 @@ packages:
     resolution: {integrity: sha512-Z/CJHIkdujO/OtN7nXUii0Rf3VT5SRuhjBA82Xvu2XhBUgX3nhP67T0LHceBdQLex7OOFGTox+Q5Yg8Jk2Qivg==}
     engines: {node: '>=14'}
     hasBin: true
-
-  primeflex@4.0.0:
-    resolution: {integrity: sha512-UOEZCRjR36+sm5bUpDhS1xbA068l9VC6y1aTNVqQPtXuKIdPTqAWHRUxj3mKAoPrQ9W373ooJJMgNVXfiaw04g==}
 
   primeicons@8.0.2:
     resolution: {integrity: sha512-o3UQey3nXMEQRAudVYZZWswz6mmnWpPnksYb7wIu4rEEVfdS3pLnxnmSJx5gKBRMer1MxnhJZG5QRDxVVJFNkA==}
@@ -4330,8 +4324,6 @@ snapshots:
   prelude-ls@1.2.1: {}
 
   prettier@3.9.9: {}
-
-  primeflex@4.0.0: {}
 
   primeicons@8.0.2: {}
 
