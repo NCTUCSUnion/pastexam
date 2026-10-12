@@ -7,7 +7,9 @@ engine = create_async_engine(
     f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@"
     f"{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}",
     echo=False,
-    future=True
+    future=True,
+    # Check pooled connections before use so a database restart does not fail requests
+    pool_pre_ping=True,
 )
 
 AsyncSessionLocal = sessionmaker(
