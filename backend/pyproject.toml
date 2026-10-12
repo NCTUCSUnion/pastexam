@@ -9,6 +9,7 @@ dependencies = [
     "arq>=0.25.0",
     "asyncpg>=0.30.0",
     "bcrypt>=4.3.0",
+    "cryptography>=50.0.0",
     "fastapi[standard]>=0.141.1",
     "google-genai>=2.16.0",
     "greenlet>=3.5.4",

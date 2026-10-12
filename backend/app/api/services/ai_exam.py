@@ -17,6 +17,7 @@ from app.models.models import (
 )
 from app.utils.auth import get_current_user
 from app.utils.auth_ws import get_ws_token_payload
+from app.utils.crypto import decrypt_secret, encrypt_secret
 
 router = APIRouter()
 
@@ -404,12 +405,13 @@ async def get_api_key_status(
         if not user:
             return ApiKeyResponse(has_api_key=False, api_key_masked=None)
 
-        has_api_key = bool(user.gemini_api_key)
+        api_key = decrypt_secret(user.gemini_api_key)
+        has_api_key = bool(api_key)
         api_key_masked = None
 
         if has_api_key:
             # Show only last 4 characters
-            api_key_masked = f"****{user.gemini_api_key[-4:]}"
+            api_key_masked = f"****{api_key[-4:]}"
 
         return ApiKeyResponse(has_api_key=has_api_key, api_key_masked=api_key_masked)
     except HTTPException:
@@ -437,7 +439,13 @@ async def update_api_key(
         stmt = (
             update(User)
             .where(User.id == current_user.user_id, User.deleted_at.is_(None))
-            .values(gemini_api_key=request.gemini_api_key)
+            .values(
+                gemini_api_key=(
+                    encrypt_secret(request.gemini_api_key)
+                    if request.gemini_api_key
+                    else None
+                )
+            )
         )
         await db.execute(stmt)
         await db.commit()
@@ -449,11 +457,9 @@ async def update_api_key(
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        has_api_key = bool(user.gemini_api_key) if user else False
-        api_key_masked = None
-
-        if has_api_key and user:
-            api_key_masked = f"****{user.gemini_api_key[-4:]}"
+        api_key = decrypt_secret(user.gemini_api_key) if user else None
+        has_api_key = bool(api_key)
+        api_key_masked = f"****{api_key[-4:]}" if api_key else None
 
         return ApiKeyResponse(has_api_key=has_api_key, api_key_masked=api_key_masked)
     except HTTPException:

@@ -16,6 +16,7 @@ from app.api.services.ai_exam import JobStatus
 from app.main import app
 from app.models.models import User, UserRoles
 from app.utils.auth import get_current_user
+from app.utils.crypto import ENCRYPTED_PREFIX, decrypt_secret
 
 
 class FakeRedis:
@@ -504,7 +505,10 @@ async def test_update_api_key_persists_value(
 
         async with session_maker() as session:
             refreshed = await session.get(User, user.id)
-            assert refreshed.gemini_api_key == new_key
+            # Stored encrypted, never as the plain key
+            assert refreshed.gemini_api_key.startswith(ENCRYPTED_PREFIX)
+            assert new_key not in refreshed.gemini_api_key
+            assert decrypt_secret(refreshed.gemini_api_key) == new_key
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
