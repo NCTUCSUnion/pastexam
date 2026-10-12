@@ -50,28 +50,17 @@
   <img src="docs/screenshots/ai-exam.webp" width="100%" />
 </p>
 
-## 系統架構
+## 架構
 
-| 元件 | 說明 |
-| :--- | :--- |
-| `nginx` | 反向代理：`/` 前端、`/api/` 後端（含 WebSocket）、`/rustfs/` 物件儲存的預簽章網址 |
-| `frontend` | Vue 3 單頁應用程式 |
-| `backend` | FastAPI 應用程式，啟動時自動執行資料庫遷移 |
-| `worker` | ARQ 背景工作，處理 AI 模擬試題生成 |
-| `db` | PostgreSQL |
-| `redis` | 快取、使用者活動統計、請求頻率限制、討論區訊息廣播與 ARQ 佇列 |
-| `rustfs` | S3 相容物件儲存，存放考古題 PDF |
-
-## 技術
-
-| 分類 | 技術 |
-| :--- | :--- |
-| **前端** | Vue 3、Vite、PrimeVue、Tailwind CSS |
-| **後端** | Python 3.12、FastAPI、SQLModel、Alembic、ARQ |
-| **資料庫 / 快取** | PostgreSQL、Redis |
-| **物件儲存** | RustFS（S3 相容） |
-| **測試** | pytest、Vitest、Playwright |
-| **部署** | Docker Compose、GitHub Actions、GitHub Container Registry |
+| 元件 | 技術 | 說明 |
+| :--- | :--- | :--- |
+| `frontend` | Vue 3、Vite、PrimeVue、Tailwind CSS | 單頁應用程式 |
+| `backend` | Python 3.12、FastAPI、SQLModel、Alembic | API 與 WebSocket，啟動時自動執行資料庫遷移 |
+| `worker` | ARQ | 背景工作，處理 AI 模擬試題生成 |
+| `db` | PostgreSQL | 主要資料庫 |
+| `redis` | Redis | 快取、統計、請求頻率限制、討論區訊息廣播與工作佇列 |
+| `rustfs` | RustFS（S3 相容） | 存放考古題 PDF |
+| `nginx` | Nginx | 反向代理：`/` 前端、`/api/` 後端、`/rustfs/` 檔案下載 |
 
 ## 本地開發
 
@@ -109,36 +98,13 @@ cd frontend && pnpm install && pnpm test --run && pnpm lint
 cd frontend && pnpm test:e2e
 ```
 
-## 開發流程
+## 開發與部署
 
-- 由 `dev` 建立分支，完成後開 Pull Request 合併回 `dev`（以 `main` 為目標的 PR 會自動改為 `dev`）。
-- Commit 訊息遵循 [Conventional Commits](https://www.conventionalcommits.org/)（`feat:`、`fix:`、`chore:` 等），用於產生版本號與 Release Notes。
-- 發布時將 `dev` 合併至 `main`，GitHub Actions 會依序執行 lint、測試、建置映像檔並部署至正式環境，同時由 semantic-release 建立新版本。
-
-## 部署與維運
-
-正式環境以 `docker/docker-compose.yml` 運行。部署時，伺服器上的程式碼會同步至該次部署的 commit，並更新映像檔與容器。專案根目錄另提供下列維運腳本：
-
-| 腳本 | 用途 |
-| :--- | :--- |
-| `backup.sh` | 不中斷服務備份 PostgreSQL（`pg_dump`）與 RustFS 物件 |
-| `restore.sh <日期>` | 由備份還原資料庫與物件 |
-| `rollback.sh <commit>` | 將前端與後端切換回指定 commit 建置的映像檔 |
-
-## 參與貢獻
-
-歡迎回報問題或提出建議：
-
-1. 先查閱 [Issues](https://github.com/NCTUCSUnion/pastexam/issues)，確認是否已有相關討論。
-2. 由 `dev` 建立分支進行修改。
-3. 提交 Pull Request 至 `dev`，經維護者審查後合併。
+- 由 `dev` 建立分支，完成後開 Pull Request 合併回 `dev`。問題回報與建議請使用 [Issues](https://github.com/NCTUCSUnion/pastexam/issues)。
+- Commit 訊息遵循 [Conventional Commits](https://www.conventionalcommits.org/)（`feat:`、`fix:` 等），用於產生版本號。
+- 將 `dev` 合併至 `main` 即發布新版本：GitHub Actions 執行測試、建置映像檔並部署至正式環境。
+- 正式環境的維運腳本位於專案根目錄：`backup.sh`（不中斷服務的備份）、`restore.sh`（還原）、`rollback.sh`（回復至指定版本的映像檔）。
 
 ## 授權
 
 本專案採用 [MIT License](LICENSE) 授權。
-
----
-
-<p align="center">
-  Made with ❤️ by <a href="https://github.com/NCTUCSUnion">NCTUCSUnion</a>
-</p>
