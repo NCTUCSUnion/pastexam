@@ -148,3 +148,6 @@ vite.config.ts.timestamp-*
 /.local-browsers
 /allure-results/
 /.allure/
+
+# pnpm store created when installing inside the dev container
+.pnpm-store/
