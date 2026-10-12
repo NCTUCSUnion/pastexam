@@ -26,11 +26,11 @@ if docker volume ls --format "{{.Name}}" | grep -q "pastexam-postgres-data"; the
     echo "PostgreSQL volume backup completed"
 fi
 
-# MinIO Volume backup
-if docker volume ls --format "{{.Name}}" | grep -q "pastexam-minio-data"; then
-    echo "Backing up MinIO volume..."
-    docker run --rm -v pastexam-minio-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine:3.22 tar czf /backup/minio-volume-$DATE.tar.gz -C /data .
-    echo "MinIO volume backup completed"
+# RustFS Volume backup
+if docker volume ls --format "{{.Name}}" | grep -q "pastexam-rustfs-data"; then
+    echo "Backing up RustFS volume..."
+    docker run --rm -v pastexam-rustfs-data:/data -v $(pwd)/$BACKUP_DIR:/backup alpine:3.22 tar czf /backup/rustfs-volume-$DATE.tar.gz -C /data .
+    echo "RustFS volume backup completed"
 fi
 
 echo "All backups completed! Backup files located at: $BACKUP_DIR"

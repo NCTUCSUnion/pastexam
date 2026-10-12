@@ -21,7 +21,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-      minio:
+      rustfs:
         condition: service_started
     # ports:
     #   - "8000:8000"
@@ -42,7 +42,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-      minio:
+      rustfs:
         condition: service_started
     env_file:
       - ../backend/.env
@@ -69,28 +69,27 @@ services:
     networks:
       - app_network
 
-  minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: pastexam-minio
+  rustfs:
+    image: rustfs/rustfs:1.0.1
+    container_name: pastexam-rustfs
     restart: always
-    command: server /data --console-address ":9001"
     # ports:
     #   - "9000:9000"
-    #   - "9001:9001" # 9000 for S3 API, 9001 for MinIO Console
+    #   - "9001:9001" # 9000 for S3 API, 9001 for RustFS Console
     environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY}
+      - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY}
     volumes:
-      - minio_data:/data
+      - rustfs_data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
       app_network:
         aliases:
-          - minio
+          - rustfs
 
   redis:
     image: redis:7.4.5-alpine3.21
@@ -114,7 +113,7 @@ services:
     depends_on:
       - frontend
       - backend
-      - minio
+      - rustfs
     networks:
       - app_network
 
@@ -126,7 +125,7 @@ networks:
 volumes:
   pg_data:
     name: pastexam-postgres-data
-  minio_data:
-    name: pastexam-minio-data
+  rustfs_data:
+    name: pastexam-rustfs-data
   redis_data:
     name: pastexam-redis-data

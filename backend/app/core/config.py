@@ -20,10 +20,10 @@ class Settings(BaseSettings):
     OAUTH_USERINFO_URL: str
     FRONTEND_URL: str
 
-    MINIO_ENDPOINT: str
-    MINIO_ROOT_USER: str
-    MINIO_ROOT_PASSWORD: str
-    MINIO_BUCKET_NAME: str
+    RUSTFS_ENDPOINT: str
+    RUSTFS_ACCESS_KEY: str
+    RUSTFS_SECRET_KEY: str
+    RUSTFS_BUCKET_NAME: str
     EXTERNAL_ENDPOINT: str
 
     REDIS_URL: str

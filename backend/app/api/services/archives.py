@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.db.session import get_session
 from app.models.models import Archive, Course, CourseCategory, User
 from app.utils.auth import get_current_user
-from app.utils.storage import get_minio_client
+from app.utils.storage import get_storage_client
 
 router = APIRouter()
 
@@ -74,11 +74,11 @@ async def upload_archive(
     object_name = f"archives/{course.id}/{unique_filename}"
 
     try:
-        minio_client = get_minio_client()
+        storage_client = get_storage_client()
         file_data = io.BytesIO(file_content)
 
-        minio_client.put_object(
-            bucket_name=settings.MINIO_BUCKET_NAME,
+        storage_client.put_object(
+            bucket_name=settings.RUSTFS_BUCKET_NAME,
             object_name=object_name,
             data=file_data,
             length=file_size,
