@@ -50,60 +50,42 @@
   <img src="docs/screenshots/ai-exam.webp" width="100%" />
 </p>
 
-## 架構
+## 技術
 
-| 元件 | 技術 | 說明 |
-| :--- | :--- | :--- |
-| `frontend` | Vue 3、Vite、PrimeVue、Tailwind CSS | 單頁應用程式 |
-| `backend` | Python 3.12、FastAPI、SQLModel、Alembic | API 與 WebSocket，啟動時自動執行資料庫遷移 |
-| `worker` | ARQ | 背景工作，處理 AI 模擬試題生成 |
-| `db` | PostgreSQL | 主要資料庫 |
-| `redis` | Redis | 快取、統計、請求頻率限制、討論區訊息廣播與工作佇列 |
-| `rustfs` | RustFS（S3 相容） | 存放考古題 PDF |
-| `nginx` | Nginx | 反向代理：`/` 前端、`/api/` 後端、`/rustfs/` 檔案下載 |
+- **前端**：Vue 3、PrimeVue、Tailwind CSS
+- **後端**：FastAPI、PostgreSQL、Redis
+- **檔案儲存**：RustFS（S3 相容）
+- **部署**：Docker Compose、GitHub Actions
 
 ## 本地開發
 
 需求：Docker 與 Docker Compose v2。
 
-### 1. 取得原始碼
 ```bash
 git clone git@github.com:NCTUCSUnion/pastexam.git
 cd pastexam
-```
 
-### 2. 設定環境變數
-```bash
-cp docker/.env.example docker/.env        # PostgreSQL 與 RustFS
-cp backend/.env.example backend/.env      # 後端
-cp frontend/.env.example frontend/.env    # 前端
-```
-本地登入可使用 `backend/.env` 中 `DEFAULT_ADMIN_NAME` / `DEFAULT_ADMIN_PASSWORD` 設定的管理員帳號；NYCU OAuth 登入需另外填入 `OAUTH_CLIENT_ID` 與 `OAUTH_CLIENT_SECRET`。
+cp docker/.env.example docker/.env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 
-### 3. 啟動
-```bash
 docker compose -f docker/docker-compose.dev.yml up -d --build
 ```
-啟動後開啟 <http://localhost:8080>。前端與後端皆支援熱重載。
+
+啟動後開啟 <http://localhost:8080>。
 
 ### 測試
+
 ```bash
-# 後端（會一併啟動 db、redis、rustfs）
-docker compose -f docker/docker-compose.dev.yml run --rm backend uv run pytest
-
-# 前端單元測試與 lint
-cd frontend && pnpm install && pnpm test --run && pnpm lint
-
-# 前端端對端測試（需先啟動開發環境，並使用初始 seed 的資料庫）
-cd frontend && pnpm test:e2e
+docker compose -f docker/docker-compose.dev.yml run --rm backend uv run pytest   # 後端
+cd frontend && pnpm install && pnpm test --run                                   # 前端
 ```
 
 ## 開發與部署
 
-- 由 `dev` 建立分支，完成後開 Pull Request 合併回 `dev`。問題回報與建議請使用 [Issues](https://github.com/NCTUCSUnion/pastexam/issues)。
-- Commit 訊息遵循 [Conventional Commits](https://www.conventionalcommits.org/)（`feat:`、`fix:` 等），用於產生版本號。
-- 將 `dev` 合併至 `main` 即發布新版本：GitHub Actions 執行測試、建置映像檔並部署至正式環境。
-- 正式環境的維運腳本位於專案根目錄：`backup.sh`（不中斷服務的備份）、`restore.sh`（還原）、`rollback.sh`（回復至指定版本的映像檔）。
+- 由 `dev` 建立分支，完成後開 Pull Request 合併回 `dev`；問題回報與建議請使用 [Issues](https://github.com/NCTUCSUnion/pastexam/issues)。
+- Commit 訊息遵循 [Conventional Commits](https://www.conventionalcommits.org/)。
+- `dev` 合併至 `main` 後會自動部署並發布新版本。
 
 ## 授權
 
