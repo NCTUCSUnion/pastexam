@@ -65,5 +65,7 @@ fi
 
 echo "Restarting services..."
 docker compose -f $COMPOSE_FILE up -d
+# nginx caches upstream IPs, which change when backend is recreated
+docker compose -f $COMPOSE_FILE restart nginx
 
 echo "Restore completed!"
