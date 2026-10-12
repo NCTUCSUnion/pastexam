@@ -14,9 +14,8 @@
 ---
 
 ## 簡介
-<p>
-  交大資工考古題系統由交大資工系學會開發與維護，旨在彙整並整理課程相關的歷年考試資料（題目、解答與參考內容），協助同學更有效率地進行考試準備。因應使用人數成長與功能擴充需求，本系統重新設計並優化整體架構與使用體驗，使資料搜尋、線上預覽與討論交流更加直覺、流暢。
-</p>
+
+交大資工考古題系統是由國立陽明交通大學資訊工程學系學會（NCTUCSUnion）開發與維護的考古題平台，提供系上同學瀏覽、下載與分享歷年考試題目及解答。使用者以陽明交大帳號（NYCU OAuth）登入。
 
 <p align="center">
   <picture>
@@ -25,13 +24,17 @@
   </picture>
 </p>
 
-## 功能特色
-* **條件搜尋與篩選**：可依課程名稱、授課教師、年度等條件進行查詢。
-* **線上文件預覽**：支援 PDF 與圖片格式，無需下載即可瀏覽。
-* **討論區功能**：針對特定課程或考古題進行集中討論與經驗交流。
-* **AI 模擬試題**：可選取考古題內容生成模擬試題（後端整合 `google-genai`）。
+## 功能
+
+- **瀏覽與篩選**：依課程分類瀏覽考古題，並可依年份、授課教師、考試類型及是否附解答篩選。
+- **線上預覽與下載**：直接於瀏覽器預覽 PDF，或下載原始檔案。
+- **上傳**：登入使用者可上傳 PDF 考古題（單檔上限 10 MB）；管理員可編輯資訊或將考古題移至其他課程。
+- **討論區**：每份考古題皆有即時討論區，訊息透過 WebSocket 同步。
+- **AI 模擬試題**：選取考古題後，以 Google Gemini 生成模擬試題。使用者需自行設定 Gemini API Key，Key 加密後儲存。
+- **管理後台**：管理課程、使用者與系統公告。
 
 ## 介面預覽
+
 ### 搜尋介面
 <p align="center">
   <img src="docs/screenshots/search.webp" width="100%" />
@@ -47,20 +50,34 @@
   <img src="docs/screenshots/ai-exam.webp" width="100%" />
 </p>
 
-## 使用技術
+## 系統架構
+
+| 元件 | 說明 |
+| :--- | :--- |
+| `nginx` | 反向代理：`/` 前端、`/api/` 後端（含 WebSocket）、`/rustfs/` 物件儲存的預簽章網址 |
+| `frontend` | Vue 3 單頁應用程式 |
+| `backend` | FastAPI 應用程式，啟動時自動執行資料庫遷移 |
+| `worker` | ARQ 背景工作，處理 AI 模擬試題生成 |
+| `db` | PostgreSQL |
+| `redis` | 快取、使用者活動統計、請求頻率限制、討論區訊息廣播與 ARQ 佇列 |
+| `rustfs` | S3 相容物件儲存，存放考古題 PDF |
+
+## 技術
 
 | 分類 | 技術 |
 | :--- | :--- |
-| **前端** | Vue 3、Vite、TypeScript、PrimeVue、Tailwind CSS |
-| **後端** | Python、FastAPI、SQLModel、Alembic、ARQ |
+| **前端** | Vue 3、Vite、PrimeVue、Tailwind CSS |
+| **後端** | Python 3.12、FastAPI、SQLModel、Alembic、ARQ |
 | **資料庫 / 快取** | PostgreSQL、Redis |
 | **物件儲存** | RustFS（S3 相容） |
-| **反向代理** | Nginx |
-| **DevOps / CI** | Docker Compose、GitHub Actions |
+| **測試** | pytest、Vitest、Playwright |
+| **部署** | Docker Compose、GitHub Actions、GitHub Container Registry |
 
 ## 本地開發
 
-### 1. 複製專案
+需求：Docker 與 Docker Compose v2。
+
+### 1. 取得原始碼
 ```bash
 git clone git@github.com:NCTUCSUnion/pastexam.git
 cd pastexam
@@ -68,29 +85,56 @@ cd pastexam
 
 ### 2. 設定環境變數
 ```bash
-# Docker Compose（Postgres / RustFS）使用的環境變數
-cp docker/.env.example .env
-
-# 後端與前端各自的環境變數
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+cp docker/.env.example docker/.env        # PostgreSQL 與 RustFS
+cp backend/.env.example backend/.env      # 後端
+cp frontend/.env.example frontend/.env    # 前端
 ```
+本地登入可使用 `backend/.env` 中 `DEFAULT_ADMIN_NAME` / `DEFAULT_ADMIN_PASSWORD` 設定的管理員帳號；NYCU OAuth 登入需另外填入 `OAUTH_CLIENT_ID` 與 `OAUTH_CLIENT_SECRET`。
 
-### 3. 啟動開發環境
+### 3. 啟動
 ```bash
-docker compose -f docker/docker-compose.dev.yml build
-docker compose -f docker/docker-compose.dev.yml up -d
+docker compose -f docker/docker-compose.dev.yml up -d --build
+```
+啟動後開啟 <http://localhost:8080>。前端與後端皆支援熱重載。
+
+### 測試
+```bash
+# 後端（會一併啟動 db、redis、rustfs）
+docker compose -f docker/docker-compose.dev.yml run --rm backend uv run pytest
+
+# 前端單元測試與 lint
+cd frontend && pnpm install && pnpm test --run && pnpm lint
+
+# 前端端對端測試（需先啟動開發環境，並使用初始 seed 的資料庫）
+cd frontend && pnpm test:e2e
 ```
 
-> 開發網站連結：`http://localhost:8080`
+## 開發流程
+
+- 由 `dev` 建立分支，完成後開 Pull Request 合併回 `dev`（以 `main` 為目標的 PR 會自動改為 `dev`）。
+- Commit 訊息遵循 [Conventional Commits](https://www.conventionalcommits.org/)（`feat:`、`fix:`、`chore:` 等），用於產生版本號與 Release Notes。
+- 發布時將 `dev` 合併至 `main`，GitHub Actions 會依序執行 lint、測試、建置映像檔並部署至正式環境，同時由 semantic-release 建立新版本。
+
+## 部署與維運
+
+正式環境以 `docker/docker-compose.yml` 運行。部署時，伺服器上的程式碼會同步至該次部署的 commit，並更新映像檔與容器。專案根目錄另提供下列維運腳本：
+
+| 腳本 | 用途 |
+| :--- | :--- |
+| `backup.sh` | 不中斷服務備份 PostgreSQL（`pg_dump`）與 RustFS 物件 |
+| `restore.sh <日期>` | 由備份還原資料庫與物件 |
+| `rollback.sh <commit>` | 將前端與後端切換回指定 commit 建置的映像檔 |
 
 ## 參與貢獻
-我們歡迎任何形式的貢獻與回饋，包含錯誤回報與功能建議：
-1. 請先查閱 [Issues](https://github.com/NCTUCSUnion/pastexam/issues)，確認是否已有相關討論。
-2. Fork 此專案並建立功能分支。
-3. 提交 Pull Request 供維護者審查。
+
+歡迎回報問題或提出建議：
+
+1. 先查閱 [Issues](https://github.com/NCTUCSUnion/pastexam/issues)，確認是否已有相關討論。
+2. 由 `dev` 建立分支進行修改。
+3. 提交 Pull Request 至 `dev`，經維護者審查後合併。
 
 ## 授權
+
 本專案採用 [MIT License](LICENSE) 授權。
 
 ---
