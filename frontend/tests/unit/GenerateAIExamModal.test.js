@@ -100,11 +100,12 @@ const pdfPreviewStub = {
   props: ['showDiscussion'],
 }
 
-function mountModal() {
+function mountModal(props = {}) {
   return mount(GenerateAIExamModal, {
     props: {
       visible: false,
       coursesList,
+      ...props,
     },
     global: {
       stubs: {
@@ -191,6 +192,15 @@ describe('GenerateAIExamModal', () => {
       navigator.clipboard = originalClipboard
     }
     globalThis.WebSocket = originalWebSocket
+  })
+
+  it('initialises when it is mounted already visible', async () => {
+    // Navbar mounts the modal lazily, the first time it is opened
+    const wrapper = mountModal({ visible: true })
+    await flushPromises()
+
+    expect(aiExamServiceMock.getApiKeyStatus).toHaveBeenCalled()
+    expect(wrapper.vm.currentStep).toBe('selectProfessor')
   })
 
   it('handles archive selection and task persistence helpers', async () => {
