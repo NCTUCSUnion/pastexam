@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 from sqlalchemy import text
-from sqlmodel import SQLModel, func, select
+from sqlmodel import func, select
 
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal, engine
@@ -52,26 +52,27 @@ async def _run_migrations():
         text=True,
         check=False,
     )
-    if result.returncode != 0:
-        print(f"Alembic migration failed: {result.stderr}")
-        # Fallback to create_all if migration fails
-        async with engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.create_all)
-            await conn.commit()
-    else:
-        print("Database migrations applied successfully")
+    if result.returncode == 0:
+        # Flush so the result shows up in the container log right away
+        print("Database migrations applied successfully", flush=True)
+        return
+
+    if "Can't locate revision" in result.stderr:
+        # The database was migrated by a newer release, e.g. after rolling back
+        print(
+            "Database is at a newer revision than this release; "
+            "skipping migrations:\n" + result.stderr,
+            flush=True,
+        )
+        return
+
+    # Refuse to start on a schema that does not match the code
+    raise RuntimeError(f"Alembic migration failed:\n{result.stderr}")
 
 
 async def init_db():
-    try:
-        async with _migration_lock():
-            await _run_migrations()
-    except Exception as e:  # noqa: BLE001 - migration failure falls back to create_all
-        print(f"Error running migrations: {e}")
-        # Fallback to create_all
-        async with engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.create_all)
-            await conn.commit()
+    async with _migration_lock():
+        await _run_migrations()
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
