@@ -5,9 +5,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 import Components from 'unplugin-vue-components/vite'
 import { PrimeVueResolver } from '@primevue/auto-import-resolver'
-import eslintPlugin from 'vite-plugin-eslint'
 import Sitemap from 'vite-plugin-sitemap'
-import viteCompression from 'vite-plugin-compression'
+import { compression } from 'vite-plugin-compression2'
 
 export default defineConfig(({ mode }) => {
   const root = fileURLToPath(new URL('.', import.meta.url))
@@ -37,7 +36,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       mode === 'development' && vueDevTools({ launchEditor: 'zed' }),
-      mode !== 'test' && eslintPlugin({ include: ['src/**/*.vue', 'src/**/*.js', 'src/**/*.ts'] }),
       tailwindcss(),
       // Only auto-import PrimeVue; local components are imported explicitly so they can be lazy loaded
       Components({ dirs: [], resolvers: [PrimeVueResolver()] }),
@@ -53,11 +51,11 @@ export default defineConfig(({ mode }) => {
           readable: true,
         }),
       mode === 'production' &&
-        viteCompression({
-          algorithm: 'gzip',
-          ext: '.gz',
+        // nginx:alpine only ships gzip_static, so precompress with gzip only
+        compression({
+          algorithms: ['gzip'],
           threshold: 10240,
-          deleteOriginFile: false,
+          deleteOriginalAssets: false,
         }),
     ].filter(Boolean),
   }
