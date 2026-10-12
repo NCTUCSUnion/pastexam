@@ -2,10 +2,12 @@ import asyncio
 import os
 import subprocess
 import unicodedata
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
 
 import yaml
+from sqlalchemy import text
 from sqlmodel import SQLModel, func, select
 
 from app.core.config import settings
@@ -14,6 +16,24 @@ from app.models.models import Course, CourseCategory, Meme, User
 from app.utils.auth import get_password_hash
 
 SEED_DATA_PATH = Path(__file__).with_name("seed_data.yaml")
+# Arbitrary id for the Postgres advisory lock guarding startup migrations
+MIGRATION_LOCK_ID = 7_319_2026
+
+
+@asynccontextmanager
+async def _migration_lock():
+    """Let one uvicorn worker migrate at a time; the others wait and then find
+    the database already at head."""
+    async with engine.connect() as conn:
+        await conn.execute(
+            text("SELECT pg_advisory_lock(:id)"), {"id": MIGRATION_LOCK_ID}
+        )
+        try:
+            yield
+        finally:
+            await conn.execute(
+                text("SELECT pg_advisory_unlock(:id)"), {"id": MIGRATION_LOCK_ID}
+            )
 
 
 @lru_cache(maxsize=1)
@@ -22,26 +42,30 @@ def load_seed_data():
         return yaml.safe_load(file) or {}
 
 
-async def init_db():
+async def _run_migrations():
     # Run Alembic migrations instead of create_all
+    result = await asyncio.to_thread(
+        subprocess.run,
+        ["uv", "run", "alembic", "upgrade", "head"],
+        cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        print(f"Alembic migration failed: {result.stderr}")
+        # Fallback to create_all if migration fails
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
+            await conn.commit()
+    else:
+        print("Database migrations applied successfully")
+
+
+async def init_db():
     try:
-        # Run alembic upgrade head to apply all migrations
-        result = await asyncio.to_thread(
-            subprocess.run,
-            ["uv", "run", "alembic", "upgrade", "head"],
-            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            print(f"Alembic migration failed: {result.stderr}")
-            # Fallback to create_all if migration fails
-            async with engine.begin() as conn:
-                await conn.run_sync(SQLModel.metadata.create_all)
-                await conn.commit()
-        else:
-            print("Database migrations applied successfully")
+        async with _migration_lock():
+            await _run_migrations()
     except Exception as e:  # noqa: BLE001 - migration failure falls back to create_all
         print(f"Error running migrations: {e}")
         # Fallback to create_all
