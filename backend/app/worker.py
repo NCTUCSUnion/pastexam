@@ -5,8 +5,9 @@ from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import ClassVar
+from weakref import WeakKeyDictionary
 
-from arq import create_pool
+from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
 from google import genai
 from google.genai.types import UploadFileConfig
@@ -272,6 +273,16 @@ class WorkerSettings:
     keep_result = 86400  # Keep results for 24 hours
 
 
-async def get_redis_pool():
-    """Get Redis connection pool"""
-    return await create_pool(WorkerSettings.redis_settings)
+_redis_pools: WeakKeyDictionary[asyncio.AbstractEventLoop, ArqRedis] = (
+    WeakKeyDictionary()
+)
+
+
+async def get_redis_pool() -> ArqRedis:
+    """Get the ARQ Redis pool for the running event loop, creating it once"""
+    loop = asyncio.get_running_loop()
+    pool = _redis_pools.get(loop)
+    if pool is None:
+        pool = await create_pool(WorkerSettings.redis_settings)
+        _redis_pools[loop] = pool
+    return pool

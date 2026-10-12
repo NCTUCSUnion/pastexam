@@ -214,6 +214,10 @@ async def test_submit_generate_task_enqueues_job(
         assert metadata["archive_ids"] == [1, 2]
         assert metadata["status"] == "pending"
         assert fake_redis.expirations[metadata_key] == 86400
+
+        active_key = f"ai_task_active:{user.id}".encode()
+        assert fake_redis.metadata[active_key] == b"job-1"
+        assert fake_redis.expirations[active_key] == 3600
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -225,10 +229,7 @@ async def test_submit_generate_task_conflict_when_active_job(
     fake_redis: FakeRedis,
 ):
     user = await make_user()
-    await fake_redis.set(
-        "task_metadata:job-existing",
-        {"user_id": user.id, "status": "pending"},
-    )
+    await fake_redis.set(f"ai_task_active:{user.id}", "job-existing")
     fake_redis.job_statuses["job-existing"] = JobStatus.in_progress
 
     async def fake_get_current_user():
@@ -247,13 +248,17 @@ async def test_submit_generate_task_conflict_when_active_job(
 
 
 @pytest.mark.asyncio
-async def test_submit_generate_task_ignores_missing_metadata(
+async def test_submit_generate_task_allows_resubmit_after_previous_finished(
     client: AsyncClient,
     make_user,
     fake_redis: FakeRedis,
 ):
     user = await make_user()
-    fake_redis.metadata[b"task_metadata:stale"] = None
+    await fake_redis.set(f"ai_task_active:{user.id}", "job-old")
+    fake_redis.job_statuses["job-old"] = JobStatus.complete
+    # Another user's running task does not block this user
+    await fake_redis.set(f"ai_task_active:{user.id + 1}", "job-other")
+    fake_redis.job_statuses["job-other"] = JobStatus.in_progress
 
     async def fake_get_current_user():
         return UserRoles(user_id=user.id, is_admin=False)
@@ -267,6 +272,7 @@ async def test_submit_generate_task_ignores_missing_metadata(
         )
         assert response.status_code == 200
         assert response.json()["task_id"] == "job-1"
+        assert fake_redis.metadata[f"ai_task_active:{user.id}".encode()] == b"job-1"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -516,6 +522,7 @@ async def test_delete_task_success(
         f"task_metadata:{task_id}",
         json.dumps({"user_id": user.id}),
     )
+    await fake_redis.set(f"ai_task_active:{user.id}", task_id)
     fake_redis.results[f"arq:result:{task_id}"] = {"some": "data"}
 
     async def fake_get_current_user():
@@ -528,6 +535,7 @@ async def test_delete_task_success(
         assert response.status_code == 200
         assert response.json()["success"] is True
         assert f"task_metadata:{task_id}".encode() not in fake_redis.metadata
+        assert f"ai_task_active:{user.id}".encode() not in fake_redis.metadata
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 

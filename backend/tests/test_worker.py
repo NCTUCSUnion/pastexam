@@ -254,3 +254,11 @@ async def test_get_redis_pool(monkeypatch):
     monkeypatch.setattr(worker, "create_pool", fake_create_pool)
     pool = await worker.get_redis_pool()
     assert pool == f"pool-for-{worker.WorkerSettings.redis_settings}"
+
+
+@pytest.mark.asyncio
+async def test_get_redis_pool_is_reused_within_an_event_loop():
+    first = await worker.get_redis_pool()
+    second = await worker.get_redis_pool()
+    assert first is second
+    assert await first.ping()
