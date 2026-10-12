@@ -309,7 +309,7 @@
                   @update:modelValue="(val) => (editForm.professor = val)"
                   :suggestions="availableEditProfessors"
                   @complete="searchEditProfessor"
-                  @item-select="onEditProfessorSelect"
+                  @option-select="onEditProfessorSelect"
                   @focus="() => searchEditProfessor({ query: '' })"
                   @click="() => searchEditProfessor({ query: '' })"
                   optionLabel="name"
@@ -389,7 +389,7 @@
                     v-model="editForm.targetCourse"
                     :suggestions="availableCoursesForTransfer"
                     @complete="searchTargetCourse"
-                    @item-select="onTargetCourseSelect"
+                    @option-select="onTargetCourseSelect"
                     @focus="() => searchTargetCourse({ query: '' })"
                     @click="() => searchTargetCourse({ query: '' })"
                     optionLabel="label"
@@ -1277,19 +1277,19 @@ const handleEdit = async () => {
       targetCategory: editForm.value.shouldTransfer ? editForm.value.targetCategory : null,
     })
 
+    const transferred = editForm.value.shouldTransfer
+
     shouldResetPanels.value = true
     await fetchArchives()
 
     // If transfer was performed, refresh the course list to show the new course
-    if (editForm.value.shouldTransfer) {
+    if (transferred) {
       await fetchCourses()
     }
 
     closeEditDialog()
 
-    const successMessage = editForm.value.shouldTransfer
-      ? '考古題已更新並轉移到新課程'
-      : '考古題資訊已更新'
+    const successMessage = transferred ? '考古題已更新並轉移到新課程' : '考古題資訊已更新'
 
     toast.add({
       severity: 'success',
