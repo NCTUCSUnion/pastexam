@@ -34,7 +34,7 @@ async def test_local_login_success(client, make_user):
 async def test_local_login_failure(client):
     response = await client.post(
         "/auth/login",
-        data={"username": "unknown", "password": "wrong"},
+        data={"username": f"unknown-{uuid.uuid4().hex[:8]}", "password": "wrong"},
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid credentials"
@@ -206,7 +206,7 @@ async def test_logout_updates_last_logout_and_blacklists(
     user = await make_user()
     captured_tokens: list[str] = []
 
-    def fake_blacklist(token: str):
+    async def fake_blacklist(token: str):
         captured_tokens.append(token)
 
     async def fake_get_current_user():
@@ -339,7 +339,7 @@ async def test_logout_direct_without_header(monkeypatch, session_maker):
     calls = []
     monkeypatch.setattr(
         "app.api.services.auth.blacklist_token",
-        lambda token: calls.append(token),
+        AsyncMock(side_effect=calls.append),
     )
 
     async with session_maker() as session:

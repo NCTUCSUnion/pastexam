@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 
-import redis
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -12,9 +11,10 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_session
 from app.models.models import User, UserRoles
+from app.utils.activity import record_activity
+from app.utils.redis import get_redis
 
 pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated=["bcrypt"])
-redis_client = redis.from_url(settings.REDIS_URL)
 
 oauth2_scheme = HTTPBearer()
 
@@ -27,12 +27,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def blacklist_token(token: str, expire_seconds: int = 7200):
-    redis_client.setex(f"blacklist:{token}", expire_seconds, "1")
+async def blacklist_token(token: str, expire_seconds: int = 7200):
+    await get_redis().setex(f"blacklist:{token}", expire_seconds, "1")
 
 
-def is_token_blacklisted(token: str) -> bool:
-    result = redis_client.get(f"blacklist:{token}")
+async def is_token_blacklisted(token: str) -> bool:
+    result = await get_redis().get(f"blacklist:{token}")
     return result is not None
 
 
@@ -65,7 +65,7 @@ async def get_current_user(
     Extract user_id from Bearer <token> in header and verify user's admin
     status from database.
     """
-    if is_token_blacklisted(token.credentials):
+    if await is_token_blacklisted(token.credentials):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has been invalidated",
@@ -103,6 +103,7 @@ async def get_current_user(
         if not user:
             raise credentials_exception
 
+        await record_activity(user_id)
         return UserRoles(user_id=user_id, is_admin=user.is_admin)
     except JWTError:
         raise credentials_exception

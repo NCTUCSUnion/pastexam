@@ -3,7 +3,7 @@ from enum import Enum as PyEnum
 from typing import Optional
 
 from pydantic import BaseModel
-from sqlalchemy import Column, DateTime, String, Text
+from sqlalchemy import Column, DateTime, Index, String, Text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -68,6 +68,8 @@ class Course(SQLModel, table=True):
 
 class Archive(SQLModel, table=True):
     __tablename__ = "archives"
+    # Course pages list a course's non-deleted archives
+    __table_args__ = (Index("ix_archives_course_id_deleted_at", "course_id", "deleted_at"),)
     id: int | None = Field(default=None, primary_key=True)
 
     name: str

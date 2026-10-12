@@ -1,0 +1,429 @@
+/*
+ * PrimeFlex 4.0.0 utilities still used by the templates, extracted verbatim from
+ * primeflex.css (same order, values and !important) so removing the package does
+ * not change the layout. New code should use Tailwind utilities instead.
+ */
+.text-500 {
+  color: light-dark(var(--p-surface-500), var(--p-surface-300)) !important;
+}
+.text-600 {
+  color: light-dark(var(--p-surface-600), var(--p-surface-200)) !important;
+}
+.text-700 {
+  color: light-dark(var(--p-surface-700), var(--p-surface-100)) !important;
+}
+.surface-50 {
+  background-color: light-dark(var(--p-surface-50), var(--p-surface-800)) !important;
+}
+.surface-100 {
+  background-color: light-dark(var(--p-surface-100), var(--p-surface-700)) !important;
+}
+.surface-200 {
+  background-color: light-dark(var(--p-surface-200), var(--p-surface-600)) !important;
+}
+.text-blue-300 {
+  color: var(--p-blue-300) !important;
+}
+.text-blue-600 {
+  color: var(--p-blue-600) !important;
+}
+.text-blue-800 {
+  color: var(--p-blue-800) !important;
+}
+.text-green-500 {
+  color: var(--p-green-500) !important;
+}
+.text-green-600 {
+  color: var(--p-green-600) !important;
+}
+.text-green-700 {
+  color: var(--p-green-700) !important;
+}
+.text-orange-600 {
+  color: var(--p-orange-600) !important;
+}
+.text-orange-700 {
+  color: var(--p-orange-700) !important;
+}
+.text-gray-100 {
+  color: var(--p-gray-100) !important;
+}
+.text-gray-500 {
+  color: var(--p-gray-500) !important;
+}
+.text-gray-600 {
+  color: var(--p-gray-600) !important;
+}
+.text-gray-900 {
+  color: var(--p-gray-900) !important;
+}
+.text-red-400 {
+  color: var(--p-red-400) !important;
+}
+.text-red-500 {
+  color: var(--p-red-500) !important;
+}
+.text-red-600 {
+  color: var(--p-red-600) !important;
+}
+.bg-blue-50 {
+  background-color: var(--p-blue-50) !important;
+}
+.bg-green-50 {
+  background-color: var(--p-green-50) !important;
+}
+.bg-orange-50 {
+  background-color: var(--p-orange-50) !important;
+}
+.text-color {
+  color: var(--p-text-color) !important;
+}
+.surface-ground {
+  background-color: light-dark(var(--p-surface-50), var(--p-surface-950)) !important;
+}
+.field {
+  margin-bottom: 1rem;
+}
+.hidden {
+  display: none !important;
+}
+.block {
+  display: block !important;
+}
+.inline-block {
+  display: inline-block !important;
+}
+.flex {
+  display: flex !important;
+}
+.inline-flex {
+  display: inline-flex !important;
+}
+@media screen and (min-width: 768px) {
+  .md\:hidden {
+    display: none !important;
+  }
+  .md\:block {
+    display: block !important;
+  }
+  .md\:flex {
+    display: flex !important;
+  }
+}
+.text-center {
+  text-align: center !important;
+}
+.text-left {
+  text-align: left !important;
+}
+.underline {
+  text-decoration: underline !important;
+}
+.uppercase {
+  text-transform: uppercase !important;
+}
+.text-overflow-ellipsis {
+  text-overflow: ellipsis !important;
+}
+.font-medium {
+  font-weight: 500 !important;
+}
+.font-semibold {
+  font-weight: 600 !important;
+}
+.font-bold {
+  font-weight: 700 !important;
+}
+.text-xs {
+  font-size: 0.75rem !important;
+}
+.text-sm {
+  font-size: 0.875rem !important;
+}
+.text-lg {
+  font-size: 1.125rem !important;
+}
+.text-xl {
+  font-size: 1.25rem !important;
+}
+.text-2xl {
+  font-size: 1.5rem !important;
+}
+.text-4xl {
+  font-size: 2rem !important;
+}
+.text-6xl {
+  font-size: 3rem !important;
+}
+@media screen and (min-width: 576px) {
+  .sm\:text-base {
+    font-size: 1rem !important;
+  }
+  .sm\:text-3xl {
+    font-size: 1.75rem !important;
+  }
+}
+@media screen and (min-width: 768px) {
+  .md\:text-lg {
+    font-size: 1.125rem !important;
+  }
+  .md\:text-xl {
+    font-size: 1.25rem !important;
+  }
+  .md\:text-4xl {
+    font-size: 2rem !important;
+  }
+}
+.flex-column {
+  flex-direction: column !important;
+}
+@media screen and (min-width: 768px) {
+  .md\:flex-row {
+    flex-direction: row !important;
+  }
+}
+.flex-wrap {
+  flex-wrap: wrap !important;
+}
+.justify-content-end {
+  justify-content: flex-end !important;
+}
+.justify-content-center {
+  justify-content: center !important;
+}
+.justify-content-between {
+  justify-content: space-between !important;
+}
+.align-items-start {
+  align-items: flex-start !important;
+}
+.align-items-center {
+  align-items: center !important;
+}
+@media screen and (min-width: 768px) {
+  .md\:align-items-center {
+    align-items: center !important;
+  }
+}
+.flex-1 {
+  flex: 1 1 0% !important;
+}
+.gap-1 {
+  gap: 0.25rem !important;
+}
+.gap-2 {
+  gap: 0.5rem !important;
+}
+.gap-3 {
+  gap: 1rem !important;
+}
+.gap-4 {
+  gap: 1.5rem !important;
+}
+.p-2 {
+  padding: 0.5rem !important;
+}
+.p-3 {
+  padding: 1rem !important;
+}
+.p-4 {
+  padding: 1.5rem !important;
+}
+.p-5 {
+  padding: 2rem !important;
+}
+.p-6 {
+  padding: 3rem !important;
+}
+.pt-0 {
+  padding-top: 0rem !important;
+}
+.pt-6 {
+  padding-top: 3rem !important;
+}
+.pr-8 {
+  padding-right: 5rem !important;
+}
+.pl-4 {
+  padding-left: 1.5rem !important;
+}
+.pl-6 {
+  padding-left: 3rem !important;
+}
+.pb-3 {
+  padding-bottom: 1rem !important;
+}
+.px-1 {
+  padding-left: 0.25rem !important;
+  padding-right: 0.25rem !important;
+}
+.px-2 {
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+.px-4 {
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+.py-1 {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+.py-5 {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+@media screen and (min-width: 768px) {
+  .md\:p-4 {
+    padding: 1.5rem !important;
+  }
+  .md\:px-4 {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+}
+.m-0 {
+  margin: 0rem !important;
+}
+.m-3 {
+  margin: 1rem !important;
+}
+.mt-1 {
+  margin-top: 0.25rem !important;
+}
+.mt-2 {
+  margin-top: 0.5rem !important;
+}
+.mt-3 {
+  margin-top: 1rem !important;
+}
+.mt-4 {
+  margin-top: 1.5rem !important;
+}
+.mt-5 {
+  margin-top: 2rem !important;
+}
+.-mt-2 {
+  margin-top: -0.5rem !important;
+}
+.mr-1 {
+  margin-right: 0.25rem !important;
+}
+.mr-2 {
+  margin-right: 0.5rem !important;
+}
+.mr-3 {
+  margin-right: 1rem !important;
+}
+.ml-2 {
+  margin-left: 0.5rem !important;
+}
+.ml-auto {
+  margin-left: auto !important;
+}
+.mb-1 {
+  margin-bottom: 0.25rem !important;
+}
+.mb-2 {
+  margin-bottom: 0.5rem !important;
+}
+.mb-3 {
+  margin-bottom: 1rem !important;
+}
+.mb-4 {
+  margin-bottom: 1.5rem !important;
+}
+.mx-auto {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+@media screen and (min-width: 768px) {
+  .md\:mt-5 {
+    margin-top: 2rem !important;
+  }
+}
+.shadow-2 {
+  box-shadow:
+    0px 4px 10px rgba(0, 0, 0, 0.03),
+    0px 0px 2px rgba(0, 0, 0, 0.06),
+    0px 2px 6px rgba(0, 0, 0, 0.12) !important;
+}
+.shadow-3 {
+  box-shadow:
+    0px 1px 8px rgba(0, 0, 0, 0.08),
+    0px 3px 4px rgba(0, 0, 0, 0.1),
+    0px 1px 4px -1px rgba(0, 0, 0, 0.1) !important;
+}
+.border-1 {
+  border-width: 1px !important;
+  border-style: solid;
+}
+.border-2 {
+  border-width: 2px !important;
+  border-style: solid;
+}
+.border-dashed {
+  border-style: dashed !important;
+}
+.border-round {
+  border-radius: var(--p-content-border-radius) !important;
+}
+.w-full {
+  width: 100% !important;
+}
+@media screen and (min-width: 768px) {
+  .md\:w-auto {
+    width: auto !important;
+  }
+  .md\:w-14rem {
+    width: 14rem !important;
+  }
+}
+.h-full {
+  height: 100% !important;
+}
+.min-w-0 {
+  min-width: 0px !important;
+}
+.min-h-0 {
+  min-height: 0px !important;
+}
+.absolute {
+  position: absolute !important;
+}
+.relative {
+  position: relative !important;
+}
+.top-0 {
+  top: 0px !important;
+}
+.right-0 {
+  right: 0px !important;
+}
+.overflow-auto {
+  overflow: auto !important;
+}
+.overflow-hidden {
+  overflow: hidden !important;
+}
+.overflow-x-auto {
+  overflow-x: auto !important;
+}
+.overflow-y-hidden {
+  overflow-y: hidden !important;
+}
+.z-1 {
+  z-index: 1 !important;
+}
+.z-2 {
+  z-index: 2 !important;
+}
+.cursor-pointer {
+  cursor: pointer !important;
+}
+.opacity-50 {
+  opacity: 0.5 !important;
+}
+.opacity-70 {
+  opacity: 0.7 !important;
+}

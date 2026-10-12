@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 from datetime import UTC, datetime
@@ -25,6 +26,18 @@ logger = logging.getLogger(__name__)
 PROMPT_TEMPLATE_PATH = (
     Path(__file__).resolve().parent / "templates" / "ai_exam_prompt.txt"
 )
+
+
+def _read_object(storage_client, object_name: str) -> bytes:
+    response = storage_client.get_object(
+        bucket_name=settings.RUSTFS_BUCKET_NAME,
+        object_name=object_name,
+    )
+    try:
+        return response.read()
+    finally:
+        response.close()
+        response.release_conn()
 
 
 @lru_cache(maxsize=1)
@@ -86,7 +99,7 @@ async def generate_exam_content(
             raise ValueError("Archives not found")
 
         client = genai.Client(api_key=api_key)
-        storage_client = get_storage_client()
+        storage_client = await asyncio.to_thread(get_storage_client)
 
         uploaded_files = []
         archives_info = []
@@ -97,17 +110,14 @@ async def generate_exam_content(
             #     len(archives_with_courses),
             # )
             for idx, (archive, course) in enumerate(archives_with_courses, 1):
-                response = storage_client.get_object(
-                    bucket_name=settings.RUSTFS_BUCKET_NAME,
-                    object_name=archive.object_name,
+                # Storage and Gemini SDK calls are blocking; keep them off the event loop
+                pdf_data = await asyncio.to_thread(
+                    _read_object, storage_client, archive.object_name
                 )
-                pdf_data = response.read()
-                response.close()
-                response.release_conn()
 
                 upload_config = UploadFileConfig(mime_type="application/pdf")
-                uploaded_file = client.files.upload(
-                    file=io.BytesIO(pdf_data), config=upload_config
+                uploaded_file = await asyncio.to_thread(
+                    client.files.upload, file=io.BytesIO(pdf_data), config=upload_config
                 )
                 uploaded_files.append(uploaded_file)
 
@@ -146,7 +156,8 @@ async def generate_exam_content(
             #     "[AI Exam] Calling Gemini API (temperature=%s)",
             #     temperature,
             # )
-            response = client.models.generate_content(
+            response = await asyncio.to_thread(
+                client.models.generate_content,
                 model="gemini-2.5-flash",
                 contents=content,
                 config={"temperature": temperature},
@@ -155,7 +166,7 @@ async def generate_exam_content(
             # logger.info(f"[AI Exam] Generation completed successfully")
 
             for uploaded_file in uploaded_files:
-                client.files.delete(name=uploaded_file.name)
+                await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
 
             disclaimer = """⚠️ 注意事項 / NOTICE ⚠️
 此試題由 AI 自動生成，僅供參考練習使用。
@@ -179,7 +190,7 @@ Answers may contain errors. Please verify the correctness yourself.
             # logger.error(f"[AI Exam] Error: {type(e).__name__}: {str(e)}")
             for uploaded_file in uploaded_files:
                 try:
-                    client.files.delete(name=uploaded_file.name)
+                    await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
                 except Exception:
                     logger.warning(
                         "Failed to delete uploaded Gemini file during cleanup: %s",

@@ -1,3 +1,4 @@
+import asyncio
 import io
 import os
 import uuid
@@ -10,6 +11,7 @@ from app.core.config import settings
 from app.db.session import get_session
 from app.models.models import Archive, Course, CourseCategory, User
 from app.utils.auth import get_current_user
+from app.utils.rate_limit import get_retry_after, record_hit
 from app.utils.storage import get_storage_client
 
 router = APIRouter()
@@ -42,17 +44,16 @@ async def upload_archive(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    query = select(Course).where(
-        Course.name == subject, Course.category == category, Course.deleted_at.is_(None)
-    )
-    result = await db.execute(query)
-    course = result.scalar_one_or_none()
-
-    if not course:
-        course = Course(name=subject, category=category)
-        db.add(course)
-        await db.commit()
-        await db.refresh(course)
+    # Admins upload in bulk, so only regular users are limited
+    upload_key = f"upload:{current_user.user_id}"
+    if not current_user.is_admin:
+        retry_after = await get_retry_after(upload_key, settings.UPLOAD_LIMIT_PER_HOUR)
+        if retry_after is not None:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Upload limit reached, please try again later",
+                headers={"Retry-After": str(retry_after)},
+            )
 
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -69,15 +70,28 @@ async def upload_archive(
             detail="File size exceeds 10MB limit",
         )
 
+    query = select(Course).where(
+        Course.name == subject, Course.category == category, Course.deleted_at.is_(None)
+    )
+    result = await db.execute(query)
+    course = result.scalar_one_or_none()
+
+    if not course:
+        # Flush only to get an id; the course is committed together with the archive
+        course = Course(name=subject, category=category)
+        db.add(course)
+        await db.flush()
+
     _, file_extension = os.path.splitext(file.filename)
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     object_name = f"archives/{course.id}/{unique_filename}"
 
     try:
-        storage_client = get_storage_client()
+        storage_client = await asyncio.to_thread(get_storage_client)
         file_data = io.BytesIO(file_content)
 
-        storage_client.put_object(
+        await asyncio.to_thread(
+            storage_client.put_object,
             bucket_name=settings.RUSTFS_BUCKET_NAME,
             object_name=object_name,
             data=file_data,
@@ -100,6 +114,9 @@ async def upload_archive(
         await db.commit()
         await db.refresh(archive)
 
+        if not current_user.is_admin:
+            await record_hit(upload_key, 60 * 60)
+
         return {
             "success": True,
             "message": "File uploaded successfully",
@@ -117,6 +134,7 @@ async def upload_archive(
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001 - translate storage and database failures
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload file: {e!s}",

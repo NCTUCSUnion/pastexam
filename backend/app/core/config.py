@@ -28,6 +28,12 @@ class Settings(BaseSettings):
 
     REDIS_URL: str
 
+    # Rate limits (per user, or per login name for failed logins)
+    UPLOAD_LIMIT_PER_HOUR: int = 30
+    DISCUSSION_MESSAGE_LIMIT_PER_MINUTE: int = 10
+    LOGIN_FAILURE_LIMIT: int = 10
+    LOGIN_FAILURE_WINDOW_SECONDS: int = 15 * 60
+
     DEFAULT_ADMIN_NAME: str
     DEFAULT_ADMIN_PASSWORD: str
     DEFAULT_ADMIN_EMAIL: str

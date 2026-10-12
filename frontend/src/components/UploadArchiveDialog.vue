@@ -542,7 +542,8 @@ const handleUpload = async () => {
     toast.add({
       severity: 'error',
       summary: '上傳失敗',
-      detail: '發生錯誤，請稍後再試',
+      detail:
+        error?.response?.status === 429 ? '上傳次數已達上限，請稍後再試' : '發生錯誤，請稍後再試',
       life: 3000,
     })
   } finally {

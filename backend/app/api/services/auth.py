@@ -14,6 +14,7 @@ from app.models.models import User
 from app.services.auth import oauth_callback
 from app.utils.auth import authenticate_user, blacklist_token, get_current_user
 from app.utils.jwt import jwt
+from app.utils.rate_limit import get_retry_after, record_hit
 
 router = APIRouter()
 
@@ -26,8 +27,19 @@ async def login(
     """
     Local login endpoint for users with password authentication
     """
+    # Count failures per login name; behind the proxy every request shares one IP
+    login_key = f"login:{form_data.username.strip().lower()}"
+    retry_after = await get_retry_after(login_key, settings.LOGIN_FAILURE_LIMIT)
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed login attempts, please try again later",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     user = await authenticate_user(form_data.username, form_data.password, db)
     if not user:
+        await record_hit(login_key, settings.LOGIN_FAILURE_WINDOW_SECONDS)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -154,5 +166,5 @@ async def logout(
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
-        blacklist_token(token)
+        await blacklist_token(token)
     return {"message": "Successfully logged out"}

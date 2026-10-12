@@ -13,6 +13,12 @@ from app.models.models import Archive, Course, CourseCategory, User, UserRoles
 from app.utils.auth import get_current_user
 
 
+async def _course_exists(session_maker, name: str) -> bool:
+    async with session_maker() as session:
+        result = await session.execute(select(Course).where(Course.name == name))
+        return result.scalar_one_or_none() is not None
+
+
 @pytest.mark.asyncio
 async def test_upload_archive_creates_course_and_archive(
     client: AsyncClient,
@@ -235,6 +241,7 @@ async def test_upload_archive_rejects_large_file(
         )
         assert response.status_code == 400
         assert response.json()["detail"] == "File size exceeds 10MB limit"
+        assert not await _course_exists(session_maker, "Oversized Course")
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
@@ -289,6 +296,7 @@ async def test_upload_archive_handles_storage_failure(
         )
         assert response.status_code == 500
         assert "Failed to upload file" in response.json()["detail"]
+        assert not await _course_exists(session_maker, "Fail Course")
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         async with session_maker() as session:
@@ -377,6 +385,7 @@ async def test_upload_archive_function_covers_creation_and_reuse(
 async def test_upload_archive_requires_pdf(
     client: AsyncClient,
     make_user,
+    session_maker,
 ):
     user = await make_user()
 
@@ -401,6 +410,7 @@ async def test_upload_archive_requires_pdf(
         )
         assert response.status_code == 400
         assert response.json()["detail"] == "Only PDF files are allowed"
+        assert not await _course_exists(session_maker, "Non PDF Course")
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 

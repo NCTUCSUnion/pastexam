@@ -311,6 +311,15 @@ describe('UploadArchiveDialog', () => {
     )
 
     toastAddMock.mockClear()
+    vm.form.file = failingFile
+    archiveServiceMock.uploadArchive.mockRejectedValueOnce({ response: { status: 429 } })
+    await vm.handleUpload()
+    await flushPromises()
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: '上傳失敗', detail: '上傳次數已達上限，請稍後再試' })
+    )
+
+    toastAddMock.mockClear()
     archiveServiceMock.uploadArchive.mockRejectedValueOnce(new Error('unauthorized'))
     isUnauthorizedErrorMock.mockReturnValueOnce(true)
     await vm.handleUpload()

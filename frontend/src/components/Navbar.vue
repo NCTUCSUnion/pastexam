@@ -519,7 +519,8 @@ export default {
         this.toast.add({
           severity: 'error',
           summary: '登入失敗',
-          detail: '帳號或密碼錯誤',
+          detail:
+            error?.response?.status === 429 ? '登入失敗次數過多，請稍後再試' : '帳號或密碼錯誤',
           life: 3000,
         })
       } finally {

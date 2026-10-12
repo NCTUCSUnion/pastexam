@@ -207,8 +207,17 @@ describe('Navbar methods', () => {
     await Navbar.methods.handleLocalLogin.call(ctx)
 
     expect(trackEventMock).toHaveBeenCalledWith('login-local', { success: false })
-    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ summary: '登入失敗' }))
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: '登入失敗', detail: '帳號或密碼錯誤' })
+    )
     expect(ctx.loading).toBe(false)
+
+    toastAddMock.mockClear()
+    localLoginMock.mockRejectedValueOnce({ response: { status: 429 } })
+    await Navbar.methods.handleLocalLogin.call(ctx)
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: '登入失敗', detail: '登入失敗次數過多，請稍後再試' })
+    )
   })
 
   it('opens login dialog and tracks dialog event', () => {
@@ -746,6 +755,7 @@ describe('Navbar methods', () => {
 
     expect(unauthWrapper.find('[data-icon="pi pi-sign-in"]').exists()).toBe(true)
     expect(unauthWrapper.find('[data-icon="pi pi-sign-out"]').exists()).toBe(false)
+    expect(unauthWrapper.findComponent({ name: 'NotificationCenterModal' }).exists()).toBe(false)
 
     unauthWrapper.unmount()
 
@@ -767,8 +777,9 @@ describe('Navbar methods', () => {
 
     expect(authWrapper.find('[data-icon="pi pi-sign-in"]').exists()).toBe(false)
     expect(authWrapper.find('[data-icon="pi pi-sign-out"]').exists()).toBe(true)
-    expect(authWrapper.find('.notification-modal').exists()).toBe(true)
-    expect(authWrapper.find('.notification-center').exists()).toBe(true)
+    // Lazily loaded modals are stubbed by shallowMount, so match them by name
+    expect(authWrapper.findComponent({ name: 'NotificationModal' }).exists()).toBe(true)
+    expect(authWrapper.findComponent({ name: 'NotificationCenterModal' }).exists()).toBe(true)
 
     const menuProps = authWrapper.getComponent({ name: 'MenuStub' }).props('model')
     expect(Array.isArray(menuProps)).toBe(true)
