@@ -32,7 +32,7 @@
         v-if="currentStep === 'loading'"
         class="flex flex-column align-items-center justify-content-center p-6"
       >
-        <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="載入中" />
+        <ProgressSpinner class="app-progress-spinner" :strokeWidth="8" aria-label="載入中" />
         <p class="mt-4 text-lg font-semibold">載入中...</p>
       </div>
 
@@ -163,7 +163,7 @@
         v-else-if="currentStep === 'generating'"
         class="flex flex-column align-items-center justify-content-center p-6"
       >
-        <ProgressSpinner class="app-progress-spinner" strokeWidth="8" aria-label="生成中" />
+        <ProgressSpinner class="app-progress-spinner" :strokeWidth="8" aria-label="生成中" />
         <p class="mt-4 text-lg font-semibold">正在分析考古題並生成模擬試題</p>
         <p class="text-sm text-500 mt-2">這可能需要 2-5 分鐘，您可以關閉視窗稍後再回來查看結果</p>
         <div
@@ -384,7 +384,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, inject, onBeforeUnmount, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, inject, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import { aiExamService, courseService, archiveService } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
@@ -1189,51 +1189,55 @@ const confirmRegenerate = () => {
   })
 }
 
-watch(
-  () => props.visible,
-  async (newVal) => {
-    if (newVal) {
-      if (closeResetTimeoutId) {
-        clearTimeout(closeResetTimeoutId)
-        closeResetTimeoutId = null
-      }
-      // Load API key status
-      loadApiKeyStatus()
-
-      // Check for unfinished task when modal opens
-      const savedTask = loadTaskFromStorage()
-      if (savedTask && savedTask.taskId) {
-        if (
-          currentStep.value === 'result' &&
-          currentTaskId.value === savedTask.taskId &&
-          result.value
-        ) {
-          return
-        }
-        if (savedTask.displayInfo) {
-          if (savedTask.displayInfo.course_name) {
-            form.value.course_name = savedTask.displayInfo.course_name
-          }
-          if (savedTask.displayInfo.professor) {
-            form.value.professor = savedTask.displayInfo.professor
-          }
-        }
-        await resumeTask(savedTask.taskId)
-      } else {
-        // No saved task, go to professor selection
-        currentStep.value = 'selectProfessor'
-      }
-    } else {
-      closeTaskWebSocket()
-
-      closeResetTimeoutId = setTimeout(() => {
-        const savedTask = loadTaskFromStorage()
-        const hasTask = Boolean(savedTask?.taskId || currentTaskId.value)
-        resetModalState({ keepTask: hasTask })
-      }, 300)
+const handleVisibleChange = async (newVal) => {
+  if (newVal) {
+    if (closeResetTimeoutId) {
+      clearTimeout(closeResetTimeoutId)
+      closeResetTimeoutId = null
     }
+    // Load API key status
+    loadApiKeyStatus()
+
+    // Check for unfinished task when modal opens
+    const savedTask = loadTaskFromStorage()
+    if (savedTask && savedTask.taskId) {
+      if (
+        currentStep.value === 'result' &&
+        currentTaskId.value === savedTask.taskId &&
+        result.value
+      ) {
+        return
+      }
+      if (savedTask.displayInfo) {
+        if (savedTask.displayInfo.course_name) {
+          form.value.course_name = savedTask.displayInfo.course_name
+        }
+        if (savedTask.displayInfo.professor) {
+          form.value.professor = savedTask.displayInfo.professor
+        }
+      }
+      await resumeTask(savedTask.taskId)
+    } else {
+      // No saved task, go to professor selection
+      currentStep.value = 'selectProfessor'
+    }
+  } else {
+    closeTaskWebSocket()
+
+    closeResetTimeoutId = setTimeout(() => {
+      const savedTask = loadTaskFromStorage()
+      const hasTask = Boolean(savedTask?.taskId || currentTaskId.value)
+      resetModalState({ keepTask: hasTask })
+    }, 300)
   }
-)
+}
+
+watch(() => props.visible, handleVisibleChange)
+
+// Navbar mounts the modal lazily the first time it opens, so it can start out visible
+onMounted(() => {
+  if (props.visible) handleVisibleChange(true)
+})
 
 onBeforeUnmount(() => {
   closeTaskWebSocket()

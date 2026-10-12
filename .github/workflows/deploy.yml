@@ -18,7 +18,13 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           script: |
+            set -e
             cd ${{ secrets.DEPLOY_DIRECTORY }}
+            # Bring compose files, nginx config and scripts to the commit being deployed;
+            # stops here if the server checkout has local changes
+            REPO_DIR=$(git rev-parse --show-toplevel)
+            git -C "$REPO_DIR" fetch --quiet origin main
+            git -C "$REPO_DIR" merge --ff-only --quiet ${{ github.sha }}
             if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
               echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
             fi
