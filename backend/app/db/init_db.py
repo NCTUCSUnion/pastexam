@@ -71,9 +71,13 @@ async def _run_migrations():
 
 
 async def init_db():
+    # Every uvicorn worker runs this; the lock also keeps them from seeding twice
     async with _migration_lock():
         await _run_migrations()
+        await _seed_initial_data()
 
+
+async def _seed_initial_data():
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(User).where(User.name == settings.DEFAULT_ADMIN_NAME)

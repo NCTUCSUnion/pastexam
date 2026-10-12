@@ -214,3 +214,29 @@ async def test_migration_lock_lets_one_worker_migrate_at_a_time(monkeypatch):
     assert events[0].endswith("-start") and events[1].endswith("-end")
     assert events[0][0] == events[1][0]
     assert events[2][0] == events[3][0] != events[0][0]
+
+
+@pytest.mark.asyncio
+async def test_init_db_seeds_while_holding_the_migration_lock(monkeypatch):
+    events: list[str] = []
+
+    @asynccontextmanager
+    async def recording_lock():
+        events.append("lock")
+        yield
+        events.append("unlock")
+
+    async def migrate():
+        events.append("migrate")
+
+    async def seed():
+        events.append("seed")
+
+    monkeypatch.setattr(init_db, "_migration_lock", recording_lock)
+    monkeypatch.setattr(init_db, "_run_migrations", migrate)
+    monkeypatch.setattr(init_db, "_seed_initial_data", seed)
+
+    await init_db.init_db()
+
+    # Other workers wait at the lock until the data is seeded
+    assert events == ["lock", "migrate", "seed", "unlock"]
