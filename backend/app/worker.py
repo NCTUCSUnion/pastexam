@@ -49,7 +49,7 @@ async def generate_exam_content(
     archive_ids: list[int],
     user_id: int,
     prompt: str | None = None,
-    temperature: float = 0.7,
+    temperature: float | None = None,
 ) -> dict:
     """
     Core AI exam generation logic
@@ -158,9 +158,9 @@ async def generate_exam_content(
             # )
             response = await asyncio.to_thread(
                 client.models.generate_content,
-                model="gemini-2.5-flash",
+                model=settings.GEMINI_MODEL,
                 contents=content,
-                config={"temperature": temperature},
+                config={"temperature": temperature} if temperature is not None else None,
             )
 
             # logger.info(f"[AI Exam] Generation completed successfully")
@@ -248,7 +248,7 @@ async def generate_ai_exam_task(ctx, task_data: dict):
             archive_ids=task_data["archive_ids"],
             user_id=task_data["user_id"],
             prompt=task_data.get("prompt"),
-            temperature=task_data.get("temperature", 0.7),
+            temperature=task_data.get("temperature"),
         )
 
         # logger.info(f"[Worker] Task completed successfully")

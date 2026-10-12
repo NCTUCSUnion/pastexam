@@ -20,6 +20,15 @@ from app.utils.auth_ws import get_ws_token_payload
 
 router = APIRouter()
 
+
+def _validate_gemini_api_key(api_key: str) -> None:
+    """Raise if Google rejects the key; listing models does not depend on any
+    particular model being available to the key and spends no tokens."""
+    from google import genai
+
+    client = genai.Client(api_key=api_key)
+    next(iter(client.models.list(config={"page_size": 1})), None)
+
 _STATUS_MAP = {
     JobStatus.queued: "pending",
     JobStatus.deferred: "pending",
@@ -423,10 +432,7 @@ async def update_api_key(
 
     try:
         if request.gemini_api_key:
-            from google import genai
-
-            client = genai.Client(api_key=request.gemini_api_key)
-            client.models.generate_content(model="gemini-2.5-flash", contents="Hello")
+            await asyncio.to_thread(_validate_gemini_api_key, request.gemini_api_key)
 
         stmt = (
             update(User)

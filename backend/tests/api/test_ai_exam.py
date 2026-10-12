@@ -469,9 +469,9 @@ async def test_update_api_key_persists_value(
         def __init__(self):
             self.calls = []
 
-        def generate_content(self, **kwargs):
+        def list(self, **kwargs):
             self.calls.append(kwargs)
-            return SimpleNamespace(text="ok")
+            return iter([SimpleNamespace(name="models/gemini")])
 
     class FakeClient:
         instances: ClassVar[list] = []
@@ -749,7 +749,7 @@ async def test_update_api_key_invalid_key(
             self.api_key = api_key
             self.models = self
 
-        def generate_content(self, **kwargs):
+        def list(self, **kwargs):
             raise ValueError("API key invalid")
 
     monkeypatch.setattr("google.genai.Client", ErrorClient)
@@ -782,8 +782,8 @@ async def test_update_api_key_handles_other_errors(
             self.api_key = api_key
             self.models = self
 
-        def generate_content(self, **kwargs):
-            return SimpleNamespace(text="ok")
+        def list(self, **kwargs):
+            return iter([])
 
     async def fake_get_current_user():
         return UserRoles(user_id=user.id, is_admin=False)
