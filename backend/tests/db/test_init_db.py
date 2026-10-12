@@ -145,77 +145,53 @@ async def test_init_db_creates_admin_and_seeds(monkeypatch):
     original_loader.cache_clear()
 
 
-@pytest.mark.asyncio
-async def test_init_db_fallback_when_migration_fails(monkeypatch):
-    original_loader = init_db.load_seed_data
-    original_loader.cache_clear()
-
-    class FailResult:
-        returncode = 1
+def _patch_init_db(monkeypatch, *, returncode, stderr, fake_session):
+    class Result:
         stdout = ""
-        stderr = "boom"
 
-    fake_session = FakeSession(admin_exists=True, course_count=1, meme_count=1)
+    Result.returncode = returncode
+    Result.stderr = stderr
 
     @asynccontextmanager
     async def fake_session_factory():
         async with fake_session:
             yield fake_session
 
-    class FakeConnection:
-        def __init__(self, tracker):
-            self.tracker = tracker
-
-        async def run_sync(self, fn):
-            self.tracker["create_all"] += 1
-
-        async def commit(self):
-            return None
-
-    class FakeEngine:
-        def __init__(self, tracker):
-            self.tracker = tracker
-
-        def begin(self):
-            tracker = self.tracker
-
-            @asynccontextmanager
-            async def ctx():
-                yield FakeConnection(tracker)
-
-            return ctx()
-
-    tracker = {"create_all": 0}
-
     monkeypatch.setattr(init_db, "_migration_lock", _no_lock)
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: Result())
     monkeypatch.setattr(
-        subprocess,
-        "run",
-        lambda *args, **kwargs: FailResult(),
+        init_db, "load_seed_data", lambda: {"courses": [], "memes": []}, raising=False
     )
     monkeypatch.setattr(
-        init_db,
-        "load_seed_data",
-        lambda: {"courses": [], "memes": []},
-        raising=False,
-    )
-    monkeypatch.setattr(
-        init_db,
-        "AsyncSessionLocal",
-        lambda: fake_session_factory(),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        init_db,
-        "engine",
-        FakeEngine(tracker),
-        raising=False,
+        init_db, "AsyncSessionLocal", lambda: fake_session_factory(), raising=False
     )
 
+
+@pytest.mark.asyncio
+async def test_init_db_refuses_to_start_when_migration_fails(monkeypatch):
+    init_db.load_seed_data.cache_clear()
+    fake_session = FakeSession(admin_exists=True, course_count=1, meme_count=1)
+    _patch_init_db(
+        monkeypatch, returncode=1, stderr="relation already exists", fake_session=fake_session
+    )
+
+    with pytest.raises(RuntimeError, match="relation already exists"):
+        await init_db.init_db()
+
+
+@pytest.mark.asyncio
+async def test_init_db_starts_when_database_is_newer_than_the_code(monkeypatch):
+    init_db.load_seed_data.cache_clear()
+    fake_session = FakeSession(admin_exists=True, course_count=1, meme_count=1)
+    _patch_init_db(
+        monkeypatch,
+        returncode=1,
+        stderr="Can't locate revision identified by 'ffffffffffff'",
+        fake_session=fake_session,
+    )
+
+    # A rollback to an older release must still boot
     await init_db.init_db()
-
-    assert tracker["create_all"] == 1
-    original_loader.cache_clear()
 
 
 @pytest.mark.asyncio
