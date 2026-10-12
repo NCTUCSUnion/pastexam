@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     REDIS_URL: str
 
+    GEMINI_MODEL: str = "gemini-3.8-flash"
+
     # Rate limits (per user, or per login name for failed logins)
     UPLOAD_LIMIT_PER_HOUR: int = 30
     DISCUSSION_MESSAGE_LIMIT_PER_MINUTE: int = 10

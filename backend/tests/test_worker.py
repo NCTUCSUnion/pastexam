@@ -66,6 +66,8 @@ class FakeGenAIClient:
 
         class Models:
             def generate_content(self, *, model, contents, config):
+                client.last_model = model
+                client.last_config = config
                 client.last_contents = contents
                 if client.should_fail:
                     raise RuntimeError("generation failed")
@@ -133,6 +135,15 @@ async def test_generate_exam_content_success(monkeypatch):
     assert fake_storage.requests == [
         (worker.settings.RUSTFS_BUCKET_NAME, "archives/1.pdf")
     ]
+    assert fake_client.last_model == worker.settings.GEMINI_MODEL
+    assert fake_client.last_config == {"temperature": 0.5}
+
+    # Without an explicit temperature the model's own default is used
+    fake_client.uploads.clear()
+    fake_client.deleted.clear()
+    fake_session._results = [_user_result(user), _archives_result([(archive, course)])]
+    await worker.generate_exam_content(archive_ids=[1], user_id=7)
+    assert fake_client.last_config is None
 
 
 @pytest.mark.asyncio

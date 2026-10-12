@@ -321,7 +321,8 @@ class ArchiveUpdateCourse(BaseModel):
 class GenerateExamRequest(BaseModel):
     archive_ids: list[int]
     prompt: str | None = None
-    temperature: float | None = 0.7
+    # Gemini 3 is tuned for its default temperature; only send one when asked to
+    temperature: float | None = None
 
 
 class TaskSubmitResponse(BaseModel):
