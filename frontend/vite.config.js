@@ -27,11 +27,11 @@ export default defineConfig(({ mode }) => {
     build: {
       cssCodeSplit: true,
       chunkSizeWarningLimit: 600,
-      sourcemap: true,
-      minify: 'esbuild',
-      esbuildOptions: {
-        drop: mode === 'production' ? ['debugger'] : [],
-        pure: mode === 'production' ? ['console.log', 'console.debug'] : [],
+      // Emit maps for debugging without referencing them from the served bundles
+      sourcemap: 'hidden',
+      rolldownOptions: {
+        treeshake:
+          mode === 'production' ? { manualPureFunctions: ['console.log', 'console.debug'] } : {},
       },
     },
     plugins: [
@@ -39,7 +39,8 @@ export default defineConfig(({ mode }) => {
       mode === 'development' && vueDevTools({ launchEditor: 'zed' }),
       mode !== 'test' && eslintPlugin({ include: ['src/**/*.vue', 'src/**/*.js', 'src/**/*.ts'] }),
       tailwindcss(),
-      Components({ resolvers: [PrimeVueResolver()] }),
+      // Only auto-import PrimeVue; local components are imported explicitly so they can be lazy loaded
+      Components({ dirs: [], resolvers: [PrimeVueResolver()] }),
       mode === 'production' &&
         siteHostname &&
         Sitemap({

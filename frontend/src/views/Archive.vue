@@ -263,6 +263,7 @@
           </div>
 
           <PdfPreviewModal
+            v-if="previewMounted"
             :visible="showPreview"
             @update:visible="showPreview = $event"
             :courseId="selectedCourse"
@@ -281,6 +282,7 @@
           />
 
           <UploadArchiveDialog
+            v-if="uploadDialogMounted"
             v-model="showUploadDialog"
             :coursesList="coursesList"
             @upload-success="handleUploadSuccess"
@@ -435,10 +437,9 @@ defineOptions({
   name: 'ArchiveView',
 })
 
-import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, watch, inject, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import { courseService, archiveService } from '../api'
-import PdfPreviewModal from '../components/PdfPreviewModal.vue'
-import UploadArchiveDialog from '../components/UploadArchiveDialog.vue'
+import { useMountOnce } from '../utils/useMountOnce'
 import { getCurrentUser, isAuthenticated } from '../utils/auth'
 import { useTheme } from '../utils/useTheme'
 import { trackEvent, EVENTS } from '../utils/analytics'
@@ -450,6 +451,11 @@ import {
   removeLocalItem,
   setSessionJson,
 } from '../utils/storage'
+
+const PdfPreviewModal = defineAsyncComponent(() => import('../components/PdfPreviewModal.vue'))
+const UploadArchiveDialog = defineAsyncComponent(
+  () => import('../components/UploadArchiveDialog.vue')
+)
 
 const toast = inject('toast')
 const confirm = inject('confirm')
@@ -525,10 +531,12 @@ watch(
 )
 
 const showPreview = ref(false)
+const previewMounted = useMountOnce(showPreview)
 const selectedArchive = ref(null)
 const selectedSubject = ref(null)
 const selectedCourse = ref(null)
 const showUploadDialog = ref(false)
+const uploadDialogMounted = useMountOnce(showUploadDialog)
 const uploadFormProfessors = ref([])
 const expandedPanels = ref([])
 const expandedMenuItems = ref({})
