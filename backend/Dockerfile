@@ -3,6 +3,8 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 WORKDIR /app
 
 ENV UV_COMPILE_BYTECODE=1
+# Write logs straight to the container output instead of buffering them
+ENV PYTHONUNBUFFERED=1
 
 ENV UV_LINK_MODE=copy
 
