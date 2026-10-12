@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 
+import jwt
 from fastapi import WebSocket
-from jose import JWTError, jwt
+from jwt import PyJWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,7 +50,7 @@ async def get_ws_token_payload(websocket: WebSocket) -> dict | None:
             return None
 
         return payload
-    except JWTError:
+    except PyJWTError:
         return None
 
 
