@@ -80,11 +80,11 @@ docker compose -f docker/docker-compose.dev.yml run --rm backend uv run pytest  
 cd frontend && pnpm install && pnpm test --run                                   # 前端
 ```
 
-## 開發與部署
-
-- 由 `dev` 建立分支，完成後開 Pull Request 合併回 `dev`；問題回報與建議請使用 [Issues](https://github.com/NCTUCSUnion/pastexam/issues)。
-- Commit 訊息遵循 [Conventional Commits](https://www.conventionalcommits.org/)。
-- `dev` 合併至 `main` 後會自動部署並發布新版本。
+## 參與貢獻
+我們歡迎任何形式的貢獻與回饋，包含錯誤回報與功能建議：
+1. 請先查閱 [Issues](https://github.com/NCTUCSUnion/pastexam/issues)，確認是否已有相關討論。
+2. Fork 此專案並建立功能分支。
+3. 提交 Pull Request 供維護者審查。
 
 ## 授權
 
