@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app import worker
+from app.utils.crypto import encrypt_secret
 
 
 class FakeSession:
@@ -262,3 +263,35 @@ async def test_get_redis_pool_is_reused_within_an_event_loop():
     second = await worker.get_redis_pool()
     assert first is second
     assert await first.ping()
+
+
+async def test_generate_exam_content_decrypts_the_stored_key(monkeypatch):
+    user = SimpleNamespace(gemini_api_key=encrypt_secret("REAL_KEY"))
+    archive = SimpleNamespace(
+        id=1,
+        name="Midterm",
+        object_name="archives/1.pdf",
+        professor="Prof X",
+        academic_year=2024,
+        archive_type="final",
+        deleted_at=None,
+    )
+    course = SimpleNamespace(name="Algorithms", deleted_at=None)
+    fake_session = FakeSession(
+        [_user_result(user), _archives_result([(archive, course)])]
+    )
+    monkeypatch.setattr(worker, "AsyncSession", lambda *_a, **_k: fake_session)
+    monkeypatch.setattr(worker, "get_storage_client", lambda: FakeStorage())
+
+    used_keys = []
+    fake_client = FakeGenAIClient()
+
+    def make_client(api_key):
+        used_keys.append(api_key)
+        return fake_client
+
+    monkeypatch.setattr(worker.genai, "Client", make_client)
+
+    await worker.generate_exam_content(archive_ids=[1], user_id=7)
+
+    assert used_keys == ["REAL_KEY"]

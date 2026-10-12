@@ -17,6 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 from app.db.init_db import engine
 from app.models.models import Archive, Course
+from app.utils.crypto import decrypt_secret
 from app.utils.storage import get_storage_client
 
 # logging.basicConfig(level=logging.INFO)
@@ -76,12 +77,12 @@ async def generate_exam_content(
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if not user or not user.gemini_api_key:
+        api_key = decrypt_secret(user.gemini_api_key) if user else None
+        if not api_key:
             raise ValueError(
                 "User API key not found. Please configure your Gemini API key first."
             )
 
-        api_key = user.gemini_api_key
         query = (
             select(Archive, Course)
             .join(Course)
