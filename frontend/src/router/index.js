@@ -39,7 +39,7 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   if (to.name === 'LoginCallback' && to.query?.token) {
     const token = Array.isArray(to.query.token) ? to.query.token[0] : to.query.token
     const decoded = decodeToken(token)
@@ -47,26 +47,24 @@ router.beforeEach((to, from, next) => {
 
     if (decoded?.exp && decoded.exp > nowInSeconds) {
       setToken(token)
-      next({ name: 'Archive', replace: true })
-      return
+      return { name: 'Archive', replace: true }
     }
 
     removeSessionItem(STORAGE_KEYS.session.AUTH_TOKEN)
-    next({ name: 'Home', replace: true })
-    return
+    return { name: 'Home', replace: true }
   }
 
   const isLoggedIn = isAuthenticated()
   const currentUser = getCurrentUser()
 
   if (to.meta.requiresAuth && !isLoggedIn) {
-    next({ name: 'Home' })
-  } else if (to.meta.requiresGuest && isLoggedIn) {
-    next({ name: 'Archive' })
-  } else if (to.meta.requiresAdmin && (!currentUser || !currentUser.is_admin)) {
-    next({ name: 'Archive' })
-  } else {
-    next()
+    return { name: 'Home' }
+  }
+  if (to.meta.requiresGuest && isLoggedIn) {
+    return { name: 'Archive' }
+  }
+  if (to.meta.requiresAdmin && (!currentUser || !currentUser.is_admin)) {
+    return { name: 'Archive' }
   }
 })
 
