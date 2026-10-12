@@ -173,3 +173,39 @@ async def test_get_current_user_missing_user(monkeypatch, session_maker):
                 db=session,
             )
         assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "make_token",
+    [
+        # Expired
+        lambda: auth_utils.jwt.encode(
+            {"uid": 1, "exp": int((datetime.now(UTC) - timedelta(minutes=1)).timestamp())},
+            auth_utils.settings.SECRET_KEY,
+            algorithm=auth_utils.settings.ALGORITHM,
+        ),
+        # Signed with another key
+        lambda: auth_utils.jwt.encode(
+            {"uid": 1, "exp": int((datetime.now(UTC) + timedelta(minutes=5)).timestamp())},
+            "not-the-server-secret-key-0123456789",
+            algorithm=auth_utils.settings.ALGORITHM,
+        ),
+        # Unsigned ("alg": "none")
+        lambda: auth_utils.jwt.encode(
+            {"uid": 1, "exp": int((datetime.now(UTC) + timedelta(minutes=5)).timestamp())},
+            None,
+            algorithm="none",
+        ),
+    ],
+    ids=["expired", "wrong-key", "alg-none"],
+)
+async def test_get_current_user_rejects_invalid_tokens(
+    monkeypatch, session_maker, make_token
+):
+    monkeypatch.setattr(auth_utils, "get_redis", lambda: FakeRedis())
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=make_token())
+    async with session_maker() as session:
+        with pytest.raises(HTTPException) as exc:
+            await auth_utils.get_current_user(token=credentials, db=session)
+    assert exc.value.status_code == 401

@@ -17,8 +17,25 @@ from app.models.models import (
 )
 from app.utils.auth import get_current_user
 from app.utils.auth_ws import get_ws_token_payload
+from app.utils.crypto import decrypt_secret, encrypt_secret
 
 router = APIRouter()
+
+# Longer than the worker's job timeout plus queueing; the job status is always rechecked
+ACTIVE_TASK_TTL_SECONDS = 60 * 60
+
+
+def _active_task_key(user_id: int) -> str:
+    return f"ai_task_active:{user_id}"
+
+
+def _validate_gemini_api_key(api_key: str) -> None:
+    """Raise if Google rejects the key; listing models does not depend on any
+    particular model being available to the key and spends no tokens."""
+    from google import genai
+
+    client = genai.Client(api_key=api_key)
+    next(iter(client.models.list(config={"page_size": 1})), None)
 
 _STATUS_MAP = {
     JobStatus.queued: "pending",
@@ -270,27 +287,14 @@ async def submit_generate_task(
     try:
         redis = await get_redis_pool()
 
-        # Check if user already has an active job
-        active_jobs = []
-        async for key in redis.scan_iter(match="task_metadata:*"):
-            metadata_str = await redis.get(key)
-            if not metadata_str:
-                continue
-
-            metadata = json.loads(metadata_str.decode("utf-8"))
-            if metadata.get("user_id") == current_user.user_id:
-                task_id = key.decode().replace("task_metadata:", "")
-                job = Job(task_id, redis)
-                job_status_enum = await job.status()
-
-                if job_status_enum in [
-                    JobStatus.queued,
-                    JobStatus.deferred,
-                    JobStatus.in_progress,
-                ]:
-                    active_jobs.append(task_id)
-
-        if active_jobs:
+        # Only the user's latest task can still be running; its status decides
+        active_key = _active_task_key(current_user.user_id)
+        active_task_id = await redis.get(active_key)
+        if active_task_id and await Job(active_task_id.decode(), redis).status() in (
+            JobStatus.queued,
+            JobStatus.deferred,
+            JobStatus.in_progress,
+        ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=(
@@ -319,6 +323,7 @@ async def submit_generate_task(
             json.dumps(metadata),
             ex=86400,  # 24 hours TTL
         )
+        await redis.set(active_key, job.job_id, ex=ACTIVE_TASK_TTL_SECONDS)
 
         return TaskSubmitResponse(
             task_id=job.job_id,
@@ -365,6 +370,11 @@ async def delete_task(
         await redis.delete(metadata_key)
         await redis.delete(f"arq:result:{task_id}")
 
+        active_key = _active_task_key(current_user.user_id)
+        active_task_id = await redis.get(active_key)
+        if active_task_id and active_task_id.decode() == task_id:
+            await redis.delete(active_key)
+
         return {"success": True, "message": "Task deleted successfully"}
 
     except HTTPException:
@@ -395,12 +405,13 @@ async def get_api_key_status(
         if not user:
             return ApiKeyResponse(has_api_key=False, api_key_masked=None)
 
-        has_api_key = bool(user.gemini_api_key)
+        api_key = decrypt_secret(user.gemini_api_key)
+        has_api_key = bool(api_key)
         api_key_masked = None
 
         if has_api_key:
             # Show only last 4 characters
-            api_key_masked = f"****{user.gemini_api_key[-4:]}"
+            api_key_masked = f"****{api_key[-4:]}"
 
         return ApiKeyResponse(has_api_key=has_api_key, api_key_masked=api_key_masked)
     except HTTPException:
@@ -423,15 +434,18 @@ async def update_api_key(
 
     try:
         if request.gemini_api_key:
-            from google import genai
-
-            client = genai.Client(api_key=request.gemini_api_key)
-            client.models.generate_content(model="gemini-2.5-flash", contents="Hello")
+            await asyncio.to_thread(_validate_gemini_api_key, request.gemini_api_key)
 
         stmt = (
             update(User)
             .where(User.id == current_user.user_id, User.deleted_at.is_(None))
-            .values(gemini_api_key=request.gemini_api_key)
+            .values(
+                gemini_api_key=(
+                    encrypt_secret(request.gemini_api_key)
+                    if request.gemini_api_key
+                    else None
+                )
+            )
         )
         await db.execute(stmt)
         await db.commit()
@@ -443,11 +457,9 @@ async def update_api_key(
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        has_api_key = bool(user.gemini_api_key) if user else False
-        api_key_masked = None
-
-        if has_api_key and user:
-            api_key_masked = f"****{user.gemini_api_key[-4:]}"
+        api_key = decrypt_secret(user.gemini_api_key) if user else None
+        has_api_key = bool(api_key)
+        api_key_masked = f"****{api_key[-4:]}" if api_key else None
 
         return ApiKeyResponse(has_api_key=has_api_key, api_key_masked=api_key_masked)
     except HTTPException:

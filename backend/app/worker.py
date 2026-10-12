@@ -5,8 +5,9 @@ from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import ClassVar
+from weakref import WeakKeyDictionary
 
-from arq import create_pool
+from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
 from google import genai
 from google.genai.types import UploadFileConfig
@@ -16,6 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 from app.db.init_db import engine
 from app.models.models import Archive, Course
+from app.utils.crypto import decrypt_secret
 from app.utils.storage import get_storage_client
 
 # logging.basicConfig(level=logging.INFO)
@@ -49,7 +51,7 @@ async def generate_exam_content(
     archive_ids: list[int],
     user_id: int,
     prompt: str | None = None,
-    temperature: float = 0.7,
+    temperature: float | None = None,
 ) -> dict:
     """
     Core AI exam generation logic
@@ -75,12 +77,12 @@ async def generate_exam_content(
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if not user or not user.gemini_api_key:
+        api_key = decrypt_secret(user.gemini_api_key) if user else None
+        if not api_key:
             raise ValueError(
                 "User API key not found. Please configure your Gemini API key first."
             )
 
-        api_key = user.gemini_api_key
         query = (
             select(Archive, Course)
             .join(Course)
@@ -158,9 +160,9 @@ async def generate_exam_content(
             # )
             response = await asyncio.to_thread(
                 client.models.generate_content,
-                model="gemini-2.5-flash",
+                model=settings.GEMINI_MODEL,
                 contents=content,
-                config={"temperature": temperature},
+                config={"temperature": temperature} if temperature is not None else None,
             )
 
             # logger.info(f"[AI Exam] Generation completed successfully")
@@ -248,7 +250,7 @@ async def generate_ai_exam_task(ctx, task_data: dict):
             archive_ids=task_data["archive_ids"],
             user_id=task_data["user_id"],
             prompt=task_data.get("prompt"),
-            temperature=task_data.get("temperature", 0.7),
+            temperature=task_data.get("temperature"),
         )
 
         # logger.info(f"[Worker] Task completed successfully")
@@ -272,6 +274,16 @@ class WorkerSettings:
     keep_result = 86400  # Keep results for 24 hours
 
 
-async def get_redis_pool():
-    """Get Redis connection pool"""
-    return await create_pool(WorkerSettings.redis_settings)
+_redis_pools: WeakKeyDictionary[asyncio.AbstractEventLoop, ArqRedis] = (
+    WeakKeyDictionary()
+)
+
+
+async def get_redis_pool() -> ArqRedis:
+    """Get the ARQ Redis pool for the running event loop, creating it once"""
+    loop = asyncio.get_running_loop()
+    pool = _redis_pools.get(loop)
+    if pool is None:
+        pool = await create_pool(WorkerSettings.redis_settings)
+        _redis_pools[loop] = pool
+    return pool

@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app import worker
+from app.utils.crypto import encrypt_secret
 
 
 class FakeSession:
@@ -66,6 +67,8 @@ class FakeGenAIClient:
 
         class Models:
             def generate_content(self, *, model, contents, config):
+                client.last_model = model
+                client.last_config = config
                 client.last_contents = contents
                 if client.should_fail:
                     raise RuntimeError("generation failed")
@@ -133,6 +136,15 @@ async def test_generate_exam_content_success(monkeypatch):
     assert fake_storage.requests == [
         (worker.settings.RUSTFS_BUCKET_NAME, "archives/1.pdf")
     ]
+    assert fake_client.last_model == worker.settings.GEMINI_MODEL
+    assert fake_client.last_config == {"temperature": 0.5}
+
+    # Without an explicit temperature the model's own default is used
+    fake_client.uploads.clear()
+    fake_client.deleted.clear()
+    fake_session._results = [_user_result(user), _archives_result([(archive, course)])]
+    await worker.generate_exam_content(archive_ids=[1], user_id=7)
+    assert fake_client.last_config is None
 
 
 @pytest.mark.asyncio
@@ -243,3 +255,43 @@ async def test_get_redis_pool(monkeypatch):
     monkeypatch.setattr(worker, "create_pool", fake_create_pool)
     pool = await worker.get_redis_pool()
     assert pool == f"pool-for-{worker.WorkerSettings.redis_settings}"
+
+
+@pytest.mark.asyncio
+async def test_get_redis_pool_is_reused_within_an_event_loop():
+    first = await worker.get_redis_pool()
+    second = await worker.get_redis_pool()
+    assert first is second
+    assert await first.ping()
+
+
+async def test_generate_exam_content_decrypts_the_stored_key(monkeypatch):
+    user = SimpleNamespace(gemini_api_key=encrypt_secret("REAL_KEY"))
+    archive = SimpleNamespace(
+        id=1,
+        name="Midterm",
+        object_name="archives/1.pdf",
+        professor="Prof X",
+        academic_year=2024,
+        archive_type="final",
+        deleted_at=None,
+    )
+    course = SimpleNamespace(name="Algorithms", deleted_at=None)
+    fake_session = FakeSession(
+        [_user_result(user), _archives_result([(archive, course)])]
+    )
+    monkeypatch.setattr(worker, "AsyncSession", lambda *_a, **_k: fake_session)
+    monkeypatch.setattr(worker, "get_storage_client", lambda: FakeStorage())
+
+    used_keys = []
+    fake_client = FakeGenAIClient()
+
+    def make_client(api_key):
+        used_keys.append(api_key)
+        return fake_client
+
+    monkeypatch.setattr(worker.genai, "Client", make_client)
+
+    await worker.generate_exam_content(archive_ids=[1], user_id=7)
+
+    assert used_keys == ["REAL_KEY"]

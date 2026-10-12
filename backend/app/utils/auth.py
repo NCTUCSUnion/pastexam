@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt import PyJWTError
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -105,5 +106,5 @@ async def get_current_user(
 
         await record_activity(user_id)
         return UserRoles(user_id=user_id, is_admin=user.is_admin)
-    except JWTError:
+    except PyJWTError:
         raise credentials_exception

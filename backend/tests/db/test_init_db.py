@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 from contextlib import asynccontextmanager
 
@@ -6,6 +7,11 @@ import pytest
 from app.core.config import settings
 from app.db import init_db
 from app.models.models import Course, CourseCategory, Meme, User
+
+
+@asynccontextmanager
+async def _no_lock():
+    yield
 
 
 class FakeScalarResult:
@@ -105,6 +111,7 @@ async def test_init_db_creates_admin_and_seeds(monkeypatch):
         async with fake_session:
             yield fake_session
 
+    monkeypatch.setattr(init_db, "_migration_lock", _no_lock)
     monkeypatch.setattr(
         subprocess,
         "run",
@@ -180,6 +187,7 @@ async def test_init_db_fallback_when_migration_fails(monkeypatch):
 
     tracker = {"create_all": 0}
 
+    monkeypatch.setattr(init_db, "_migration_lock", _no_lock)
     monkeypatch.setattr(
         subprocess,
         "run",
@@ -208,3 +216,25 @@ async def test_init_db_fallback_when_migration_fails(monkeypatch):
 
     assert tracker["create_all"] == 1
     original_loader.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_migration_lock_lets_one_worker_migrate_at_a_time(monkeypatch):
+    from app.db import session as db_session
+
+    # Use the per-test engine from conftest
+    monkeypatch.setattr(init_db, "engine", db_session.engine)
+    events: list[str] = []
+
+    async def migrate(name: str):
+        async with init_db._migration_lock():
+            events.append(f"{name}-start")
+            await asyncio.sleep(0.2)
+            events.append(f"{name}-end")
+
+    await asyncio.gather(migrate("a"), migrate("b"))
+
+    # The second worker only starts after the first one released the lock
+    assert events[0].endswith("-start") and events[1].endswith("-end")
+    assert events[0][0] == events[1][0]
+    assert events[2][0] == events[3][0] != events[0][0]
