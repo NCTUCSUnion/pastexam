@@ -29,10 +29,8 @@ vi.mock('@/api', () => ({
   statisticsService: statisticsServiceMock,
 }))
 
-vi.mock('highlight.js', () => ({
-  default: {
-    highlight: vi.fn(() => ({ value: memeResponse.content })),
-  },
+vi.mock('@/utils/highlight', () => ({
+  highlightCode: vi.fn(() => memeResponse.content),
 }))
 
 describe('HomeView', () => {

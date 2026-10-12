@@ -1,7 +1,7 @@
 FROM node:26-alpine AS build
 WORKDIR /app
 
-RUN npm i -g pnpm@9.0.0
+RUN npm i -g pnpm@9.15.9
 
 ENV HUSKY=0
 ARG VITE_API_BASE_URL

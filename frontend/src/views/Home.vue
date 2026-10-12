@@ -104,7 +104,7 @@ defineOptions({
 })
 
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import hljs from 'highlight.js'
+import { highlightCode } from '../utils/highlight'
 import 'highlight.js/styles/atom-one-dark.css'
 import { useTheme } from '../utils/useTheme'
 import { getCodeBgSvg } from '../utils/svgBg'
@@ -243,9 +243,7 @@ function startTypewriter() {
       displayedText.value += fullText.value.charAt(charIndex)
       charIndex++
 
-      highlightedCode.value = hljs.highlight(displayedText.value, {
-        language: language.value || 'plaintext',
-      }).value
+      highlightedCode.value = highlightCode(displayedText.value, language.value)
     } else {
       clearInterval(typingInterval)
     }

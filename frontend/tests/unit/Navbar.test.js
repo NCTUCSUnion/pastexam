@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { nextTick } from 'vue'
-import { shallowMount } from '@vue/test-utils'
+import { flushPromises, shallowMount } from '@vue/test-utils'
 import Navbar from '@/components/Navbar.vue'
 
 const localLoginMock = vi.hoisted(() => vi.fn())
@@ -94,12 +94,14 @@ vi.mock('@/utils/http', () => ({
 }))
 
 vi.mock('@/components/GenerateAIExamModal.vue', () => ({
+  __esModule: true,
   default: {
     name: 'GenerateAIExamModal',
     template: '<div class="ai-exam-modal"></div>',
   },
 }))
 vi.mock('@/components/NotificationModal.vue', () => ({
+  __esModule: true,
   default: {
     name: 'NotificationModal',
     props: ['visible', 'notification'],
@@ -107,6 +109,7 @@ vi.mock('@/components/NotificationModal.vue', () => ({
   },
 }))
 vi.mock('@/components/NotificationCenterModal.vue', () => ({
+  __esModule: true,
   default: {
     name: 'NotificationCenterModal',
     props: ['visible', 'notifications'],
@@ -760,7 +763,7 @@ describe('Navbar methods', () => {
       },
     })
 
-    await nextTick()
+    await flushPromises()
 
     expect(authWrapper.find('[data-icon="pi pi-sign-in"]').exists()).toBe(false)
     expect(authWrapper.find('[data-icon="pi pi-sign-out"]').exists()).toBe(true)
