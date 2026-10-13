@@ -122,18 +122,15 @@
                 />
               </div>
 
-              <div v-if="usersLoading" class="flex justify-content-center mt-4">
-                <ProgressSpinner
-                  class="app-progress-spinner"
-                  :strokeWidth="8"
-                  aria-label="載入中"
-                />
-              </div>
+              <!-- Paging, sorting and search are done by the API -->
               <DataTable
-                v-else
-                :value="filteredUsers"
+                :value="users"
+                lazy
+                :loading="usersLoading"
+                :totalRecords="usersTotal"
+                :first="userFirst"
                 paginator
-                :rows="10"
+                :rows="userRows"
                 :rowsPerPageOptions="[5, 10, 15, 25, 50]"
                 tableStyle="min-width: 50rem"
                 scrollable
@@ -141,6 +138,8 @@
                 :multiSortMeta="userSortMeta"
                 sortMode="multiple"
                 removableSort
+                @page="onUserPage"
+                @sort="onUserSort"
               >
                 <Column field="name" header="使用者名稱" sortable style="width: 15%"></Column>
                 <Column field="email" header="電子郵件" sortable style="width: 20%"></Column>
@@ -547,7 +546,7 @@ defineOptions({
   name: 'AdminView',
 })
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { getCurrentUser } from '../utils/auth'
@@ -591,9 +590,14 @@ const courseForm = ref({
 
 const courseFormErrors = ref({})
 const users = ref([])
+const usersTotal = ref(0)
 const usersLoading = ref(false)
 const userSearchQuery = ref('')
 const filterUserType = ref(null)
+const userFirst = ref(0)
+const userRows = ref(10)
+let userRequestSeq = 0
+let userSearchTimer = null
 
 const userSortMeta = ref([
   { field: 'is_admin', order: -1 },
@@ -784,23 +788,6 @@ const filteredCourses = computed(() => {
   return filtered
 })
 
-const filteredUsers = computed(() => {
-  let filtered = users.value
-
-  if (userSearchQuery.value) {
-    const query = userSearchQuery.value.toLowerCase()
-    filtered = filtered.filter(
-      (user) => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query)
-    )
-  }
-
-  if (filterUserType.value !== null) {
-    filtered = filtered.filter((user) => user.is_admin === filterUserType.value)
-  }
-
-  return filtered
-})
-
 const filteredNotifications = computed(() => {
   let filtered = notifications.value
 
@@ -849,11 +836,27 @@ const loadCourses = async () => {
   }
 }
 
+const toUserSortParam = (meta) =>
+  (meta || []).map(({ field, order }) => (order === -1 ? `-${field}` : field)).join(',')
+
 const loadUsers = async () => {
+  // Ignore responses that arrive after a newer request was made
+  const requestId = ++userRequestSeq
   usersLoading.value = true
   try {
-    const response = await getUsers()
-    users.value = response.data
+    const params = {
+      page: Math.floor(userFirst.value / userRows.value) + 1,
+      page_size: userRows.value,
+      sort: toUserSortParam(userSortMeta.value),
+    }
+    const search = userSearchQuery.value.trim()
+    if (search) params.search = search
+    if (filterUserType.value !== null) params.is_admin = filterUserType.value
+
+    const response = await getUsers(params)
+    if (requestId !== userRequestSeq) return
+    users.value = response.data.items
+    usersTotal.value = response.data.total
   } catch (error) {
     console.error('載入使用者失敗:', error)
     if (isUnauthorizedError(error)) {
@@ -866,9 +869,35 @@ const loadUsers = async () => {
       life: 3000,
     })
   } finally {
-    usersLoading.value = false
+    if (requestId === userRequestSeq) usersLoading.value = false
   }
 }
+
+const onUserPage = (event) => {
+  userFirst.value = event.first
+  userRows.value = event.rows
+  loadUsers()
+}
+
+const onUserSort = (event) => {
+  userSortMeta.value = event.multiSortMeta ?? []
+  userFirst.value = 0
+  loadUsers()
+}
+
+const reloadUsersFromFirstPage = () => {
+  userFirst.value = 0
+  loadUsers()
+}
+
+watch(userSearchQuery, () => {
+  clearTimeout(userSearchTimer)
+  userSearchTimer = setTimeout(reloadUsersFromFirstPage, 300)
+})
+
+watch(filterUserType, reloadUsersFromFirstPage)
+
+onBeforeUnmount(() => clearTimeout(userSearchTimer))
 
 const loadNotifications = async () => {
   notificationsLoading.value = true

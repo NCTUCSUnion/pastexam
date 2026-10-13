@@ -1,6 +1,7 @@
 import uuid
 
 import pytest
+import pytest_asyncio
 from fastapi import HTTPException
 from sqlalchemy import delete
 
@@ -79,8 +80,9 @@ async def test_admin_can_list_users(client):
         response = await client.get(ADMIN_PATH)
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert data, "Expected at least one user in seed data"
+        assert data["total"] >= 1, "Expected at least one user in seed data"
+        assert data["page"] == 1 and data["page_size"] == 10
+        assert 1 <= len(data["items"]) <= 10
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -206,6 +208,11 @@ async def test_get_users_direct_requires_admin(session_maker):
     async with session_maker() as session:
         with pytest.raises(HTTPException) as exc:
             await get_users(
+                page=1,
+                page_size=10,
+                search=None,
+                is_admin=None,
+                sort="name",
                 current_user=UserRoles(user_id=1, is_admin=False),
                 db=session,
             )
@@ -225,10 +232,15 @@ async def test_get_users_direct_returns_users(session_maker):
         await session.commit()
 
         users = await get_users(
+            page=1,
+            page_size=10,
+            search="direct-list",
+            is_admin=None,
+            sort="name",
             current_user=UserRoles(user_id=2, is_admin=True),
             db=session,
         )
-        assert any(item.id == user.id for item in users)
+        assert any(item.id == user.id for item in users.items)
 
         await session.delete(user)
         await session.commit()
@@ -519,3 +531,74 @@ async def test_delete_user_direct_success(session_maker):
         remaining = await session.get(User, user.id)
         assert remaining is not None
         assert remaining.deleted_at is not None
+
+
+@pytest_asyncio.fixture
+async def paged_users(session_maker):
+    """Five users sharing a unique prefix; two of them admins."""
+    prefix = f"page-{uuid.uuid4().hex[:6]}"
+    users = [
+        User(
+            name=f"{prefix}-{i}",
+            email=f"{prefix}-{i}@example.com",
+            is_admin=i in (1, 3),
+            is_local=True,
+        )
+        for i in range(5)
+    ]
+    async with session_maker() as session:
+        session.add_all(users)
+        await session.commit()
+    yield prefix
+    async with session_maker() as session:
+        await session.execute(delete(User).where(User.name.like(f"{prefix}-%")))
+        await session.commit()
+
+
+async def _list(client, **params):
+    app.dependency_overrides[get_current_user] = lambda: UserRoles(user_id=1, is_admin=True)
+    try:
+        return await client.get(ADMIN_PATH, params=params)
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_list_users_paginates_with_total(client, paged_users):
+    first = (await _list(client, search=paged_users, page_size=2, sort="name")).json()
+    second = (await _list(client, search=paged_users, page=2, page_size=2, sort="name")).json()
+    last = (await _list(client, search=paged_users, page=3, page_size=2, sort="name")).json()
+
+    assert first["total"] == second["total"] == last["total"] == 5
+    names = [u["name"] for page in (first, second, last) for u in page["items"]]
+    assert names == [f"{paged_users}-{i}" for i in range(5)]
+
+
+@pytest.mark.asyncio
+async def test_list_users_search_is_case_insensitive_and_escapes_wildcards(
+    client, paged_users
+):
+    by_email = (await _list(client, search=f"{paged_users.upper()}-2@")).json()
+    assert [u["name"] for u in by_email["items"]] == [f"{paged_users}-2"]
+
+    # "%" is a literal character, not a wildcard
+    assert (await _list(client, search=f"{paged_users}%")).json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_list_users_filters_and_sorts(client, paged_users):
+    admins = (await _list(client, search=paged_users, is_admin=True, sort="name")).json()
+    assert [u["name"] for u in admins["items"]] == [f"{paged_users}-1", f"{paged_users}-3"]
+
+    descending = (await _list(client, search=paged_users, sort="-name")).json()
+    assert descending["items"][0]["name"] == f"{paged_users}-4"
+
+    admins_first = (await _list(client, search=paged_users, sort="-is_admin,name")).json()
+    assert [u["is_admin"] for u in admins_first["items"]] == [True, True, False, False, False]
+
+
+@pytest.mark.asyncio
+async def test_list_users_rejects_bad_parameters(client):
+    assert (await _list(client, sort="password_hash")).status_code == 400
+    assert (await _list(client, page_size=101)).status_code == 422
+    assert (await _list(client, page=0)).status_code == 422

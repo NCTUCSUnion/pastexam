@@ -226,8 +226,10 @@ describe('API service wrappers', () => {
     adminService.deleteCourse(1)
     expect(deleteMock).toHaveBeenCalledWith('/courses/admin/courses/1')
 
-    adminService.getUsers()
-    expect(getMock).toHaveBeenCalledWith('/users/admin/users')
+    adminService.getUsers({ page: 2, page_size: 10 })
+    expect(getMock).toHaveBeenCalledWith('/users/admin/users', {
+      params: { page: 2, page_size: 10 },
+    })
 
     adminService.createUser({ name: 'Alice' })
     expect(postMock).toHaveBeenCalledWith('/users/admin/users', { name: 'Alice' })
