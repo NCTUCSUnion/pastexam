@@ -201,7 +201,8 @@ export const mockAdminUserEndpoints = async (
       await route.fulfill({
         status: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify(users),
+        // Same shape as the paginated API; the fixtures fit on one page
+        body: JSON.stringify({ items: users, total: users.length, page: 1, page_size: 10 }),
       })
       return
     }

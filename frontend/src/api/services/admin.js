@@ -15,8 +15,8 @@ export const updateCourse = (courseId, courseData) => {
 export const deleteCourse = (courseId) => {
   return api.delete(`/courses/admin/courses/${courseId}`)
 }
-export const getUsers = () => {
-  return api.get('/users/admin/users')
+export const getUsers = (params) => {
+  return api.get('/users/admin/users', { params })
 }
 
 export const createUser = (userData) => {

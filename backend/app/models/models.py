@@ -176,6 +176,13 @@ class UserRead(BaseModel):
         from_attributes = True
 
 
+class UserPage(BaseModel):
+    items: list[UserRead]
+    total: int
+    page: int
+    page_size: int
+
+
 class UserCreate(BaseModel):
     name: str
     email: str

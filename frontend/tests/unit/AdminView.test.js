@@ -126,7 +126,9 @@ describe('AdminView', () => {
     updateCourseMock.mockResolvedValue()
     deleteCourseMock.mockResolvedValue()
 
-    getUsersMock.mockResolvedValue({ data: sampleUsers })
+    getUsersMock.mockResolvedValue({
+      data: { items: sampleUsers, total: sampleUsers.length, page: 1, page_size: 10 },
+    })
     createUserMock.mockResolvedValue()
     updateUserMock.mockResolvedValue()
     deleteUserMock.mockResolvedValue()
@@ -150,6 +152,39 @@ describe('AdminView', () => {
     vi.resetModules()
   })
 
+  it('pages, sorts and ignores stale user responses', async () => {
+    const wrapper = createWrapper()
+    await flushPromises()
+    await wrapper.vm.handleTabChange('1')
+    await flushPromises()
+
+    wrapper.vm.onUserPage({ first: 20, rows: 10 })
+    await flushPromises()
+    expect(getUsersMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 3, page_size: 10 })
+    )
+
+    wrapper.vm.onUserSort({ multiSortMeta: [{ field: 'email', order: -1 }] })
+    await flushPromises()
+    expect(getUsersMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, sort: '-email' })
+    )
+
+    // A slow earlier response must not replace a newer one
+    let resolveSlow
+    getUsersMock.mockImplementationOnce(() => new Promise((resolve) => (resolveSlow = resolve)))
+    getUsersMock.mockResolvedValueOnce({
+      data: { items: [sampleUsers[1]], total: 1, page: 1, page_size: 10 },
+    })
+    wrapper.vm.onUserPage({ first: 0, rows: 10 })
+    wrapper.vm.onUserPage({ first: 0, rows: 10 })
+    await flushPromises()
+    resolveSlow({ data: { items: sampleUsers, total: 2, page: 1, page_size: 10 } })
+    await flushPromises()
+    expect(wrapper.vm.users).toEqual([sampleUsers[1]])
+    expect(wrapper.vm.usersLoading).toBe(false)
+  })
+
   it('loads data and handles admin actions', async () => {
     const wrapper = createWrapper()
 
@@ -162,8 +197,9 @@ describe('AdminView', () => {
     await wrapper.vm.handleTabChange('1')
     await flushPromises()
 
-    expect(getUsersMock).toHaveBeenCalled()
-    expect(wrapper.vm.filteredUsers.length).toBe(2)
+    expect(getUsersMock).toHaveBeenCalledWith({ page: 1, page_size: 10, sort: '-is_admin,name' })
+    expect(wrapper.vm.users.length).toBe(2)
+    expect(wrapper.vm.usersTotal).toBe(2)
 
     wrapper.vm.openCreateDialog()
     wrapper.vm.courseForm.name = 'Discrete Math'
@@ -433,15 +469,27 @@ describe('AdminView', () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.vm.filteredCourses).toEqual([sampleCourses[1]])
 
+    // Search is sent to the API after the user stops typing
+    getUsersMock.mockClear()
     wrapper.vm.userSearchQuery = 'bob'
     await wrapper.vm.$nextTick()
-    expect(wrapper.vm.filteredUsers).toEqual([sampleUsers[1]])
+    expect(getUsersMock).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(300)
+    await flushPromises()
+    expect(getUsersMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: 'bob', page: 1 })
+    )
 
     wrapper.vm.userSearchQuery = ''
     await wrapper.vm.$nextTick()
+    vi.advanceTimersByTime(300)
+    await flushPromises()
     wrapper.vm.filterUserType = true
-    await wrapper.vm.$nextTick()
-    expect(wrapper.vm.filteredUsers).toEqual([sampleUsers[0]])
+    await flushPromises()
+    expect(getUsersMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ is_admin: true, page: 1 })
+    )
+    expect(getUsersMock.mock.lastCall[0]).not.toHaveProperty('search')
 
     wrapper.vm.notificationSearchQuery = '維護'
     wrapper.vm.notificationSeverityFilter = 'info'
