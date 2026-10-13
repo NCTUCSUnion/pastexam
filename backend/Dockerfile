@@ -5,6 +5,8 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
 # Write logs straight to the container output instead of buffering them
 ENV PYTHONUNBUFFERED=1
+# Trust X-Forwarded-For from nginx, the only service that can reach the backend
+ENV FORWARDED_ALLOW_IPS="*"
 
 ENV UV_LINK_MODE=copy
 

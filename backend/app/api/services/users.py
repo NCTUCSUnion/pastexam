@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
+from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.session import get_session
@@ -9,6 +10,7 @@ from app.models.models import (
     User,
     UserCreate,
     UserNicknameUpdate,
+    UserPage,
     UserRead,
     UserRoles,
     UserUpdate,
@@ -19,23 +21,80 @@ router = APIRouter()
 
 NICKNAME_MAX_LENGTH = 15
 
+# Columns the admin user list can be sorted by
+USER_SORT_FIELDS = {
+    "name": User.name,
+    "email": User.email,
+    "is_admin": User.is_admin,
+    "is_local": User.is_local,
+    "last_login": User.last_login,
+}
 
-@router.get("/admin/users", response_model=list[UserRead])
+
+def _user_order_by(sort: str):
+    """Parse "-is_admin,name" into ORDER BY clauses ("-" means descending)."""
+    clauses = []
+    for part in filter(None, (p.strip() for p in sort.split(","))):
+        descending = part.startswith("-")
+        column = USER_SORT_FIELDS.get(part.lstrip("-"))
+        if column is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot sort by {part.lstrip('-')}",
+            )
+        clauses.append(
+            column.desc().nulls_last() if descending else column.asc().nulls_last()
+        )
+    # A unique tie-breaker keeps the order stable across pages
+    clauses.append(User.id.asc())
+    return clauses
+
+
+@router.get("/admin/users", response_model=UserPage)
 async def get_users(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    search: str | None = Query(None, max_length=100),
+    is_admin: bool | None = None,
+    sort: str = Query("-is_admin,name", max_length=200),
     current_user: UserRoles = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):
     """
-    Get all users (admin only)
+    List users one page at a time, with search, filtering and sorting (admin only)
     """
     if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions"
         )
 
-    result = await db.execute(select(User).where(User.deleted_at.is_(None)))
-    users = result.scalars().all()
-    return users
+    filters = [User.deleted_at.is_(None)]
+    if search and search.strip():
+        escaped = (
+            search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        pattern = f"%{escaped}%"
+        filters.append(
+            or_(
+                User.name.ilike(pattern, escape="\\"),
+                User.email.ilike(pattern, escape="\\"),
+            )
+        )
+    if is_admin is not None:
+        filters.append(User.is_admin == is_admin)
+
+    order_by = _user_order_by(sort)
+    total = await db.scalar(select(func.count()).select_from(User).where(*filters))
+    result = await db.execute(
+        select(User)
+        .where(*filters)
+        .order_by(*order_by)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    return UserPage(
+        items=result.scalars().all(), total=total, page=page, page_size=page_size
+    )
 
 
 @router.post("/admin/users", response_model=UserRead)

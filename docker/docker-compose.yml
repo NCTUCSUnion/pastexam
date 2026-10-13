@@ -107,7 +107,8 @@ services:
     container_name: pastexam-nginx
     restart: always
     ports:
-      - "8080:8080"
+      # Only the host nginx (HTTPS) should reach this port
+      - "127.0.0.1:8080:8080"
     volumes:
       - ../proxy/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
