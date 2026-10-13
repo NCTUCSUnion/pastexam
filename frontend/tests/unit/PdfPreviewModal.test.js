@@ -45,7 +45,8 @@ vi.mock('@/utils/useUnauthorizedEvent.js', () => ({
   },
 }))
 
-vi.mock('@tato30/vue-pdf', () => {
+vi.mock('pdfjs-dist', () => ({ GlobalWorkerOptions: {} }))
+vi.mock('@tato30/vue-pdf/minimal', () => {
   const { pdfRef, pagesRef } = pdfState
   return {
     __esModule: true,

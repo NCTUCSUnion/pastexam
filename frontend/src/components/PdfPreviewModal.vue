@@ -176,12 +176,17 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { VuePDF, usePDF } from '@tato30/vue-pdf'
+import { GlobalWorkerOptions } from 'pdfjs-dist'
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import { VuePDF, usePDF } from '@tato30/vue-pdf/minimal'
 import '@tato30/vue-pdf/style.css'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 import ArchiveDiscussionPanel from './ArchiveDiscussionPanel.vue'
 import { getBooleanPreference } from '../utils/usePreferences'
 import { STORAGE_KEYS } from '../utils/storage'
+
+// The minimal build leaves the worker to us; serve the version-matched file ourselves
+GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 const DESKTOP_DEFAULT_OPEN_KEY = STORAGE_KEYS.local.DISCUSSION_DESKTOP_DEFAULT_OPEN
 
