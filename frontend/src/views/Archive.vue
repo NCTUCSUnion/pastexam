@@ -171,9 +171,11 @@
 
           <div v-else>
             <div v-if="selectedSubject">
+              <!-- lazy: only expanded years are rendered; courses can have 15+ years -->
               <Accordion
                 v-model:value="expandedPanels"
                 multiple
+                lazy
                 class="max-w-[calc(100%-2rem)] mx-auto"
               >
                 <AccordionPanel
