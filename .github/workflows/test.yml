@@ -18,7 +18,7 @@ jobs:
         run: |
           cp backend/.env.example backend/.env
           cat <<'EOF' >> backend/.env
-          SECRET_KEY=${{ secrets.BACKEND_SECRET_KEY }}
+          SECRET_KEY=${{ secrets.BACKEND_SECRET_KEY || 'ci-test-secret-key' }}
           OAUTH_CLIENT_ID=${{ secrets.BACKEND_OAUTH_CLIENT_ID }}
           OAUTH_CLIENT_SECRET=${{ secrets.BACKEND_OAUTH_CLIENT_SECRET }}
           EOF
@@ -128,7 +128,7 @@ jobs:
         run: |
           cp backend/.env.example backend/.env
           cat <<'EOF' >> backend/.env
-          SECRET_KEY=${{ secrets.BACKEND_SECRET_KEY }}
+          SECRET_KEY=${{ secrets.BACKEND_SECRET_KEY || 'ci-test-secret-key' }}
           OAUTH_CLIENT_ID=${{ secrets.BACKEND_OAUTH_CLIENT_ID }}
           OAUTH_CLIENT_SECRET=${{ secrets.BACKEND_OAUTH_CLIENT_SECRET }}
           EOF
