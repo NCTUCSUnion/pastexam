@@ -357,6 +357,7 @@ async def test_admin_course_crud_flow(
         response = await client.delete(f"/courses/admin/courses/{course_id}")
         assert response.status_code == 200
         assert "deleted successfully" in response.json()["message"]
+        assert response.json()["deleted_archives"] == 0
 
         async with session_maker() as session:
             soft_deleted = await session.get(Course, course_id)

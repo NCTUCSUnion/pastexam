@@ -342,6 +342,18 @@ describe('Navbar methods', () => {
     expect(hideSpy).toHaveBeenCalled()
   })
 
+  it('follows the window width instead of the width at first render', () => {
+    expect(Navbar.computed.isDesktopView.call({ viewportWidth: 1280 })).toBe(true)
+    expect(Navbar.computed.isDesktopView.call({ viewportWidth: 744 })).toBe(false)
+
+    const ctx = { viewportWidth: 1280 }
+    const originalWidth = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { value: 700, configurable: true })
+    Navbar.methods.updateViewportWidth.call(ctx)
+    expect(ctx.viewportWidth).toBe(700)
+    Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
+  })
+
   it('checks authentication and updates user data', () => {
     isAuthenticatedMock.mockReturnValue(true)
     getCurrentUserMock.mockReturnValue({ name: 'Alice' })

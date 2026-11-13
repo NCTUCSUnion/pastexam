@@ -225,8 +225,16 @@ describe('AdminView', () => {
     await wrapper.vm.saveCourse()
     expect(updateCourseMock).toHaveBeenCalled()
 
+    deleteCourseMock.mockResolvedValueOnce({ data: { deleted_archives: 12 } })
     wrapper.vm.confirmDeleteCourse(sampleCourses[0])
+    expect(confirmRequireMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: expect.stringContaining('所有考古題也會一併刪除') })
+    )
     expect(deleteCourseMock).toHaveBeenCalledWith(sampleCourses[0].id)
+    await flushPromises()
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: '課程已刪除，連同 12 份考古題' })
+    )
 
     wrapper.vm.openCreateUserDialog()
     wrapper.vm.userForm.name = 'Charlie'
