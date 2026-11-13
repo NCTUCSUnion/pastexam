@@ -177,17 +177,16 @@ async def generate_exam_content(
             if not response.text:
                 raise EmptyGenerationError("Gemini returned no text")
 
-            disclaimer = """⚠️ 注意事項 / NOTICE ⚠️
-此試題由 AI 自動生成，僅供參考練習使用。
-答案可能有誤，請務必自行確認正確性。
-This exam is AI-generated for reference and practice only.
-Answers may contain errors. Please verify the correctness yourself.
+            # Markdown, like the exam itself, so it renders as a callout above it
+            disclaimer = """> ⚠️ **注意事項 / NOTICE**
+> 此試題由 AI 自動生成，僅供參考練習使用。答案可能有誤，請務必自行確認正確性。
+> This exam is AI-generated for reference and practice only. Answers may contain errors. Please verify the correctness yourself.
 
-{separator}
+---
 
 """
 
-            generated_content = disclaimer.format(separator="=" * 80) + response.text
+            generated_content = disclaimer + response.text
 
             return {
                 "success": True,
