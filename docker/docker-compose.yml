@@ -27,6 +27,19 @@ services:
     #   - "8000:8000"
     env_file:
       - ../backend/.env
+    healthcheck:
+      # Also fails while migrations run or when the database is unreachable
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/statistics', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       app_network:
         aliases:

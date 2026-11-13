@@ -69,7 +69,7 @@ cd pastexam
 ### 2. 設定環境變數
 ```bash
 # Docker Compose（Postgres / RustFS）使用的環境變數
-cp docker/.env.example .env
+cp docker/.env.example docker/.env
 
 # 後端與前端各自的環境變數
 cp backend/.env.example backend/.env

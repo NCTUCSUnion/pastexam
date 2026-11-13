@@ -8,6 +8,12 @@ permissions:
   contents: read
   packages: write
 
+# Runs for the same branch wait for each other, so an older main build cannot finish
+# after a newer one and leave its images deployed
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   lint:
     uses: ./.github/workflows/lint.yml
