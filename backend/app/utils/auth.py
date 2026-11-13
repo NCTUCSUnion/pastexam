@@ -1,10 +1,15 @@
+import asyncio
+import base64
+import hashlib
+import hmac
+import re
 from datetime import UTC, datetime
 
+import bcrypt
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWTError
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -15,20 +20,67 @@ from app.models.models import User, UserRoles
 from app.utils.activity import record_activity
 from app.utils.redis import get_redis
 
-pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated=["bcrypt"])
+# Hashes use passlib's bcrypt_sha256 v2 format so existing rows keep verifying:
+# bcrypt(base64(hmac_sha256(key=salt, msg=password)), salt, rounds). The HMAC only
+# fits any password into bcrypt's 72-byte input; bcrypt provides the work factor.
+# Plain bcrypt hashes are still accepted on verify. passlib's older v1 format
+# (unkeyed sha256) is not: no stored password uses it.
+_BCRYPT_SHA256_ROUNDS = 12
+_BCRYPT_SHA256_V2 = re.compile(
+    r"^\$bcrypt-sha256\$v=2,t=(?P<ident>2b),r=(?P<rounds>\d{1,2})"
+    r"\$(?P<salt>[^$]{22})\$(?P<digest>[^$]{31})$"
+)
+_BCRYPT_MAX_BYTES = 72
 
 oauth2_scheme = HTTPBearer()
 
 
+def _hmac_key(password: bytes, salt: str) -> bytes:
+    return base64.b64encode(
+        hmac.new(salt.encode("ascii"), password, hashlib.sha256).digest()
+    )
+
+
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    config = bcrypt.gensalt(rounds=_BCRYPT_SHA256_ROUNDS, prefix=b"2b").decode("ascii")
+    salt = config[-22:]
+    hashed = bcrypt.hashpw(
+        _hmac_key(password.encode("utf-8"), salt), config.encode("ascii")
+    )
+    digest = hashed.decode("ascii")[-31:]
+    return f"$bcrypt-sha256$v=2,t=2b,r={_BCRYPT_SHA256_ROUNDS}${salt}${digest}"
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    secret = plain_password.encode("utf-8")
+    try:
+        if match := _BCRYPT_SHA256_V2.match(hashed_password):
+            key = _hmac_key(secret, match["salt"])
+        else:
+            return bcrypt.checkpw(
+                secret[:_BCRYPT_MAX_BYTES], hashed_password.encode("ascii")
+            )
+        rounds = int(match["rounds"])
+        bcrypt_hash = f"${match['ident']}${rounds:02d}${match['salt']}{match['digest']}"
+        return bcrypt.checkpw(key, bcrypt_hash.encode("ascii"))
+    except ValueError:
+        return False
 
 
-async def blacklist_token(token: str, expire_seconds: int = 7200):
+def _seconds_until_expiry(token: str) -> int:
+    """Seconds left on a token, so a blacklist entry lives exactly as long as it."""
+    try:
+        exp = jwt.decode(token, options={"verify_signature": False}).get("exp")
+    except PyJWTError:
+        exp = None
+    if exp is None:
+        return settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    return max(int(exp - datetime.now(UTC).timestamp()), 1)
+
+
+async def blacklist_token(token: str, expire_seconds: int | None = None):
+    if expire_seconds is None:
+        expire_seconds = _seconds_until_expiry(token)
     await get_redis().setex(f"blacklist:{token}", expire_seconds, "1")
 
 
@@ -52,7 +104,8 @@ async def authenticate_user(name: str, password: str, db: AsyncSession) -> User 
 
     if not user.password_hash:
         return None
-    if not verify_password(password, user.password_hash):
+    # bcrypt takes a few hundred ms; keep it off the event loop
+    if not await asyncio.to_thread(verify_password, password, user.password_hash):
         return None
 
     return user

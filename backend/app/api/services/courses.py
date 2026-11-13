@@ -16,6 +16,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
+from app.db import session as db_session
 from app.db.session import get_session
 from app.models.models import (
     Archive,
@@ -33,9 +34,10 @@ from app.models.models import (
     User,
     UserRoles,
 )
-from app.utils.auth import get_current_user
-from app.utils.auth_ws import get_ws_token_payload
+from app.utils.auth import get_current_user, is_token_blacklisted
+from app.utils.auth_ws import get_ws_token, get_ws_token_payload
 from app.utils.discussion_hub import discussion_hub
+from app.utils.names import find_course, require_name
 from app.utils.rate_limit import consume
 from app.utils.storage import presigned_get_url
 
@@ -103,7 +105,12 @@ async def get_course_archives(
     result = await db.execute(query)
     archives = result.scalars().all()
 
-    return archives
+    return [
+        ArchiveRead.model_validate(archive).model_copy(
+            update={"is_mine": archive.uploader_id == current_user.user_id}
+        )
+        for archive in archives
+    ]
 
 
 @router.get("/{course_id}/archives/{archive_id}/preview")
@@ -185,6 +192,12 @@ async def _ensure_archive_exists_for_discussion(
     return archive
 
 
+async def _get_active_user(user_id: int, db: AsyncSession) -> User | None:
+    return await db.scalar(
+        select(User).where(User.id == user_id, User.deleted_at.is_(None))
+    )
+
+
 async def _fetch_archive_discussion_messages(
     archive_id: int,
     db: AsyncSession,
@@ -251,10 +264,12 @@ async def archive_discussion_ws(
     websocket: WebSocket,
     course_id: int,
     archive_id: int,
-    db: AsyncSession = Depends(get_session),
 ):
+    # A discussion socket stays open as long as the preview is, so it must not hold
+    # a pooled DB connection: every query below opens and closes its own session.
     await websocket.accept()
 
+    token = get_ws_token(websocket)
     payload = await get_ws_token_payload(websocket)
     if not payload:
         await websocket.close(code=4401)
@@ -265,28 +280,26 @@ async def archive_discussion_ws(
         await websocket.close(code=4401)
         return
 
-    user = await db.scalar(
-        select(User).where(User.id == user_id, User.deleted_at.is_(None))
-    )
-    if not user:
-        await websocket.close(code=4401)
-        return
-
     exp = payload.get("exp")
     exp_ts = float(exp) if exp is not None else None
 
-    try:
-        await _ensure_archive_exists_for_discussion(course_id, archive_id, db)
-    except HTTPException:
-        await websocket.close(code=1008)
-        return
+    async with db_session.AsyncSessionLocal() as db:
+        if not await _get_active_user(user_id, db):
+            await websocket.close(code=4401)
+            return
+        try:
+            await _ensure_archive_exists_for_discussion(course_id, archive_id, db)
+        except HTTPException:
+            await websocket.close(code=1008)
+            return
 
     await discussion_hub.connect(archive_id, websocket)
 
     try:
-        history = await _fetch_archive_discussion_messages(
-            archive_id, db, limit=50, before_id=None
-        )
+        async with db_session.AsyncSessionLocal() as db:
+            history = await _fetch_archive_discussion_messages(
+                archive_id, db, limit=50, before_id=None
+            )
         await websocket.send_json(
             jsonable_encoder({"type": "history", "messages": history})
         )
@@ -324,8 +337,13 @@ async def archive_discussion_ws(
                 )
                 continue
 
+            # Logging out or being deleted must also end an already open socket.
+            if token and await is_token_blacklisted(token):
+                await websocket.close(code=4401)
+                return
+
             retry_after = await consume(
-                f"discussion:{user.id}",
+                f"discussion:{user_id}",
                 settings.DISCUSSION_MESSAGE_LIMIT_PER_MINUTE,
                 60,
             )
@@ -341,27 +359,20 @@ async def archive_discussion_ws(
                 )
                 continue
 
-            message = ArchiveDiscussionMessage(
-                archive_id=archive_id,
-                user_id=user.id,
-                content=content,
-                created_at=datetime.now(UTC),
-            )
-            db.add(message)
-            await db.commit()
-            await db.refresh(message)
+            async with db_session.AsyncSessionLocal() as db:
+                user = await _get_active_user(user_id, db)
+                if not user:
+                    await websocket.close(code=4401)
+                    return
 
-            # Fetch latest nickname each time (user object may be stale while WS is open).
-            user_row = (
-                await db.execute(
-                    select(User.nickname, User.name).where(User.id == user.id)
+                message = ArchiveDiscussionMessage(
+                    archive_id=archive_id,
+                    user_id=user.id,
+                    content=content,
+                    created_at=datetime.now(UTC),
                 )
-            ).one_or_none()
-            latest_display_name = None
-            if user_row:
-                latest_display_name = _discussion_public_display_name(
-                    user_id=user.id, nickname=user_row[0], name=user_row[1]
-                )
+                db.add(message)
+                await db.commit()
 
             payload = jsonable_encoder(
                 {
@@ -370,8 +381,7 @@ async def archive_discussion_ws(
                         id=message.id,
                         archive_id=message.archive_id,
                         user_id=message.user_id,
-                        user_name=latest_display_name
-                        or _discussion_public_display_name(
+                        user_name=_discussion_public_display_name(
                             user_id=user.id, nickname=user.nickname, name=user.name
                         ),
                         content=message.content,
@@ -458,9 +468,9 @@ async def update_archive(
         )
 
     if name is not None:
-        archive.name = name
+        archive.name = require_name(name, "Archive name")
     if professor is not None:
-        archive.professor = professor
+        archive.professor = require_name(professor, "Professor")
     if archive_type is not None:
         archive.archive_type = archive_type
     if has_answers is not None:
@@ -532,13 +542,8 @@ async def update_archive_course(
             )
     elif course_update.course_name and course_update.course_category:
         # Transfer to course by name and category, create if not exists
-        new_course_query = select(Course).where(
-            Course.name == course_update.course_name,
-            Course.category == course_update.course_category,
-            Course.deleted_at.is_(None),
-        )
-        new_course_result = await db.execute(new_course_query)
-        new_course = new_course_result.scalar_one_or_none()
+        course_name = require_name(course_update.course_name, "Course name")
+        new_course = await find_course(db, course_name, course_update.course_category)
 
         if new_course:
             # Check if trying to transfer to the same course
@@ -549,9 +554,7 @@ async def update_archive_course(
                 )
         else:
             # Create new course if it doesn't exist
-            new_course = Course(
-                name=course_update.course_name, category=course_update.course_category
-            )
+            new_course = Course(name=course_name, category=course_update.course_category)
             db.add(new_course)
             await db.commit()
             await db.refresh(new_course)
@@ -629,21 +632,14 @@ async def create_course(
             detail="Only admins can create courses",
         )
 
-    query = select(Course).where(
-        Course.name == course_data.name,
-        Course.category == course_data.category,
-        Course.deleted_at.is_(None),
-    )
-    result = await db.execute(query)
-    existing_course = result.scalar_one_or_none()
-
-    if existing_course:
+    name = require_name(course_data.name, "Course name")
+    if await find_course(db, name, course_data.category):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Course with this name and category already exists",
         )
 
-    course = Course(name=course_data.name, category=course_data.category)
+    course = Course(name=name, category=course_data.category)
 
     db.add(course)
     await db.commit()
@@ -677,6 +673,8 @@ async def update_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
+    if course_data.name is not None:
+        course_data.name = require_name(course_data.name, "Course name")
     if course_data.name is not None or course_data.category is not None:
         new_name = course_data.name if course_data.name is not None else course.name
         new_category = (
@@ -685,21 +683,14 @@ async def update_course(
             else course.category
         )
 
-        if new_name != course.name or new_category != course.category:
-            check_query = select(Course).where(
-                Course.name == new_name,
-                Course.category == new_category,
-                Course.id != course_id,
-                Course.deleted_at.is_(None),
+        changed = new_name != course.name or new_category != course.category
+        if changed and await find_course(
+            db, new_name, new_category, exclude_id=course_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Course with this name and category already exists",
             )
-            check_result = await db.execute(check_query)
-            existing_course = check_result.scalar_one_or_none()
-
-            if existing_course:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Course with this name and category already exists",
-                )
 
     if course_data.name is not None:
         course.name = course_data.name
@@ -757,7 +748,8 @@ async def delete_course(
         "message": (
             f"Course '{course.name}' and {len(archives)} associated "
             f"archives deleted successfully"
-        )
+        ),
+        "deleted_archives": len(archives),
     }
 
 

@@ -27,6 +27,20 @@ services:
     #   - "8000:8000"
     env_file:
       - ../backend/.env
+    healthcheck:
+      # Fails until startup (including migrations) has finished; /statistics answers
+      # even when the database is down, so this does not detect a lost database
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/statistics', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       app_network:
         aliases:
@@ -37,6 +51,8 @@ services:
     container_name: pastexam-worker
     restart: always
     command: arq app.worker.WorkerSettings
+    # Lets running AI jobs finish (job_completion_wait in app/worker.py) before a kill
+    stop_grace_period: 75s
     depends_on:
       db:
         condition: service_healthy

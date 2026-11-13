@@ -114,6 +114,8 @@
       :visible="notificationStore.state.centerVisible"
       :notifications="notificationStore.state.all"
       :loading="notificationStore.state.loadingAll"
+      :error="Boolean(notificationStore.errors.all)"
+      @retry="notificationStore.refreshAll()"
       @update:visible="handleNotificationCenterVisible"
       @mark-seen="handleNotificationDetailSeen"
     />
@@ -335,6 +337,8 @@ export default {
       aiExamDialogMounted: false,
       notificationCenterMounted: false,
       coursesList: null,
+      // Tracked so the layout follows window resizes and device rotation
+      viewportWidth: typeof window === 'undefined' ? 0 : window.innerWidth,
     }
   },
   setup() {
@@ -352,6 +356,9 @@ export default {
     }
   },
   mounted() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', this.updateViewportWidth)
+    }
     this.checkAuthentication()
     if (this.isAuthenticated) {
       void this.initializeNotifications()
@@ -370,6 +377,9 @@ export default {
   },
 
   beforeUnmount() {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', this.updateViewportWidth)
+    }
     if (typeof window !== 'undefined' && window.__pastexam) {
       delete window.__pastexam.openLoginModal
     }
@@ -431,6 +441,10 @@ export default {
       }
     },
 
+    updateViewportWidth() {
+      this.viewportWidth = window.innerWidth
+    },
+
     invokeMenuAction(action) {
       if (this.$refs.moreActionsMenu?.hide) {
         this.$refs.moreActionsMenu.hide()
@@ -446,7 +460,7 @@ export default {
     },
 
     handleNotificationDismiss(notification) {
-      this.notificationStore.markNotificationAsSeen(notification)
+      this.notificationStore.dismissNotification(notification)
     },
 
     handleNotificationCenterVisible(value) {
@@ -838,10 +852,7 @@ export default {
 
   computed: {
     isDesktopView() {
-      if (typeof window === 'undefined') {
-        return false
-      }
-      return window.innerWidth >= 768
+      return this.viewportWidth >= 768
     },
 
     menuItems() {

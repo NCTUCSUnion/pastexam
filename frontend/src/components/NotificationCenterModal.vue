@@ -18,6 +18,15 @@
       <div v-if="loading" class="flex justify-content-center py-5">
         <ProgressSpinner class="app-progress-spinner" :strokeWidth="8" aria-label="載入中" />
       </div>
+      <div
+        v-else-if="error"
+        class="flex flex-column align-items-center gap-2 py-5 text-500"
+        role="alert"
+      >
+        <i class="pi pi-exclamation-circle text-4xl"></i>
+        <span class="text-sm mt-2">無法載入公告，請稍後再試</span>
+        <Button label="重試" icon="pi pi-refresh" size="small" text @click="emit('retry')" />
+      </div>
       <div v-else>
         <div
           v-if="notifications.length === 0"
@@ -125,9 +134,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Loading failed, so an empty list would wrongly read as "no notices"
+  error: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['update:visible', 'mark-seen'])
+const emit = defineEmits(['update:visible', 'mark-seen', 'retry'])
 
 const resolveSeverity = (value) => (value === 'danger' ? 'danger' : 'info')
 const resolveSeverityLabel = (value) => (value === 'danger' ? '重要' : '一般')

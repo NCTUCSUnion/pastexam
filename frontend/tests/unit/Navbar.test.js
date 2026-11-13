@@ -22,9 +22,12 @@ const notificationStoreMock = vi.hoisted(() => ({
     initialized: false,
     loadingAll: false,
   },
+  errors: { active: null, all: null },
   initNotifications: vi.fn(),
+  refreshAll: vi.fn(),
   openCenter: vi.fn(),
   markNotificationAsSeen: vi.fn(),
+  dismissNotification: vi.fn(),
   latestUnseenNotification: null,
 }))
 
@@ -293,7 +296,7 @@ describe('Navbar methods', () => {
     expect(notificationStoreMock.state.modalVisible).toBe(true)
 
     Navbar.methods.handleNotificationDismiss.call(ctx, { id: 1 })
-    expect(notificationStoreMock.markNotificationAsSeen).toHaveBeenCalledWith({ id: 1 })
+    expect(notificationStoreMock.dismissNotification).toHaveBeenCalledWith({ id: 1 })
 
     Navbar.methods.handleNotificationCenterVisible.call(ctx, true)
     expect(notificationStoreMock.state.centerVisible).toBe(true)
@@ -340,6 +343,18 @@ describe('Navbar methods', () => {
     hideSpy.mockClear()
     Navbar.methods.invokeMenuAction.call(ctx, 'not-a-function')
     expect(hideSpy).toHaveBeenCalled()
+  })
+
+  it('follows the window width instead of the width at first render', () => {
+    expect(Navbar.computed.isDesktopView.call({ viewportWidth: 1280 })).toBe(true)
+    expect(Navbar.computed.isDesktopView.call({ viewportWidth: 744 })).toBe(false)
+
+    const ctx = { viewportWidth: 1280 }
+    const originalWidth = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { value: 700, configurable: true })
+    Navbar.methods.updateViewportWidth.call(ctx)
+    expect(ctx.viewportWidth).toBe(700)
+    Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
   })
 
   it('checks authentication and updates user data', () => {

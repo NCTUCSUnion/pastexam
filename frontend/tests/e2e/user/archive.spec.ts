@@ -28,7 +28,7 @@ test.describe('User › Archive browsing', () => {
         professor: '王教授',
         has_answers: true,
         download_count: archiveDownloadCount,
-        uploader_id: 9,
+        is_mine: false,
       },
     ]
 

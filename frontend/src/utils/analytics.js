@@ -55,6 +55,7 @@ export const EVENTS = {
   EDIT_ARCHIVE: 'edit-archive',
   DELETE_ARCHIVE: 'delete-archive',
   GENERATE_AI_EXAM: 'generate-ai-exam',
+  DOWNLOAD_AI_EXAM: 'download-ai-exam',
   SEARCH_COURSE: 'search-course',
   SELECT_COURSE: 'select-course',
   FILTER_ARCHIVES: 'filter-archives',

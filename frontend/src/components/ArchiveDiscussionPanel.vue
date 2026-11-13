@@ -22,6 +22,21 @@
       <div v-if="loading" class="flex-1 flex align-items-center justify-content-center">
         <ProgressSpinner class="app-progress-spinner" :strokeWidth="8" aria-label="載入中" />
       </div>
+      <div
+        v-else-if="!historyLoaded"
+        class="flex flex-column align-items-center gap-2 text-sm"
+        style="color: var(--text-secondary)"
+      >
+        <div>無法連線到討論區</div>
+        <Button
+          label="重新連線"
+          icon="pi pi-refresh"
+          severity="secondary"
+          size="small"
+          text
+          @click="reconnectNow"
+        />
+      </div>
       <div v-else-if="messages.length === 0" class="text-sm" style="color: var(--text-secondary)">
         還沒有人發起討論，來當第一個吧！
       </div>
@@ -186,6 +201,8 @@ const emit = defineEmits(['desktop-default-open-change'])
 
 const messages = ref([])
 const loading = ref(false)
+// True once the server has sent history, so an empty list means "no messages" rather than "not connected".
+const historyLoaded = ref(false)
 const connected = ref(false)
 const connecting = ref(false)
 const draft = ref('')
@@ -194,6 +211,8 @@ const toast = inject('toast', null)
 const confirm = inject('confirm', null)
 
 let socket = null
+// Text of the last sent message, restored into the input if the server rejects it.
+let pendingContent = null
 let reconnectTimer = null
 let connectSeq = 0
 
@@ -324,6 +343,7 @@ async function connect() {
   connecting.value = true
   connected.value = false
   loading.value = true
+  historyLoaded.value = false
 
   const ws = discussionService.openArchiveDiscussionWebSocket(courseId, archiveId)
   if (!ws) {
@@ -347,12 +367,17 @@ async function connect() {
       if (!data || typeof data !== 'object') return
       if (data.type === 'history' && Array.isArray(data.messages)) {
         messages.value = data.messages
+        historyLoaded.value = true
         loading.value = false
         await nextTick()
         scrollToBottom()
         return
       }
       if (data.type === 'error') {
+        if (pendingContent !== null && !draft.value) {
+          draft.value = pendingContent
+        }
+        pendingContent = null
         toast?.add?.({
           severity: 'error',
           summary: '送出失敗',
@@ -363,14 +388,17 @@ async function connect() {
       }
       if (data.type === 'message' && data.message) {
         const incoming = data.message
+        if (messages.value.some((m) => m.id === incoming.id)) return
         const user = currentUser.value
         const preferredName = (profile.value.nickname || profile.value.name || '').trim()
         const normalized =
           user && preferredName && incoming.user_id === user.id
             ? { ...incoming, user_name: preferredName }
             : incoming
+        if (user && incoming.user_id === user.id) pendingContent = null
 
-        messages.value = [...messages.value, normalized]
+        // Broadcasts from different backend workers can arrive out of order.
+        messages.value = [...messages.value, normalized].sort((a, b) => a.id - b.id)
         await nextTick()
         scrollToBottom()
         return
@@ -422,10 +450,16 @@ async function send() {
       archiveId: normalizeId(props.archiveId),
       length: rawContent.length,
     })
+    pendingContent = rawContent
     draft.value = ''
   } catch {
     // ignore
   }
+}
+
+function reconnectNow() {
+  reconnectAttempts.value = 0
+  connect()
 }
 
 function canDelete(msg) {

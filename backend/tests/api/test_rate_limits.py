@@ -48,6 +48,31 @@ async def test_login_is_locked_after_repeated_failures(
 
 
 @pytest.mark.asyncio
+async def test_parallel_failed_logins_cannot_exceed_the_limit(
+    client: AsyncClient, make_user, monkeypatch
+):
+    import asyncio
+
+    user = await make_user()
+    monkeypatch.setattr(settings, "LOGIN_FAILURE_LIMIT", 3)
+    key = f"{KEY_PREFIX}login:{user.name.lower()}"
+
+    try:
+        responses = await asyncio.gather(
+            *(
+                client.post(
+                    "/auth/login", data={"username": user.name, "password": "wrong"}
+                )
+                for _ in range(12)
+            )
+        )
+        codes = sorted(r.status_code for r in responses)
+        assert codes == [401] * 3 + [429] * 9
+    finally:
+        await get_redis().delete(key)
+
+
+@pytest.mark.asyncio
 async def test_successful_login_does_not_count(
     client: AsyncClient, make_user, monkeypatch
 ):
@@ -113,6 +138,32 @@ async def test_upload_limit_applies_to_regular_users_only(
             await session.execute(delete(Archive).where(Archive.uploader_id == user.id))
             await session.execute(delete(Course).where(Course.name == subject))
             await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_failed_uploads_count_toward_the_limit(
+    client: AsyncClient, make_user, monkeypatch
+):
+    user = await make_user()
+    subject = f"Rate Limit Course {uuid.uuid4().hex[:8]}"
+    monkeypatch.setattr(settings, "UPLOAD_LIMIT_PER_HOUR", 1)
+
+    class BrokenStorage:
+        def put_object(self, **kwargs):
+            raise RuntimeError("storage down")
+
+    monkeypatch.setattr(
+        "app.api.services.archives.get_storage_client", lambda: BrokenStorage()
+    )
+    app.dependency_overrides[get_current_user] = lambda: UserRoles(
+        user_id=user.id, is_admin=False
+    )
+    try:
+        assert (await _upload(client, subject)).status_code == 500
+        assert (await _upload(client, subject)).status_code == 429
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        await get_redis().delete(f"{KEY_PREFIX}upload:{user.id}")
 
 
 @pytest.mark.asyncio

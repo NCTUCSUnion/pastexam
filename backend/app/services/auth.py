@@ -35,8 +35,9 @@ async def oauth_callback(
         raise HTTPException(
             status_code=token_resp.status_code, detail="OAuth token exchange failed"
         )
-    token_data = token_resp.json()
-    access_token = token_data["access_token"]
+    access_token = token_resp.json().get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=502, detail="OAuth token response has no token")
 
     try:
         async with httpx.AsyncClient() as client:

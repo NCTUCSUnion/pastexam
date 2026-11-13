@@ -30,3 +30,7 @@ export const updateUser = (userId, userData) => {
 export const deleteUser = (userId) => {
   return api.delete(`/users/admin/users/${userId}`)
 }
+
+export const restoreUser = (userId) => {
+  return api.post(`/users/admin/users/${userId}/restore`)
+}

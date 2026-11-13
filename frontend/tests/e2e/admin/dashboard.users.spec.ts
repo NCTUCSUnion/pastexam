@@ -14,7 +14,7 @@ test.describe('Admin Dashboard › Users', () => {
     })
   })
 
-  test('allows creating, editing, and deleting users', async ({ page }) => {
+  test('allows creating, editing, and suspending users', async ({ page }) => {
     await mockAdminCourseEndpoints(page)
     const { createPayloads, updatePayloads, deleteIds } = await mockAdminUserEndpoints(page)
 
@@ -78,16 +78,16 @@ test.describe('Admin Dashboard › Users', () => {
     await expect(updatedUserRow).toBeVisible()
     await expect(updatedUserRow).toContainText('是')
 
-    const deleteRow = page.getByRole('row', { name: /新用戶/ })
-    await clickWhenVisible(deleteRow.getByRole('button', { name: '刪除' }))
+    const suspendRow = page.getByRole('row', { name: /新用戶/ })
+    await clickWhenVisible(suspendRow.getByRole('button', { name: '停權' }))
 
-    const dialog = page.getByRole('alertdialog', { name: '刪除確認' })
+    const dialog = page.getByRole('alertdialog', { name: '停權確認' })
     await expect(dialog).toBeVisible()
 
     const previousDeleteCount = deleteIds.length
-    await clickWhenVisible(dialog.getByRole('button', { name: '刪除' }))
+    await clickWhenVisible(dialog.getByRole('button', { name: '停權' }))
     await expect
-      .poll(() => deleteIds.length, { message: '等待刪除 API 完成' })
+      .poll(() => deleteIds.length, { message: '等待停權 API 完成' })
       .toBe(previousDeleteCount + 1)
 
     expect(deleteIds.length).toBeGreaterThan(0)

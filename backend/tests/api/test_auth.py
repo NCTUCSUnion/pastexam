@@ -1,10 +1,12 @@
 import uuid
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi import HTTPException
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import delete, select
 
 from app.api.services import auth as auth_service
@@ -81,7 +83,23 @@ async def test_oauth_login_and_callback_creates_user(
     assert callback_response.status_code in {302, 307}
     redirect_url = callback_response.headers["location"]
     assert "/login/callback" in redirect_url
-    assert "token=" in redirect_url
+    assert "token=" not in redirect_url
+    code = parse_qs(urlparse(redirect_url).query)["code"][0]
+
+    # Another browser (no session cookie) cannot redeem the code
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as other_browser:
+        stolen = await other_browser.post("/auth/oauth/exchange", json={"code": code})
+    assert stolen.status_code == 400
+
+    exchange = await client.post("/auth/oauth/exchange", json={"code": code})
+    assert exchange.status_code == 200
+    assert exchange.json()["access_token"]
+
+    # One-time use
+    replay = await client.post("/auth/oauth/exchange", json={"code": code})
+    assert replay.status_code == 400
 
     async with session_maker() as session:
         result = await session.execute(
@@ -98,7 +116,7 @@ async def test_oauth_login_and_callback_creates_user(
 
 
 @pytest.mark.asyncio
-async def test_oauth_callback_invalid_response_returns_400(
+async def test_oauth_callback_invalid_response_redirects_with_error(
     client,
     monkeypatch,
 ):
@@ -123,8 +141,9 @@ async def test_oauth_callback_invalid_response_returns_400(
         params={"code": "bad-code", "state": state},
         follow_redirects=False,
     )
-    assert callback_response.status_code == 400
-    assert callback_response.json()["detail"] == "Invalid OAuth response"
+    assert callback_response.status_code in {302, 307}
+    query = parse_qs(urlparse(callback_response.headers["location"]).query)
+    assert query == {"error": ["provider"]}
 
 
 @pytest.mark.asyncio
@@ -310,7 +329,10 @@ async def test_auth_callback_direct_creates_user(monkeypatch, session_maker):
             db=session,
         )
         assert response.status_code in {302, 307}
-        assert "direct-token" in response.headers["location"]
+        location = response.headers["location"]
+        assert "direct-token" not in location
+        code = parse_qs(urlparse(location).query)["code"][0]
+        assert fake_request.session["oauth_code"] == code
 
     async with session_maker() as session:
         created = await session.execute(
@@ -357,3 +379,121 @@ async def test_logout_direct_without_header(monkeypatch, session_maker):
         await session.commit()
 
     assert calls == []
+
+
+async def _oauth_callback_with(client, monkeypatch, info, **extra_params):
+    login_response = await client.get("/auth/oauth/login", follow_redirects=False)
+    state = parse_qs(urlparse(login_response.headers["location"]).query)["state"][0]
+    monkeypatch.setattr(
+        "app.api.services.auth.oauth_callback", AsyncMock(return_value=info)
+    )
+    response = await client.get(
+        "/auth/oauth/callback",
+        params={"code": "dummy", "state": state, **extra_params},
+        follow_redirects=False,
+    )
+    assert response.status_code in {302, 307}
+    return parse_qs(urlparse(response.headers["location"]).query)
+
+
+@pytest.mark.asyncio
+async def test_oauth_callback_rejects_suspended_user(
+    client, monkeypatch, session_maker
+):
+    suffix = uuid.uuid4().hex[:8]
+    async with session_maker() as session:
+        user = User(
+            name=f"suspended-{suffix}",
+            email=f"suspended-{suffix}@example.com",
+            oauth_provider="nycu",
+            oauth_sub=f"suspended-{suffix}",
+            is_admin=True,
+            deleted_at=datetime.now(UTC),
+        )
+        session.add(user)
+        await session.commit()
+        user_id = user.id
+
+    try:
+        query = await _oauth_callback_with(
+            client,
+            monkeypatch,
+            {
+                "provider": "nycu",
+                "sub": f"suspended-{suffix}",
+                "email": f"suspended-{suffix}@example.com",
+                "name": f"suspended-{suffix}",
+            },
+        )
+        assert query == {"error": ["suspended"]}
+
+        async with session_maker() as session:
+            still_suspended = await session.get(User, user_id)
+            assert still_suspended.deleted_at is not None
+    finally:
+        async with session_maker() as session:
+            await session.execute(delete(User).where(User.id == user_id))
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_oauth_callback_name_conflict_redirects_with_error(
+    client, monkeypatch, make_user
+):
+    existing = await make_user(name=f"taken-{uuid.uuid4().hex[:8]}")
+
+    query = await _oauth_callback_with(
+        client,
+        monkeypatch,
+        {
+            "provider": "nycu",
+            "sub": f"new-sub-{uuid.uuid4().hex[:8]}",
+            "email": f"{uuid.uuid4().hex[:8]}@example.com",
+            "name": existing.name,
+        },
+    )
+    assert query == {"error": ["conflict"]}
+
+
+@pytest.mark.asyncio
+async def test_oauth_callback_denied_by_provider(client, monkeypatch):
+    query = await _oauth_callback_with(
+        client, monkeypatch, {}, error="access_denied"
+    )
+    assert query == {"error": ["denied"]}
+
+
+@pytest.mark.asyncio
+async def test_oauth_callback_bad_state_redirects_with_error(client):
+    response = await client.get(
+        "/auth/oauth/callback",
+        params={"code": "dummy", "state": "forged"},
+        follow_redirects=False,
+    )
+    assert response.status_code in {302, 307}
+    query = parse_qs(urlparse(response.headers["location"]).query)
+    assert query == {"error": ["state"]}
+
+
+@pytest.mark.asyncio
+async def test_oauth_exchange_rejects_unknown_code(client):
+    response = await client.post("/auth/oauth/exchange", json={"code": "nope"})
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_oauth_exchange_rejects_non_ascii_code(client, monkeypatch):
+    query = await _oauth_callback_with(
+        client,
+        monkeypatch,
+        {
+            "provider": "nycu",
+            "sub": f"ascii-{uuid.uuid4().hex[:8]}",
+            "email": f"{uuid.uuid4().hex[:8]}@example.com",
+            "name": f"ascii-{uuid.uuid4().hex[:8]}",
+        },
+    )
+    assert "code" in query
+
+    response = await client.post("/auth/oauth/exchange", json={"code": "代碼"})
+    assert response.status_code == 400

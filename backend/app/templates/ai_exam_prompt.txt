@@ -31,8 +31,14 @@ CRITICAL REQUIREMENTS:
 
 6. STRICT OUTPUT FORMAT:
    - Start with exam questions immediately
-   - Add a clear separator (e.g., "===== 參考解答 =====" or "===== ANSWER KEY =====")
+   - Put the answer key under its own heading (e.g., "## 參考解答" or "## Answer Key")
    - End with the complete answer key
+
+7. MARKDOWN FORMATTING (the result is rendered and printed as a PDF):
+   - Write GitHub-flavored Markdown; do NOT wrap the whole response in a code block
+   - Use "#" for the exam title, "##" for sections, and a numbered list for questions, with the points in each question
+   - Write ALL math in LaTeX: inline as $...$ and displayed equations as $$...$$ on their own lines
+   - Put code in fenced code blocks with a language (e.g. ```c); use Markdown tables for tabular data
    - DO NOT add any concluding statements like "預期的結果", "expected results", "總結", "summary", or similar phrases
    - DO NOT add any meta-commentary about the exam generation process
    - END IMMEDIATELY after the answer key

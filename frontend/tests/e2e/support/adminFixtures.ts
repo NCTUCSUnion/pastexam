@@ -246,7 +246,7 @@ export const mockAdminUserEndpoints = async (
       await route.fulfill({
         status: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify({ message: 'User deleted successfully' }),
+        body: JSON.stringify({ detail: 'User suspended successfully' }),
       })
       return
     }

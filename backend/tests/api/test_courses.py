@@ -137,6 +137,9 @@ async def test_get_course_archives_returns_active_archives(
         body = response.json()
         assert len(body) == 1
         assert body[0]["id"] == active_archive.id
+        # The uploader is never exposed, only whether it is the caller
+        assert "uploader_id" not in body[0]
+        assert body[0]["is_mine"] is True
 
         missing_response = await client.get("/courses/999999/archives")
         assert missing_response.status_code == 404
@@ -354,6 +357,7 @@ async def test_admin_course_crud_flow(
         response = await client.delete(f"/courses/admin/courses/{course_id}")
         assert response.status_code == 200
         assert "deleted successfully" in response.json()["message"]
+        assert response.json()["deleted_archives"] == 0
 
         async with session_maker() as session:
             soft_deleted = await session.get(Course, course_id)
@@ -608,6 +612,28 @@ async def test_get_categorized_courses_direct(session_maker, make_user):
                     Course.id.in_([course_general.id, course_graduate.id])
                 )
             )
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_get_course_archives_hides_other_uploaders(
+    client: AsyncClient, session_maker, make_user
+):
+    uploader = await make_user()
+    viewer = await make_user()
+    course = await _create_course(session_maker)
+    await _create_archive(session_maker, course_id=course.id, uploader_id=uploader.id)
+
+    app.dependency_overrides[get_current_user] = _override_user(viewer)
+    try:
+        body = (await client.get(f"/courses/{course.id}/archives")).json()
+        assert body[0]["is_mine"] is False
+        assert "uploader_id" not in body[0]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        async with session_maker() as session:
+            await session.execute(delete(Archive).where(Archive.course_id == course.id))
+            await session.execute(delete(Course).where(Course.id == course.id))
             await session.commit()
 
 

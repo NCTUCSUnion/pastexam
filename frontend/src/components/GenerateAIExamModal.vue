@@ -181,7 +181,9 @@
         class="flex flex-column align-items-center justify-content-center p-6"
       >
         <i class="pi pi-exclamation-triangle text-6xl text-red-500 mb-4"></i>
-        <p class="text-lg font-semibold text-red-600 mb-2">生成失敗</p>
+        <p class="text-lg font-semibold text-red-600 mb-2">
+          {{ currentTaskId ? '連線中斷' : '生成失敗' }}
+        </p>
         <p class="text-500">{{ errorMessage }}</p>
       </div>
 
@@ -214,11 +216,10 @@
             />
           </div>
           <div
-            class="whitespace-pre-wrap p-3 surface-50 border-round flex-1"
+            class="exam-content p-3 surface-50 border-round flex-1"
             style="line-height: 1.8; overflow-y: auto"
-          >
-            {{ result.generated_content }}
-          </div>
+            v-html="renderedExam"
+          ></div>
         </div>
       </div>
 
@@ -266,10 +267,17 @@
             />
             <Button
               v-if="currentStep === 'result'"
-              label="下載 TXT"
-              icon="pi pi-download"
+              label="下載 PDF"
+              icon="pi pi-file-pdf"
               severity="success"
               @click="downloadResult"
+            />
+            <Button
+              v-if="currentStep === 'error' && currentTaskId"
+              label="重新連線"
+              icon="pi pi-replay"
+              severity="secondary"
+              @click="resumeTask(currentTaskId)"
             />
             <Button
               v-else-if="currentStep === 'error'"
@@ -390,6 +398,8 @@ import { trackEvent, EVENTS } from '../utils/analytics'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 import { isUnauthorizedError } from '../utils/http'
 import { STORAGE_KEYS, getLocalJson, setLocalJson, removeLocalItem } from '../utils/storage'
+import { renderExamMarkdown, printExam } from '../utils/examMarkdown'
+import { getCurrentUser } from '../utils/auth'
 
 const PdfPreviewModal = defineAsyncComponent(() => import('./PdfPreviewModal.vue'))
 
@@ -771,7 +781,21 @@ const downloadArchiveFromPreview = async (done) => {
 let taskWebSocket = null
 let closeResetTimeoutId = null
 
+// Generation takes minutes, so a dropped connection (sleep, network switch, deploy)
+// is retried instead of forgetting a task that is still running on the server
+const MAX_RECONNECT_ATTEMPTS = 5
+let reconnectAttempts = 0
+let reconnectTimer = null
+
+const cancelReconnect = () => {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+}
+
 const closeTaskWebSocket = () => {
+  cancelReconnect()
   if (!taskWebSocket) return
   try {
     // Mark as intentional close so onclose/onerror won't flip UI to error.
@@ -783,10 +807,28 @@ const closeTaskWebSocket = () => {
   taskWebSocket = null
 }
 
+// Error codes sent by the backend for failed or missing tasks
+const TASK_ERROR_MESSAGES = {
+  api_key_missing: '尚未設定 Gemini API Key，請先設定後再生成。',
+  api_key_invalid: 'Gemini API Key 無效或已失效，請更新 API Key 後再試。',
+  quota_exceeded: 'Gemini API 用量已達上限，請稍後再試或改用其他 API Key。',
+  timeout: '生成時間過長已逾時，請減少選取的考古題後再試。',
+  interrupted: '生成被中斷（可能逾時或系統正在更新），請重新生成。',
+  empty_response: 'AI 沒有產生內容，請稍後再試。',
+  expired: '找不到這個生成任務（結果只保留 24 小時），請重新生成。',
+}
+const DEFAULT_TASK_ERROR = '生成失敗，請稍後再試'
+
 const handleTaskStatusData = (statusData, context = {}) => {
   if (statusData.status === 'complete') {
     if (statusData.result && statusData.result.generated_content) {
       result.value = statusData.result
+      // A followed task (409) has no stored course; take it from the archives used
+      const usedArchive = statusData.result.archives_used?.[0]
+      if (!form.value.course_name && usedArchive) {
+        form.value.course_name = usedArchive.course
+        form.value.professor = usedArchive.professor
+      }
       currentStep.value = 'result'
 
       const taskId = statusData.task_id
@@ -808,6 +850,8 @@ const handleTaskStatusData = (statusData, context = {}) => {
         updateTaskInStorage(taskId, { successToastShown: true })
       }
     } else {
+      // The task is over; the heading must say failed, not a lost connection
+      currentTaskId.value = null
       errorMessage.value = '生成失敗，請稍後再試'
       currentStep.value = 'error'
 
@@ -825,14 +869,16 @@ const handleTaskStatusData = (statusData, context = {}) => {
     clearTaskFromStorage()
     currentTaskId.value = null
     result.value = null
-    errorMessage.value = '生成失敗，請稍後再試'
+    errorMessage.value =
+      TASK_ERROR_MESSAGES[statusData.error] ??
+      (statusData.status === 'not_found' ? TASK_ERROR_MESSAGES.expired : DEFAULT_TASK_ERROR)
     currentStep.value = 'error'
 
     toast.add({
       severity: 'error',
       summary: '生成失敗',
       detail: errorMessage.value,
-      life: 3000,
+      life: 5000,
     })
     return true
   }
@@ -873,6 +919,9 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
           `Invalid status payload: task_id mismatch (expected ${taskId}, got ${statusData.task_id})`
         )
       }
+      // Only a real status update proves the connection works; the server accepts
+      // sockets before checking the task, so onopen alone must not reset the count
+      reconnectAttempts = 0
       if (statusData.status) {
         taskStatus.value = statusData.status
       }
@@ -899,39 +948,47 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
     }
   }
 
-  socket.onerror = () => {
-    if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
-      closeTaskWebSocket()
+  const handleDisconnect = (event) => {
+    if (socket.__manualClose || socket.__disconnectHandled || finished) return
+    socket.__disconnectHandled = true
+    if (currentStep.value !== 'generating') return
+    if (taskWebSocket === socket) taskWebSocket = null
+
+    // 1008: the task does not exist or belongs to someone else; retrying cannot help
+    if (event?.code === 1008) {
       clearTaskFromStorage()
       currentTaskId.value = null
       taskStatus.value = ''
-      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
+      errorMessage.value = TASK_ERROR_MESSAGES.expired
       currentStep.value = 'error'
-      toast.add({
-        severity: 'error',
-        summary: '連線失敗',
-        detail: errorMessage.value,
-        life: 3000,
-      })
+      return
     }
+
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      const delay = Math.min(1000 * 2 ** reconnectAttempts, 15000)
+      reconnectAttempts += 1
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null
+        if (currentStep.value !== 'generating' || currentTaskId.value !== taskId) return
+        startTaskWebSocketStream(taskId, context)
+      }, delay)
+      return
+    }
+
+    // Keep the saved task: it may still finish, and 重新連線 can pick it up later
+    taskStatus.value = ''
+    errorMessage.value = '與伺服器的連線中斷，生成可能仍在背景進行。請稍後按「重新連線」查看結果。'
+    currentStep.value = 'error'
+    toast.add({
+      severity: 'warn',
+      summary: '連線中斷',
+      detail: errorMessage.value,
+      life: 5000,
+    })
   }
 
-  socket.onclose = () => {
-    if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
-      taskWebSocket = null
-      clearTaskFromStorage()
-      currentTaskId.value = null
-      taskStatus.value = ''
-      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
-      currentStep.value = 'error'
-      toast.add({
-        severity: 'error',
-        summary: '連線失敗',
-        detail: errorMessage.value,
-        life: 3000,
-      })
-    }
-  }
+  socket.onerror = handleDisconnect
+  socket.onclose = handleDisconnect
 
   return true
 }
@@ -940,6 +997,8 @@ const saveTaskToStorage = (taskId, displayInfo = {}) => {
   try {
     setLocalJson(TASK_STORAGE_KEY, {
       taskId,
+      // Another account logging in on this browser must not resume this task
+      userId: getCurrentUser()?.id ?? null,
       displayInfo, // Store only the presentation-ready fields
       timestamp: Date.now(),
       successToastShown: false,
@@ -1037,6 +1096,7 @@ const taskStatusIcon = computed(() => {
 })
 
 const resumeTask = async (taskId) => {
+  reconnectAttempts = 0
   currentTaskId.value = taskId
   currentStep.value = 'generating'
   taskStatus.value = ''
@@ -1104,6 +1164,22 @@ const generateExam = async () => {
     clearTaskFromStorage()
 
     // Handle specific error cases
+    const activeTaskId = error.response?.headers?.['x-active-task-id']
+    if (error.response?.status === 409 && activeTaskId) {
+      // Follow the task that is already running instead of failing. It may be for
+      // another course, so drop the current choice; the result fills it in.
+      form.value.course_name = null
+      form.value.professor = null
+      saveTaskToStorage(activeTaskId, {})
+      toast.add({
+        severity: 'info',
+        summary: '已有進行中的任務',
+        detail: '正在接續您先前送出的生成任務',
+        life: 3000,
+      })
+      await resumeTask(activeTaskId)
+      return
+    }
     if (error.response?.status === 409) {
       errorMessage.value = '您已有一個進行中的任務，請等待完成後再提交新任務'
       toast.add({
@@ -1151,26 +1227,30 @@ const copyContent = async () => {
   }
 }
 
-const downloadResult = () => {
+// Sanitized HTML of the exam; the AI writes Markdown with LaTeX math
+const renderedExam = computed(() => renderExamMarkdown(result.value?.generated_content))
+
+const examTitle = () => {
+  const parts = [form.value?.course_name, form.value?.professor].filter(Boolean)
+  return [...parts, '模擬試題'].join('_')
+}
+
+// Opens the print dialog, where the user picks "Save as PDF"
+const downloadResult = async () => {
   if (!result.value) return
 
-  const content = result.value.generated_content
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `${form.value.course_name}_${form.value.professor}_模擬試題.txt`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-
-  toast.add({
-    severity: 'success',
-    summary: '下載成功',
-    detail: '模擬試題已下載',
-    life: 3000,
-  })
+  try {
+    await printExam({ title: examTitle(), html: renderedExam.value })
+    trackEvent(EVENTS.DOWNLOAD_AI_EXAM, { format: 'pdf' })
+  } catch (error) {
+    console.error('Print exam error:', error)
+    toast.add({
+      severity: 'error',
+      summary: '無法開啟列印',
+      detail: '請改用「複製」後貼到其他文件中',
+      life: 4000,
+    })
+  }
 }
 
 const resetToSelect = () => {
@@ -1199,7 +1279,11 @@ const handleVisibleChange = async (newVal) => {
     loadApiKeyStatus()
 
     // Check for unfinished task when modal opens
-    const savedTask = loadTaskFromStorage()
+    let savedTask = loadTaskFromStorage()
+    if (savedTask?.userId && savedTask.userId !== getCurrentUser()?.id) {
+      clearTaskFromStorage()
+      savedTask = null
+    }
     if (savedTask && savedTask.taskId) {
       if (
         currentStep.value === 'result' &&
@@ -1346,7 +1430,53 @@ useUnauthorizedEvent(handleUnauthorized)
 </script>
 
 <style scoped>
-.generated-content {
-  font-family: 'Courier New', monospace;
+.exam-content :deep(h1),
+.exam-content :deep(h2),
+.exam-content :deep(h3) {
+  line-height: 1.3;
+  margin: 1.2em 0 0.5em;
+}
+.exam-content :deep(h1) {
+  font-size: 1.4rem;
+}
+.exam-content :deep(h2) {
+  font-size: 1.2rem;
+}
+.exam-content :deep(h3) {
+  font-size: 1.05rem;
+}
+.exam-content :deep(p),
+.exam-content :deep(ul),
+.exam-content :deep(ol) {
+  margin: 0.5em 0;
+}
+.exam-content :deep(ol),
+.exam-content :deep(ul) {
+  padding-left: 1.5em;
+}
+.exam-content :deep(blockquote) {
+  margin: 0 0 1em;
+  padding: 0.5em 0.9em;
+  border-left: 3px solid var(--border-color);
+  color: var(--text-secondary);
+}
+.exam-content :deep(pre) {
+  padding: 0.7em;
+  border-radius: 6px;
+  background: var(--bg-primary);
+  overflow-x: auto;
+}
+.exam-content :deep(table) {
+  border-collapse: collapse;
+  margin: 0.8em 0;
+}
+.exam-content :deep(th),
+.exam-content :deep(td) {
+  border: 1px solid var(--border-color);
+  padding: 0.3em 0.6em;
+}
+.exam-content :deep(.katex-display) {
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 </style>

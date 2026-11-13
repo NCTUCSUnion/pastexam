@@ -75,14 +75,10 @@ const handleVisibility = (value) => {
   emit('update:visible', value)
 }
 
-const handleClose = () => {
-  emit('update:visible', false)
-}
-
+// The store decides whether the next unread notice replaces this one or the popup closes
 const handleDismiss = () => {
   if (!props.notification?.id) return
   emit('dismiss', props.notification)
-  handleClose()
 }
 
 const openCenter = () => {

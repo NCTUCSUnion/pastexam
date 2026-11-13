@@ -37,6 +37,7 @@ def _validate_gemini_api_key(api_key: str) -> None:
     client = genai.Client(api_key=api_key)
     next(iter(client.models.list(config={"page_size": 1})), None)
 
+
 _STATUS_MAP = {
     JobStatus.queued: "pending",
     JobStatus.deferred: "pending",
@@ -73,7 +74,13 @@ async def stream_task_status(
         metadata_key = f"task_metadata:{task_id}"
         metadata_str = await redis.get(metadata_key)
         if not metadata_str:
-            await websocket.close(code=1008)
+            # Task metadata is kept for 24 hours
+            await websocket.send_json(
+                TaskStatusResponse(
+                    task_id=task_id, status="not_found", error="expired"
+                ).dict()
+            )
+            await websocket.close(code=1000)
             return
 
         metadata = json.loads(metadata_str.decode("utf-8"))
@@ -114,31 +121,59 @@ async def stream_task_status(
                 return None
             return str(error_raw)
 
-        async def _get_job_result():
-            last_err: Exception | None = None
-            for _ in range(5):
-                try:
-                    res = await job.result()
-                    if res is None:
-                        pass
-                    elif isinstance(res, dict):
-                        return res
-                    else:
-                        raise TypeError("Task result must be a dict")
-                except Exception as e:  # noqa: BLE001 - ARQ result failures are retried
-                    last_err = e
-                await asyncio.sleep(0.05)
-            if last_err:
-                raise last_err
-            return None
+        async def _finish(failed_error: str | None = None) -> None:
+            """Send the final state of a finished job and close the socket.
+
+            `failed_error` comes from the worker's "failed" event; otherwise the
+            outcome is read from ARQ, which stores it shortly after the event.
+            """
+            from app.worker import classify_generation_error
+
+            info = None
+            if failed_error is None:
+                for _ in range(20):
+                    info = await job.result_info()
+                    if info is not None:
+                        break
+                    await asyncio.sleep(0.1)
+
+            if failed_error is not None or info is None or not info.success:
+                # A failed job stores the exception it raised as its result
+                error = failed_error or (
+                    classify_generation_error(info.result)
+                    if info is not None and isinstance(info.result, BaseException)
+                    else "failed"
+                )
+                await websocket.send_json(
+                    TaskStatusResponse(
+                        task_id=task_id,
+                        status="failed",
+                        created_at=metadata.get("created_at"),
+                        error=error,
+                    ).dict()
+                )
+                await websocket.close(code=1000)
+                return
+
+            completed_at = metadata.get("completed_at") or datetime.now(UTC).isoformat()
+            if metadata.get("status") != "complete":
+                metadata["completed_at"] = completed_at
+                metadata["status"] = "complete"
+                await redis.set(metadata_key, json.dumps(metadata), ex=86400)
+
+            await websocket.send_json(
+                TaskStatusResponse(
+                    task_id=task_id,
+                    status="complete",
+                    created_at=metadata.get("created_at"),
+                    completed_at=completed_at,
+                    result=info.result if isinstance(info.result, dict) else None,
+                ).dict()
+            )
+            await websocket.close(code=1000)
 
         if job_status == "complete":
-            response.result = await _get_job_result()
-            response.completed_at = (
-                metadata.get("completed_at") or datetime.now(UTC).isoformat()
-            )
-            await websocket.send_json(response.dict())
-            await websocket.close(code=1000)
+            await _finish()
             return
 
         await websocket.send_json(response.dict())
@@ -177,26 +212,7 @@ async def stream_task_status(
                     last_sent_status = current_status
 
                     if current_status == "complete":
-                        result = await _get_job_result()
-                        completed_at = datetime.now(UTC).isoformat()
-                        metadata["completed_at"] = completed_at
-                        metadata["status"] = "complete"
-                        await redis.set(
-                            metadata_key,
-                            json.dumps(metadata),
-                            ex=86400,
-                        )
-
-                        await websocket.send_json(
-                            TaskStatusResponse(
-                                task_id=task_id,
-                                status="complete",
-                                created_at=metadata.get("created_at"),
-                                completed_at=completed_at,
-                                result=result,
-                            ).dict()
-                        )
-                        await websocket.close(code=1000)
+                        await _finish()
                         return
 
                     await websocket.send_json(
@@ -220,51 +236,19 @@ async def stream_task_status(
                     last_sent_status = status_value
 
                     if status_value == "failed":
-                        error_value = _extract_error(fields)
-
-                        await websocket.send_json(
-                            TaskStatusResponse(
-                                task_id=task_id,
-                                status="failed",
-                                created_at=metadata.get("created_at"),
-                                error=error_value,
-                            ).dict()
-                        )
-                        await websocket.close(code=1011)
+                        await _finish(_extract_error(fields) or "failed")
                         return
-
-                    if status_value != "complete":
-                        await websocket.send_json(
-                            TaskStatusResponse(
-                                task_id=task_id,
-                                status=status_value,
-                                created_at=metadata.get("created_at"),
-                            ).dict()
-                        )
-                        continue
-
-                    result = await _get_job_result()
-
-                    completed_at = datetime.now(UTC).isoformat()
-                    metadata["completed_at"] = completed_at
-                    metadata["status"] = "complete"
-                    await redis.set(
-                        metadata_key,
-                        json.dumps(metadata),
-                        ex=86400,
-                    )
+                    if status_value == "complete":
+                        await _finish()
+                        return
 
                     await websocket.send_json(
                         TaskStatusResponse(
                             task_id=task_id,
-                            status="complete",
+                            status=status_value,
                             created_at=metadata.get("created_at"),
-                            completed_at=completed_at,
-                            result=result,
                         ).dict()
                     )
-                    await websocket.close(code=1000)
-                    return
     except Exception:  # noqa: BLE001 - close the WebSocket on an unexpected failure
         await websocket.close(code=1011)
         return
@@ -301,6 +285,8 @@ async def submit_generate_task(
                     "You already have an active task. Please wait for it to "
                     "complete before submitting a new one."
                 ),
+                # Lets the client follow the running task instead of being stuck
+                headers={"X-Active-Task-Id": active_task_id.decode()},
             )
 
         task_data = {

@@ -1,6 +1,8 @@
+import asyncio
 from types import SimpleNamespace
 
 import pytest
+from arq.worker import JobExecutionFailed
 
 from app import worker
 from app.utils.crypto import encrypt_secret
@@ -129,7 +131,8 @@ async def test_generate_exam_content_success(monkeypatch):
     )
 
     assert result["success"] is True
-    assert result["generated_content"].startswith("⚠️ 注意事項")
+    # The disclaimer is a Markdown callout above the exam
+    assert result["generated_content"].startswith("> ⚠️ **注意事項 / NOTICE**")
     assert len(result["archives_used"]) == 1
     assert fake_client.uploads
     assert fake_client.deleted == ["uploaded-1"]
@@ -295,3 +298,74 @@ async def test_generate_exam_content_decrypts_the_stored_key(monkeypatch):
     await worker.generate_exam_content(archive_ids=[1], user_id=7)
 
     assert used_keys == ["REAL_KEY"]
+
+
+class RecordingStreamRedis:
+    def __init__(self):
+        self.events = []
+
+    async def xadd(self, name, fields):
+        self.events.append(fields)
+
+    async def expire(self, name, seconds):
+        return None
+
+
+@pytest.mark.asyncio
+async def test_generate_ai_exam_task_reports_interruptions(monkeypatch):
+    async def cancelled(**kwargs):
+        # ARQ cancels the job coroutine when job_timeout is reached
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(worker, "generate_exam_content", cancelled)
+    redis = RecordingStreamRedis()
+
+    with pytest.raises(asyncio.CancelledError):
+        await worker.generate_ai_exam_task(
+            {"redis": redis, "job_id": "job-1"},
+            {"archive_ids": [1], "user_id": 1},
+        )
+
+    assert [e["status"] for e in redis.events] == ["in_progress", "failed"]
+    assert redis.events[-1]["error"] == "interrupted"
+
+
+def test_classify_generation_error():
+    from google.genai import errors as genai_errors
+
+    def client_error(code, message):
+        return genai_errors.ClientError(code, {"error": {"message": message}})
+
+    classify = worker.classify_generation_error
+    assert classify(asyncio.CancelledError()) == "interrupted"
+    assert classify(TimeoutError()) == "timeout"
+    assert classify(JobExecutionFailed("max 1 retries exceeded")) == "interrupted"
+    assert classify(worker.EmptyGenerationError()) == "empty_response"
+    assert (
+        classify(ValueError("User API key not found. Please configure it"))
+        == "api_key_missing"
+    )
+    assert classify(client_error(429, "Resource exhausted")) == "quota_exceeded"
+    assert classify(client_error(400, "API key not valid.")) == "api_key_invalid"
+    assert classify(client_error(403, "Permission denied")) == "api_key_invalid"
+    assert classify(RuntimeError("boom")) == "failed"
+
+
+def test_classify_generation_error_after_result_round_trip():
+    import pickle
+
+    from google.genai import errors as genai_errors
+
+    # ARQ stores a failed job's exception pickled; it comes back as APIError
+    stored = pickle.loads(
+        pickle.dumps(
+            genai_errors.ClientError(429, {"error": {"message": "Resource exhausted"}})
+        )
+    )
+    assert worker.classify_generation_error(stored) == "quota_exceeded"
+
+
+def test_interrupted_jobs_are_not_retried():
+    assert worker.WorkerSettings.retry_jobs is False
+    assert worker.WorkerSettings.max_tries == 1
+    assert 0 < worker.WorkerSettings.job_completion_wait

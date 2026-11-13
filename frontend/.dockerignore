@@ -1,0 +1,9 @@
+# The image installs its own dependencies and writes its own .env from build args
+node_modules
+dist
+.env
+.env.*
+coverage
+playwright-report
+playwright-results
+playwright/.auth

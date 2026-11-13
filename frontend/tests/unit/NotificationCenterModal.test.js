@@ -154,4 +154,29 @@ describe('NotificationCenterModal', () => {
 
     wrapper.unmount()
   })
+
+  it('shows a load error with a retry button instead of "no notices"', async () => {
+    const wrapper = mount(NotificationCenterModal, {
+      props: { visible: true, notifications: [], loading: false, error: true },
+      global: {
+        stubs: {
+          Dialog: stubComponent,
+          DataTable: stubComponent,
+          Column: { template: '<template />' },
+          Tag: stubComponent,
+          Button: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          ProgressSpinner: stubComponent,
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('無法載入公告')
+    expect(wrapper.text()).not.toContain('目前沒有公告')
+    await wrapper.find('button').trigger('click')
+    expect(wrapper.emitted('retry')).toHaveLength(1)
+  })
 })

@@ -16,6 +16,12 @@ export const authService = {
     return response.data
   },
 
+  async exchangeOAuthCode(code) {
+    // The session cookie set during the OAuth login proves this browser started it
+    const response = await api.post('/auth/oauth/exchange', { code }, { withCredentials: true })
+    return response.data
+  },
+
   logout() {
     return api.post('/auth/logout')
   },

@@ -141,6 +141,15 @@ class FakeJob:
     async def result(self):
         return self.redis.results.get(self.job_id)
 
+    async def result_info(self):
+        if self.job_id not in self.redis.results:
+            return None
+        value = self.redis.results[self.job_id]
+        # ARQ stores the raised exception as the result of a failed job
+        if isinstance(value, BaseException):
+            return SimpleNamespace(success=False, result=value)
+        return SimpleNamespace(success=True, result=value)
+
 
 @pytest.fixture
 def fake_redis(monkeypatch) -> FakeRedis:
@@ -244,6 +253,7 @@ async def test_submit_generate_task_conflict_when_active_job(
         )
         assert response.status_code == 409
         assert "active task" in response.json()["detail"]
+        assert response.headers["X-Active-Task-Id"] == "job-existing"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -605,11 +615,12 @@ async def test_get_task_status_not_found(
         )
         with (
             TestClient(app) as ws_client,
-            pytest.raises(WebSocketDisconnect) as exc,
             ws_client.websocket_connect("/ai-exam/ws/task/missing") as ws,
         ):
-            ws.receive_json()
-        assert exc.value.code == 1008
+            body = ws.receive_json()
+        # Expired tasks are reported instead of a bare close the UI cannot explain
+        assert body["status"] == "not_found"
+        assert body["error"] == "expired"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -824,3 +835,63 @@ async def test_update_api_key_handles_other_errors(
         assert response.status_code == 500
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_task_status_reports_why_a_finished_job_failed(
+    client: AsyncClient, make_user, fake_redis: FakeRedis, monkeypatch
+):
+    from google.genai import errors as genai_errors
+
+    user = await make_user()
+    task_id = "job-quota"
+    await fake_redis.set(
+        f"task_metadata:{task_id}",
+        json.dumps({"user_id": user.id, "created_at": datetime.now(UTC).isoformat()}),
+    )
+    fake_redis.job_statuses[task_id] = JobStatus.complete
+    fake_redis.results[task_id] = genai_errors.ClientError(
+        429, {"error": {"message": "Resource exhausted"}}
+    )
+
+    async def fake_ws_payload(websocket):
+        return {"uid": user.id, "exp": 4102444800}
+
+    monkeypatch.setattr("app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload)
+    with (
+        TestClient(app) as ws_client,
+        ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws,
+    ):
+        body = ws.receive_json()
+    assert body["status"] == "failed"
+    assert body["error"] == "quota_exceeded"
+
+
+@pytest.mark.asyncio
+async def test_task_status_passes_on_the_failed_event_error(
+    client: AsyncClient, make_user, fake_redis: FakeRedis, monkeypatch
+):
+    user = await make_user()
+    task_id = "job-stream-failed"
+    await fake_redis.set(
+        f"task_metadata:{task_id}",
+        json.dumps({"user_id": user.id, "created_at": datetime.now(UTC).isoformat()}),
+    )
+    fake_redis.job_statuses[task_id] = JobStatus.in_progress
+    await fake_redis.xadd(
+        f"ai_exam:task_events:{task_id}",
+        {"status": "failed", "error": "api_key_invalid"},
+    )
+
+    async def fake_ws_payload(websocket):
+        return {"uid": user.id, "exp": 4102444800}
+
+    monkeypatch.setattr("app.api.services.ai_exam.get_ws_token_payload", fake_ws_payload)
+    with (
+        TestClient(app) as ws_client,
+        ws_client.websocket_connect(f"/ai-exam/ws/task/{task_id}") as ws,
+    ):
+        first = ws.receive_json()
+        final = ws.receive_json() if first["status"] != "failed" else first
+    assert final["status"] == "failed"
+    assert final["error"] == "api_key_invalid"

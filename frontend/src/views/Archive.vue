@@ -425,6 +425,7 @@
                 severity="success"
                 @click="handleEdit"
                 :loading="editLoading"
+                :disabled="editForm.shouldTransfer && !hasTransferTarget"
               />
             </div>
           </Dialog>
@@ -846,10 +847,25 @@ function filterBySubject(course) {
   fetchArchives()
 }
 
+// Switching courses quickly must not let a slower, older response replace the list
+let archivesRequestSeq = 0
+let archivesCourseId = null
+
+function clearArchives() {
+  archives.value = []
+  years.value = []
+  professors.value = []
+  archiveTypes.value = []
+}
+
 async function fetchArchives() {
+  const requestId = ++archivesRequestSeq
+  const courseId = selectedCourse.value
   try {
     loading.value = true
-    const response = await courseService.getCourseArchives(selectedCourse.value)
+    const response = await courseService.getCourseArchives(courseId)
+    if (requestId !== archivesRequestSeq) return
+    archivesCourseId = courseId
     archives.value = response.data.map((archive) => ({
       id: archive.id,
       year: archive.academic_year,
@@ -858,7 +874,7 @@ async function fetchArchives() {
       professor: archive.professor,
       hasAnswers: archive.has_answers,
       subject: selectedSubject.value,
-      uploader_id: archive.uploader_id,
+      isMine: archive.is_mine,
       downloadCount: archive.download_count,
     }))
 
@@ -893,7 +909,13 @@ async function fetchArchives() {
         code: type,
       }))
   } catch (error) {
+    if (requestId !== archivesRequestSeq) return
     console.error('Error fetching archives:', error)
+    // Never leave another course's archives under this course's title
+    if (archivesCourseId !== courseId) {
+      archivesCourseId = null
+      clearArchives()
+    }
     if (isUnauthorizedError(error)) {
       return
     }
@@ -904,7 +926,9 @@ async function fetchArchives() {
       life: 3000,
     })
   } finally {
-    loading.value = false
+    if (requestId === archivesRequestSeq) {
+      loading.value = false
+    }
   }
 }
 
@@ -958,62 +982,77 @@ async function syncArchiveDownloadCount(archiveId) {
   }
 }
 
+// Downloads take seconds, during which the user may close the preview or switch
+// courses, so everything is read once up front instead of from live state.
+async function downloadArchiveFile(archive, source) {
+  const courseId = selectedCourse.value
+  const courseName = selectedSubject.value
+  const { data } = await archiveService.getArchiveDownloadUrl(courseId, archive.id)
+
+  const response = await fetch(data.url)
+  if (!response.ok) {
+    throw new Error(`Download failed with status ${response.status}`)
+  }
+  const blob = await response.blob()
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+
+  const fileName = `${archive.year}_${courseName}_${archive.professor}_${archive.name}.pdf`
+  link.download = fileName
+  link.style.display = 'none'
+
+  document.body.appendChild(link)
+  link.click()
+  setTimeout(() => {
+    window.URL.revokeObjectURL(url)
+    link.remove()
+  }, 100)
+
+  trackEvent(EVENTS.DOWNLOAD_ARCHIVE, {
+    archiveName: archive.name,
+    year: archive.year,
+    professor: archive.professor,
+    type: archive.type,
+    courseName,
+    source,
+  })
+
+  toast.add({
+    severity: 'success',
+    summary: '下載成功',
+    detail: `已下載 ${fileName}`,
+    life: 3000,
+  })
+
+  if (selectedCourse.value === courseId) {
+    await syncArchiveDownloadCount(archive.id)
+  }
+}
+
+function showDownloadError(error) {
+  console.error('Download error:', error)
+  if (isUnauthorizedError(error)) {
+    return
+  }
+  toast.add({
+    severity: 'error',
+    summary: '下載失敗',
+    detail: '無法取得下載連結',
+    life: 3000,
+  })
+}
+
 async function downloadArchive(archive) {
   try {
     downloadingId.value = archive.id
-
-    const { data } = await archiveService.getArchiveDownloadUrl(selectedCourse.value, archive.id)
-
-    const response = await fetch(data.url)
-    if (!response.ok) {
-      throw new Error(`Download failed with status ${response.status}`)
-    }
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-
-    const fileName = `${archive.year}_${selectedSubject.value}_${archive.professor}_${archive.name}.pdf`
-    link.download = fileName
-    link.style.display = 'none'
-
-    document.body.appendChild(link)
-    link.click()
-    setTimeout(() => {
-      window.URL.revokeObjectURL(url)
-      link.remove()
-    }, 100)
-
-    trackEvent(EVENTS.DOWNLOAD_ARCHIVE, {
-      archiveName: archive.name,
-      year: archive.year,
-      professor: archive.professor,
-      type: archive.type,
-      courseName: selectedSubject.value,
-      source: 'archive-list',
-    })
-
-    toast.add({
-      severity: 'success',
-      summary: '下載成功',
-      detail: `已下載 ${fileName}`,
-      life: 3000,
-    })
-
-    await syncArchiveDownloadCount(archive.id)
+    await downloadArchiveFile(archive, 'archive-list')
   } catch (error) {
-    console.error('Download error:', error)
-    if (isUnauthorizedError(error)) {
-      return
-    }
-    toast.add({
-      severity: 'error',
-      summary: '下載失敗',
-      detail: '無法取得下載連結',
-      life: 3000,
-    })
+    showDownloadError(error)
   } finally {
-    downloadingId.value = null
+    if (downloadingId.value === archive.id) {
+      downloadingId.value = null
+    }
   }
 }
 
@@ -1025,11 +1064,15 @@ async function previewArchive(archive) {
     previewLoading.value = true
     previewError.value = false
     showPreview.value = true
+    // Set before the request so "下載" still works when the preview link fails
+    selectedArchive.value = { ...archive, previewUrl: '' }
 
     const { data } = await archiveService.getArchivePreviewUrl(selectedCourse.value, archive.id)
 
+    // The user may have closed this preview or opened another one meanwhile
+    if (selectedArchive.value?.id !== archive.id) return
     selectedArchive.value = {
-      ...archive,
+      ...selectedArchive.value,
       previewUrl: data.url,
     }
 
@@ -1042,6 +1085,7 @@ async function previewArchive(archive) {
     })
   } catch (error) {
     console.error('Preview error:', error)
+    if (selectedArchive.value?.id !== archive.id) return
     previewError.value = true
     if (isUnauthorizedError(error)) {
       return
@@ -1053,7 +1097,10 @@ async function previewArchive(archive) {
       life: 3000,
     })
   } finally {
-    previewLoading.value = false
+    // An older request finishing must not hide the spinner of the current one
+    if (!selectedArchive.value || selectedArchive.value.id === archive.id) {
+      previewLoading.value = false
+    }
   }
 }
 
@@ -1145,7 +1192,7 @@ const canDeleteArchive = (archive) => {
   const currentUser = getCurrentUser()
   if (!currentUser) return false
 
-  return isAdmin.value || (archive.uploader_id && archive.uploader_id === currentUser.id)
+  return isAdmin.value || Boolean(archive.isMine)
 }
 
 const canEditArchive = () => {
@@ -1250,6 +1297,13 @@ const openEditDialog = async (archive) => {
   }
 }
 
+// "Transfer" needs a category and a course; otherwise saving would not move anything
+const hasTransferTarget = computed(
+  () =>
+    Boolean(editForm.value.targetCategory) &&
+    Boolean(editForm.value.targetCourseId || String(editForm.value.targetCourse ?? '').trim())
+)
+
 const handleEdit = async () => {
   try {
     editLoading.value = true
@@ -1262,6 +1316,7 @@ const handleEdit = async () => {
       academic_year: editForm.value.academicYear ? editForm.value.academicYear.getFullYear() : null,
     })
 
+    let transferred = false
     if (editForm.value.shouldTransfer && editForm.value.targetCategory) {
       if (editForm.value.targetCourseId) {
         // Transfer to existing course
@@ -1270,6 +1325,7 @@ const handleEdit = async () => {
           editForm.value.id,
           editForm.value.targetCourseId
         )
+        transferred = true
       } else if (editForm.value.targetCourse) {
         // Transfer to new course (create if not exists)
         await archiveService.updateArchiveCourseByCategoryAndName(
@@ -1278,16 +1334,15 @@ const handleEdit = async () => {
           editForm.value.targetCourse,
           editForm.value.targetCategory
         )
+        transferred = true
       }
     }
 
     trackEvent(EVENTS.EDIT_ARCHIVE, {
       action: 'submit',
-      transferred: editForm.value.shouldTransfer,
-      targetCategory: editForm.value.shouldTransfer ? editForm.value.targetCategory : null,
+      transferred,
+      targetCategory: transferred ? editForm.value.targetCategory : null,
     })
-
-    const transferred = editForm.value.shouldTransfer
 
     shouldResetPanels.value = true
     await fetchArchives()
@@ -1389,62 +1444,16 @@ function toggleSidebar() {
 }
 
 async function handlePreviewDownload(onComplete) {
-  if (!selectedArchive.value) return
+  const archive = selectedArchive.value
+  if (!archive) {
+    onComplete()
+    return
+  }
 
   try {
-    const { data } = await archiveService.getArchiveDownloadUrl(
-      selectedCourse.value,
-      selectedArchive.value.id
-    )
-
-    const response = await fetch(data.url)
-    if (!response.ok) {
-      throw new Error(`Download failed with status ${response.status}`)
-    }
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-
-    const fileName = `${selectedArchive.value.year}_${selectedSubject.value}_${selectedArchive.value.professor}_${selectedArchive.value.name}.pdf`
-    link.download = fileName
-    link.style.display = 'none'
-
-    document.body.appendChild(link)
-    link.click()
-    setTimeout(() => {
-      window.URL.revokeObjectURL(url)
-      link.remove()
-    }, 100)
-
-    trackEvent(EVENTS.DOWNLOAD_ARCHIVE, {
-      archiveName: selectedArchive.value.name,
-      year: selectedArchive.value.year,
-      professor: selectedArchive.value.professor,
-      type: selectedArchive.value.type,
-      courseName: selectedSubject.value,
-      source: 'preview-modal',
-    })
-
-    toast.add({
-      severity: 'success',
-      summary: '下載成功',
-      detail: `已下載 ${fileName}`,
-      life: 3000,
-    })
-
-    await syncArchiveDownloadCount(selectedArchive.value.id)
+    await downloadArchiveFile({ ...archive }, 'preview-modal')
   } catch (error) {
-    console.error('Download error:', error)
-    if (isUnauthorizedError(error)) {
-      return
-    }
-    toast.add({
-      severity: 'error',
-      summary: '下載失敗',
-      detail: '無法取得下載連結',
-      life: 3000,
-    })
+    showDownloadError(error)
   } finally {
     onComplete()
   }

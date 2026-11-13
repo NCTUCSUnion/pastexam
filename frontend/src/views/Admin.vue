@@ -112,6 +112,14 @@
                     showClear
                     class="w-full md:w-14rem"
                   />
+                  <Select
+                    v-model="filterUserStatus"
+                    :options="userStatusFilterOptions"
+                    optionLabel="name"
+                    optionValue="value"
+                    aria-label="篩選狀態"
+                    class="w-full md:w-10rem"
+                  />
                 </div>
                 <Button
                   label="新增使用者"
@@ -167,7 +175,17 @@
                 </Column>
                 <Column header="操作" style="width: 20%">
                   <template #body="{ data }">
-                    <div class="flex gap-2">
+                    <div v-if="data.suspended_at" class="flex align-items-center gap-2">
+                      <Tag severity="danger" class="text-sm">已停權</Tag>
+                      <Button
+                        icon="pi pi-replay"
+                        severity="success"
+                        size="small"
+                        @click="confirmRestoreUser(data)"
+                        label="恢復"
+                      />
+                    </div>
+                    <div v-else class="flex gap-2">
                       <Button
                         icon="pi pi-pencil"
                         severity="warning"
@@ -176,11 +194,11 @@
                         label="編輯"
                       />
                       <Button
-                        icon="pi pi-trash"
+                        icon="pi pi-ban"
                         severity="danger"
                         size="small"
                         @click="confirmDeleteUser(data)"
-                        label="刪除"
+                        label="停權"
                         :disabled="data.id === currentUserId"
                       />
                     </div>
@@ -561,6 +579,7 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  restoreUser,
   notificationService,
 } from '../api'
 import { trackEvent, EVENTS } from '../utils/analytics'
@@ -594,6 +613,7 @@ const usersTotal = ref(0)
 const usersLoading = ref(false)
 const userSearchQuery = ref('')
 const filterUserType = ref(null)
+const filterUserStatus = ref('active')
 const userFirst = ref(0)
 const userRows = ref(10)
 let userRequestSeq = 0
@@ -679,6 +699,12 @@ const categoryOptions = [
 const userTypeFilterOptions = [
   { name: '管理員', value: true },
   { name: '一般使用者', value: false },
+]
+
+const userStatusFilterOptions = [
+  { name: '正常', value: 'active' },
+  { name: '已停權', value: 'suspended' },
+  { name: '全部', value: 'all' },
 ]
 
 const getCategoryName = (category) => {
@@ -852,6 +878,7 @@ const loadUsers = async () => {
     const search = userSearchQuery.value.trim()
     if (search) params.search = search
     if (filterUserType.value !== null) params.is_admin = filterUserType.value
+    params.status = filterUserStatus.value
 
     const response = await getUsers(params)
     if (requestId !== userRequestSeq) return
@@ -895,7 +922,7 @@ watch(userSearchQuery, () => {
   userSearchTimer = setTimeout(reloadUsersFromFirstPage, 300)
 })
 
-watch(filterUserType, reloadUsersFromFirstPage)
+watch([filterUserType, filterUserStatus], reloadUsersFromFirstPage)
 
 onBeforeUnmount(() => clearTimeout(userSearchTimer))
 
@@ -1019,7 +1046,7 @@ const saveCourse = async () => {
 
 const confirmDeleteCourse = (course) => {
   confirm.require({
-    message: `確定要刪除課程「${course.name}」嗎？`,
+    message: `確定要刪除課程「${course.name}」嗎？此課程底下的所有考古題也會一併刪除，且無法從後台復原。`,
     header: '刪除確認',
     icon: 'pi pi-exclamation-triangle',
     rejectClass: 'p-button-secondary p-button-outlined',
@@ -1032,15 +1059,19 @@ const confirmDeleteCourse = (course) => {
 
 const deleteCourseAction = async (course) => {
   try {
-    await deleteCourse(course.id)
+    const response = await deleteCourse(course.id)
     trackEvent(EVENTS.DELETE_COURSE, {
       courseName: course.name,
       category: course.category,
     })
+    const deletedArchives = response?.data?.deleted_archives
     toast.add({
       severity: 'success',
       summary: '成功',
-      detail: '課程刪除成功',
+      detail:
+        typeof deletedArchives === 'number'
+          ? `課程已刪除，連同 ${deletedArchives} 份考古題`
+          : '課程刪除成功',
       life: 3000,
     })
     await loadCourses()
@@ -1081,7 +1112,7 @@ const openEditUserDialog = (user) => {
   userFormErrors.value = {}
   editingUser.value = user
   showUserDialog.value = true
-  trackEvent(EVENTS.UPDATE_USER, { action: 'open-dialog', userName: user.name })
+  trackEvent(EVENTS.UPDATE_USER, { action: 'open-dialog' })
 }
 
 const closeUserDialog = () => {
@@ -1134,7 +1165,6 @@ const saveUser = async () => {
       await updateUser(editingUser.value.id, updateData)
       trackEvent(EVENTS.UPDATE_USER, {
         action: 'submit',
-        userName: userForm.value.name,
         isAdmin: userForm.value.is_admin,
       })
       toast.add({
@@ -1147,7 +1177,6 @@ const saveUser = async () => {
       await createUser(userForm.value)
       trackEvent(EVENTS.CREATE_USER, {
         action: 'submit',
-        userName: userForm.value.name,
         isAdmin: userForm.value.is_admin,
       })
       toast.add({
@@ -1177,13 +1206,13 @@ const saveUser = async () => {
 
 const confirmDeleteUser = (user) => {
   confirm.require({
-    message: `確定要刪除使用者「${user.name}」嗎？`,
-    header: '刪除確認',
+    message: `確定要停權使用者「${user.name}」嗎？停權後將無法登入，管理員權限也會被移除；之後可在「已停權」中恢復。`,
+    header: '停權確認',
     icon: 'pi pi-exclamation-triangle',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptClass: 'p-button-danger',
     rejectLabel: '取消',
-    acceptLabel: '刪除',
+    acceptLabel: '停權',
     accept: () => deleteUserAction(user),
   })
 }
@@ -1192,25 +1221,61 @@ const deleteUserAction = async (user) => {
   try {
     await deleteUser(user.id)
     trackEvent(EVENTS.DELETE_USER, {
-      userName: user.name,
       isAdmin: user.is_admin,
     })
     toast.add({
       severity: 'success',
       summary: '成功',
-      detail: '使用者刪除成功',
+      detail: '使用者已停權',
       life: 3000,
     })
     await loadUsers()
   } catch (error) {
-    console.error('刪除使用者失敗:', error)
+    console.error('停權使用者失敗:', error)
     if (isUnauthorizedError(error)) {
       return
     }
     toast.add({
       severity: 'error',
       summary: '錯誤',
-      detail: '使用者刪除失敗',
+      detail: '使用者停權失敗',
+      life: 3000,
+    })
+  }
+}
+
+const confirmRestoreUser = (user) => {
+  confirm.require({
+    message: `確定要恢復使用者「${user.name}」嗎？恢復後為一般使用者，如需管理員權限請另外設定。`,
+    header: '恢復確認',
+    icon: 'pi pi-replay',
+    rejectClass: 'p-button-secondary p-button-outlined',
+    acceptClass: 'p-button-success',
+    rejectLabel: '取消',
+    acceptLabel: '恢復',
+    accept: () => restoreUserAction(user),
+  })
+}
+
+const restoreUserAction = async (user) => {
+  try {
+    await restoreUser(user.id)
+    toast.add({
+      severity: 'success',
+      summary: '成功',
+      detail: '使用者已恢復',
+      life: 3000,
+    })
+    await loadUsers()
+  } catch (error) {
+    console.error('恢復使用者失敗:', error)
+    if (isUnauthorizedError(error)) {
+      return
+    }
+    toast.add({
+      severity: 'error',
+      summary: '錯誤',
+      detail: '使用者恢復失敗',
       life: 3000,
     })
   }
