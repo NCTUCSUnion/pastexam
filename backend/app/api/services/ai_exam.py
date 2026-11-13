@@ -285,6 +285,8 @@ async def submit_generate_task(
                     "You already have an active task. Please wait for it to "
                     "complete before submitting a new one."
                 ),
+                # Lets the client follow the running task instead of being stuck
+                headers={"X-Active-Task-Id": active_task_id.decode()},
             )
 
         task_data = {

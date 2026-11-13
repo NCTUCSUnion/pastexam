@@ -27,6 +27,7 @@ const notificationStoreMock = vi.hoisted(() => ({
   refreshAll: vi.fn(),
   openCenter: vi.fn(),
   markNotificationAsSeen: vi.fn(),
+  dismissNotification: vi.fn(),
   latestUnseenNotification: null,
 }))
 
@@ -295,7 +296,7 @@ describe('Navbar methods', () => {
     expect(notificationStoreMock.state.modalVisible).toBe(true)
 
     Navbar.methods.handleNotificationDismiss.call(ctx, { id: 1 })
-    expect(notificationStoreMock.markNotificationAsSeen).toHaveBeenCalledWith({ id: 1 })
+    expect(notificationStoreMock.dismissNotification).toHaveBeenCalledWith({ id: 1 })
 
     Navbar.methods.handleNotificationCenterVisible.call(ctx, true)
     expect(notificationStoreMock.state.centerVisible).toBe(true)

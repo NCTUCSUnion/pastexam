@@ -529,9 +529,27 @@ describe('GenerateAIExamModal', () => {
     await vm.generateExam()
     await flushPromises()
     expect(webSocketInstances.length).toBe(3)
+
+    // A dropped connection is retried; the task keeps running on the server
     webSocketInstances[2].emitError()
     await flushPromises()
+    expect(vm.currentStep).toBe('generating')
+    vi.advanceTimersByTime(1000)
+    expect(webSocketInstances.length).toBe(4)
+
+    // After repeated failures it stops, but keeps the task so it can reconnect later
+    for (let i = 0; i < 5; i++) {
+      webSocketInstances.at(-1).emitError()
+      vi.advanceTimersByTime(15000)
+      await flushPromises()
+    }
     expect(vm.currentStep).toBe('error')
+    expect(vm.currentTaskId).toBe('task-error')
+    expect(vm.errorMessage).toContain('重新連線')
+    const socketsBefore = webSocketInstances.length
+    await vm.resumeTask(vm.currentTaskId)
+    expect(webSocketInstances.length).toBe(socketsBefore + 1)
+    expect(vm.currentStep).toBe('generating')
 
     wrapper.unmount()
     appendSpy.mockRestore()
@@ -676,6 +694,26 @@ describe('GenerateAIExamModal', () => {
     expect(emittedAfter).toBe(emittedBefore + 1)
     expect(vm.showApiKeyModal).toBe(false)
 
+    wrapper.unmount()
+  })
+
+  it('follows an already running task when the server reports a conflict', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const vm = wrapper.vm
+    vm.selectedArchiveIds = ['arch-1']
+    vm.currentStep = 'selectArchives'
+    const socketsBefore = webSocketInstances.length
+    aiExamServiceMock.generateMockExam.mockRejectedValueOnce({
+      response: { status: 409, headers: { 'x-active-task-id': 'task-running' } },
+    })
+
+    await vm.generateExam()
+    await flushPromises()
+
+    expect(vm.currentStep).toBe('generating')
+    expect(vm.currentTaskId).toBe('task-running')
+    expect(webSocketInstances.length).toBe(socketsBefore + 1)
     wrapper.unmount()
   })
 })

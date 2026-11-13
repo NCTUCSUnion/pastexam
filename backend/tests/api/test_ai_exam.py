@@ -253,6 +253,7 @@ async def test_submit_generate_task_conflict_when_active_job(
         )
         assert response.status_code == 409
         assert "active task" in response.json()["detail"]
+        assert response.headers["X-Active-Task-Id"] == "job-existing"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 

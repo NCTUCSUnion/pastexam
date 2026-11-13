@@ -271,6 +271,13 @@
               @click="downloadResult"
             />
             <Button
+              v-if="currentStep === 'error' && currentTaskId"
+              label="重新連線"
+              icon="pi pi-replay"
+              severity="secondary"
+              @click="resumeTask(currentTaskId)"
+            />
+            <Button
               v-else-if="currentStep === 'error'"
               label="重試"
               icon="pi pi-refresh"
@@ -771,7 +778,21 @@ const downloadArchiveFromPreview = async (done) => {
 let taskWebSocket = null
 let closeResetTimeoutId = null
 
+// Generation takes minutes, so a dropped connection (sleep, network switch, deploy)
+// is retried instead of forgetting a task that is still running on the server
+const MAX_RECONNECT_ATTEMPTS = 5
+let reconnectAttempts = 0
+let reconnectTimer = null
+
+const cancelReconnect = () => {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+}
+
 const closeTaskWebSocket = () => {
+  cancelReconnect()
   if (!taskWebSocket) return
   try {
     // Mark as intentional close so onclose/onerror won't flip UI to error.
@@ -871,6 +892,7 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
 
   socket.onopen = () => {
     taskStatus.value = 'pending'
+    reconnectAttempts = 0
   }
 
   socket.onmessage = (event) => {
@@ -913,39 +935,37 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
     }
   }
 
-  socket.onerror = () => {
-    if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
-      closeTaskWebSocket()
-      clearTaskFromStorage()
-      currentTaskId.value = null
-      taskStatus.value = ''
-      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
-      currentStep.value = 'error'
-      toast.add({
-        severity: 'error',
-        summary: '連線失敗',
-        detail: errorMessage.value,
-        life: 3000,
-      })
+  const handleDisconnect = () => {
+    if (socket.__manualClose || socket.__disconnectHandled || finished) return
+    socket.__disconnectHandled = true
+    if (currentStep.value !== 'generating') return
+    if (taskWebSocket === socket) taskWebSocket = null
+
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      const delay = Math.min(1000 * 2 ** reconnectAttempts, 15000)
+      reconnectAttempts += 1
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null
+        if (currentStep.value !== 'generating' || currentTaskId.value !== taskId) return
+        startTaskWebSocketStream(taskId, context)
+      }, delay)
+      return
     }
+
+    // Keep the saved task: it may still finish, and 重新連線 can pick it up later
+    taskStatus.value = ''
+    errorMessage.value = '與伺服器的連線中斷，生成可能仍在背景進行。請稍後按「重新連線」查看結果。'
+    currentStep.value = 'error'
+    toast.add({
+      severity: 'warn',
+      summary: '連線中斷',
+      detail: errorMessage.value,
+      life: 5000,
+    })
   }
 
-  socket.onclose = () => {
-    if (!socket.__manualClose && !finished && currentStep.value === 'generating') {
-      taskWebSocket = null
-      clearTaskFromStorage()
-      currentTaskId.value = null
-      taskStatus.value = ''
-      errorMessage.value = '無法連接即時狀態服務，請稍後再試'
-      currentStep.value = 'error'
-      toast.add({
-        severity: 'error',
-        summary: '連線失敗',
-        detail: errorMessage.value,
-        life: 3000,
-      })
-    }
-  }
+  socket.onerror = handleDisconnect
+  socket.onclose = handleDisconnect
 
   return true
 }
@@ -1051,6 +1071,7 @@ const taskStatusIcon = computed(() => {
 })
 
 const resumeTask = async (taskId) => {
+  reconnectAttempts = 0
   currentTaskId.value = taskId
   currentStep.value = 'generating'
   taskStatus.value = ''
@@ -1118,6 +1139,19 @@ const generateExam = async () => {
     clearTaskFromStorage()
 
     // Handle specific error cases
+    const activeTaskId = error.response?.headers?.['x-active-task-id']
+    if (error.response?.status === 409 && activeTaskId) {
+      // Follow the task that is already running instead of failing
+      saveTaskToStorage(activeTaskId, {})
+      toast.add({
+        severity: 'info',
+        summary: '已有進行中的任務',
+        detail: '正在接續您先前送出的生成任務',
+        life: 3000,
+      })
+      await resumeTask(activeTaskId)
+      return
+    }
     if (error.response?.status === 409) {
       errorMessage.value = '您已有一個進行中的任務，請等待完成後再提交新任務'
       toast.add({

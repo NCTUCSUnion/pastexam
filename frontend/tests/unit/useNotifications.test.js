@@ -87,11 +87,11 @@ describe('useNotifications composable', () => {
     expect(composable.latestUnseenNotification.value?.id).toBe(5)
   })
 
-  it('marks notifications as seen one at a time', async () => {
+  it('dismissing a notice shows the next unread one', async () => {
     const composable = await importComposable()
     await composable.initNotifications()
 
-    composable.markNotificationAsSeen(composable.latestUnseenNotification.value)
+    composable.dismissNotification(composable.latestUnseenNotification.value)
 
     const expectedTimestamp = new Date('2025-11-01T10:00:00Z').getTime()
     expect(composable.seenNotifications.value).toEqual({ 5: expectedTimestamp })
@@ -102,9 +102,20 @@ describe('useNotifications composable', () => {
     expect(composable.state.modalVisible).toBe(true)
     expect(composable.latestUnseenNotification.value?.id).toBe(2)
 
-    composable.markNotificationAsSeen(composable.latestUnseenNotification.value)
+    composable.dismissNotification(composable.latestUnseenNotification.value)
     expect(composable.state.modalVisible).toBe(false)
     expect(composable.latestUnseenNotification.value).toBeNull()
+  })
+
+  it('reading a notice in the center does not open the popup', async () => {
+    const composable = await importComposable()
+    await composable.initNotifications()
+    composable.state.modalVisible = false
+
+    composable.markNotificationAsSeen({ id: 5, updated_at: '2025-11-01T10:00:00Z' })
+
+    expect(composable.seenNotifications.value[5]).toBeDefined()
+    expect(composable.state.modalVisible).toBe(false)
   })
 
   it('shows a scheduled notice when it starts even if newer notices were seen', async () => {

@@ -79,13 +79,18 @@ function persistSeenNotifications(seen) {
   }
 }
 
+// Record a notice as read without touching the popup (e.g. viewed in the center)
 function markNotificationAsSeen(notification) {
   if (!notification) return
   persistSeenNotifications({
     ...seenNotifications.value,
     [notification.id]: effectiveTime(notification),
   })
-  // Show the next unread notice, if any
+}
+
+// "不再顯示" in the popup: mark it read, then show the next unread notice or close
+function dismissNotification(notification) {
+  markNotificationAsSeen(notification)
   state.modalVisible = !!latestUnseenNotification.value
 }
 
@@ -187,6 +192,7 @@ export function useNotifications() {
     openCenter,
     closeCenter,
     markNotificationAsSeen,
+    dismissNotification,
     seenNotifications,
   }
 }
