@@ -10,13 +10,14 @@ from weakref import WeakKeyDictionary
 from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai.types import UploadFileConfig
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.db.init_db import engine
-from app.models.models import Archive, Course
+from app.models.models import Archive, ArchiveType, Course
 from app.utils.crypto import decrypt_secret
 from app.utils.storage import get_storage_client
 
@@ -130,7 +131,8 @@ async def generate_exam_content(
                         "course": course.name,
                         "professor": archive.professor,
                         "academic_year": archive.academic_year,
-                        "archive_type": archive.archive_type,
+                        # The plain value: str.format on the enum prints "ArchiveType.FINAL"
+                        "archive_type": ArchiveType(archive.archive_type).value,
                     }
                 )
 
@@ -162,13 +164,18 @@ async def generate_exam_content(
                 client.models.generate_content,
                 model=settings.GEMINI_MODEL,
                 contents=content,
-                config={"temperature": temperature} if temperature is not None else None,
+                config={"temperature": temperature}
+                if temperature is not None
+                else None,
             )
 
             # logger.info(f"[AI Exam] Generation completed successfully")
 
-            for uploaded_file in uploaded_files:
-                await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
+            # The exam is ready; a failed cleanup must not throw it away
+            await _delete_uploaded_files(client, uploaded_files)
+
+            if not response.text:
+                raise EmptyGenerationError("Gemini returned no text")
 
             disclaimer = """⚠️ 注意事項 / NOTICE ⚠️
 此試題由 AI 自動生成，僅供參考練習使用。
@@ -188,18 +195,42 @@ Answers may contain errors. Please verify the correctness yourself.
                 "archives_used": archives_info,
             }
 
-        except Exception:
-            # logger.error(f"[AI Exam] Error: {type(e).__name__}: {str(e)}")
-            for uploaded_file in uploaded_files:
-                try:
-                    await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
-                except Exception:
-                    logger.warning(
-                        "Failed to delete uploaded Gemini file during cleanup: %s",
-                        uploaded_file.name,
-                        exc_info=True,
-                    )
+        except (Exception, asyncio.CancelledError):
+            # CancelledError is how ARQ stops a job at job_timeout
+            await _delete_uploaded_files(client, uploaded_files)
             raise
+
+
+class EmptyGenerationError(Exception):
+    """Gemini answered without any text (e.g. blocked by safety filters)."""
+
+
+async def _delete_uploaded_files(client, uploaded_files) -> None:
+    for uploaded_file in uploaded_files:
+        try:
+            await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
+        except Exception:
+            logger.warning(
+                "Failed to delete uploaded Gemini file: %s",
+                uploaded_file.name,
+                exc_info=True,
+            )
+
+
+def classify_generation_error(exc: BaseException) -> str:
+    """Map a failed generation to a code the frontend can explain to the user."""
+    if isinstance(exc, asyncio.CancelledError | TimeoutError):
+        return "timeout"
+    if isinstance(exc, EmptyGenerationError):
+        return "empty_response"
+    if isinstance(exc, ValueError) and "API key not found" in str(exc):
+        return "api_key_missing"
+    if isinstance(exc, genai_errors.ClientError):
+        if exc.code == 429:
+            return "quota_exceeded"
+        if exc.code in (401, 403) or "API key" in str(exc):
+            return "api_key_invalid"
+    return "failed"
 
 
 async def generate_ai_exam_task(ctx, task_data: dict):
@@ -257,9 +288,9 @@ async def generate_ai_exam_task(ctx, task_data: dict):
         await publish_event("complete")
         return result
 
-    except Exception as e:
-        await publish_event("failed", error=str(e))
-        # logger.error(f"[Worker] Task failed: {str(e)}")
+    except (Exception, asyncio.CancelledError) as e:
+        # Publish even on timeout (CancelledError), or the client never hears back
+        await publish_event("failed", error=classify_generation_error(e))
         raise
 
 

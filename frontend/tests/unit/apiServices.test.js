@@ -148,6 +148,13 @@ describe('API service wrappers', () => {
       temperature: params.temperature,
     })
 
+    aiExamService.generateMockExam({ archive_ids: ['a1'] })
+    expect(postMock).toHaveBeenLastCalledWith('/ai-exam/generate', {
+      archive_ids: ['a1'],
+      prompt: null,
+      temperature: null,
+    })
+
     aiExamService.deleteTask(taskId)
     expect(deleteMock).toHaveBeenCalledWith(`/ai-exam/task/${taskId}`)
 

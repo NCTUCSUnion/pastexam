@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -295,3 +296,53 @@ async def test_generate_exam_content_decrypts_the_stored_key(monkeypatch):
     await worker.generate_exam_content(archive_ids=[1], user_id=7)
 
     assert used_keys == ["REAL_KEY"]
+
+
+class RecordingStreamRedis:
+    def __init__(self):
+        self.events = []
+
+    async def xadd(self, name, fields):
+        self.events.append(fields)
+
+    async def expire(self, name, seconds):
+        return None
+
+
+@pytest.mark.asyncio
+async def test_generate_ai_exam_task_reports_timeouts(monkeypatch):
+    async def cancelled(**kwargs):
+        # ARQ cancels the job coroutine when job_timeout is reached
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(worker, "generate_exam_content", cancelled)
+    redis = RecordingStreamRedis()
+
+    with pytest.raises(asyncio.CancelledError):
+        await worker.generate_ai_exam_task(
+            {"redis": redis, "job_id": "job-1"},
+            {"archive_ids": [1], "user_id": 1},
+        )
+
+    assert [e["status"] for e in redis.events] == ["in_progress", "failed"]
+    assert redis.events[-1]["error"] == "timeout"
+
+
+def test_classify_generation_error():
+    from google.genai import errors as genai_errors
+
+    def client_error(code, message):
+        return genai_errors.ClientError(code, {"error": {"message": message}})
+
+    classify = worker.classify_generation_error
+    assert classify(asyncio.CancelledError()) == "timeout"
+    assert classify(TimeoutError()) == "timeout"
+    assert classify(worker.EmptyGenerationError()) == "empty_response"
+    assert (
+        classify(ValueError("User API key not found. Please configure it"))
+        == "api_key_missing"
+    )
+    assert classify(client_error(429, "Resource exhausted")) == "quota_exceeded"
+    assert classify(client_error(400, "API key not valid.")) == "api_key_invalid"
+    assert classify(client_error(403, "Permission denied")) == "api_key_invalid"
+    assert classify(RuntimeError("boom")) == "failed"
