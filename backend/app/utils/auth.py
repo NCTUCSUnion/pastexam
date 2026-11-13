@@ -21,15 +21,13 @@ from app.utils.activity import record_activity
 from app.utils.redis import get_redis
 
 # Hashes use passlib's bcrypt_sha256 v2 format so existing rows keep verifying:
-# bcrypt(base64(hmac_sha256(key=salt, msg=password)), salt, rounds).
-# Older v1 bcrypt_sha256 and plain bcrypt hashes are still accepted on verify.
+# bcrypt(base64(hmac_sha256(key=salt, msg=password)), salt, rounds). The HMAC only
+# fits any password into bcrypt's 72-byte input; bcrypt provides the work factor.
+# Plain bcrypt hashes are still accepted on verify. passlib's older v1 format
+# (unkeyed sha256) is not: no stored password uses it.
 _BCRYPT_SHA256_ROUNDS = 12
 _BCRYPT_SHA256_V2 = re.compile(
     r"^\$bcrypt-sha256\$v=2,t=(?P<ident>2b),r=(?P<rounds>\d{1,2})"
-    r"\$(?P<salt>[^$]{22})\$(?P<digest>[^$]{31})$"
-)
-_BCRYPT_SHA256_V1 = re.compile(
-    r"^\$bcrypt-sha256\$(?P<ident>2[ab]),(?P<rounds>\d{1,2})"
     r"\$(?P<salt>[^$]{22})\$(?P<digest>[^$]{31})$"
 )
 _BCRYPT_MAX_BYTES = 72
@@ -58,8 +56,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         if match := _BCRYPT_SHA256_V2.match(hashed_password):
             key = _hmac_key(secret, match["salt"])
-        elif match := _BCRYPT_SHA256_V1.match(hashed_password):
-            key = base64.b64encode(hashlib.sha256(secret).digest())
         else:
             return bcrypt.checkpw(
                 secret[:_BCRYPT_MAX_BYTES], hashed_password.encode("ascii")

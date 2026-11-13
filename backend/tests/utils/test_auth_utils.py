@@ -48,10 +48,6 @@ PASSLIB_HASHES = [
         "x",
         "$bcrypt-sha256$v=2,t=2b,r=12$HiN9XBOf4Im6KAFXch6LCu$08WfAavuI6hX1D0heAXeSg8Tr0SvQ1a",
     ),
-    (
-        "LegacyV1pw",
-        "$bcrypt-sha256$2a,4$jad5Y5L3x9W96bPI3NOxou$xq.CiV1gEBVZdG2om2Fp0jieZyctBHm",
-    ),
     ("PlainBcrypt!", "$2b$04$XN2M0Fv046NDJHNARoPeS.Ef.7KqOjqLkifs41UHd9C6S5t938Yi6"),
     ("PlainBcrypt2a", "$2a$04$2RtkOX/hOBpA7shHDxVnVeA5CrMj.3SsT1f4Tqqg4bRpvG3DygldK"),
     (LONG_PASSWORD, "$2b$04$K3niwwHqJgro0f46CBrBru.LzqkyTC3ly8xkqqs6euFFxG4W7XN.."),
@@ -69,6 +65,12 @@ def test_password_hash_keeps_passlib_bcrypt_sha256_format():
     assert hashed.startswith("$bcrypt-sha256$v=2,t=2b,r=12$")
     assert auth_utils.verify_password(LONG_PASSWORD, hashed) is True
     assert auth_utils.verify_password(LONG_PASSWORD + "!", hashed) is False
+
+
+def test_verify_password_rejects_unkeyed_bcrypt_sha256_v1():
+    # passlib v1 pre-hashed with plain sha256; no stored password uses it
+    v1 = "$bcrypt-sha256$2a,4$jad5Y5L3x9W96bPI3NOxou$xq.CiV1gEBVZdG2om2Fp0jieZyctBHm"
+    assert auth_utils.verify_password("LegacyV1pw", v1) is False
 
 
 @pytest.mark.parametrize(
