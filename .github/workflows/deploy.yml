@@ -39,7 +39,9 @@ jobs:
               sleep 5
             done
             if [ "$status" != healthy ]; then
+              # Only the health check output: this repository's CI logs are public,
+              # so the backend logs stay on the server (docker compose logs backend)
               echo "Backend is $status after deploy"
-              docker compose logs --tail 80 backend
+              docker inspect -f '{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}' pastexam-backend 2>/dev/null | tail -c 600 || true
               exit 1
             fi
