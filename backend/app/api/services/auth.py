@@ -170,9 +170,8 @@ async def auth_callback_endpoint(
         except IntegrityError:
             # Name or email already belongs to another (e.g. local) account
             await db.rollback()
-            logger.warning(
-                "OAuth user %s conflicts with an existing account", info["sub"]
-            )
+            # No identifiers in the log: the subject is the student's NYCU id
+            logger.warning("A new OAuth user conflicts with an existing account")
             return _login_callback_redirect(error="conflict")
         await db.refresh(user)
     elif user.deleted_at is not None:
