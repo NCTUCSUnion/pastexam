@@ -173,6 +173,7 @@ async def generate_exam_content(
 
             # The exam is ready; a failed cleanup must not throw it away
             await _delete_uploaded_files(client, uploaded_files)
+            uploaded_files.clear()
 
             if not response.text:
                 raise EmptyGenerationError("Gemini returned no text")
@@ -218,15 +219,20 @@ async def _delete_uploaded_files(client, uploaded_files) -> None:
 
 def classify_generation_error(exc: BaseException) -> str:
     """Map a failed generation to a code the frontend can explain to the user."""
-    if isinstance(exc, asyncio.CancelledError | TimeoutError):
+    # Inside the job both job_timeout and a worker shutdown arrive as CancelledError
+    if isinstance(exc, asyncio.CancelledError):
+        return "interrupted"
+    if isinstance(exc, TimeoutError):
         return "timeout"
     if isinstance(exc, EmptyGenerationError):
         return "empty_response"
     if isinstance(exc, ValueError) and "API key not found" in str(exc):
         return "api_key_missing"
-    if isinstance(exc, genai_errors.ClientError):
+    # APIError rather than ClientError: a stored job result is unpickled as APIError
+    if isinstance(exc, genai_errors.APIError):
         if exc.code == 429:
             return "quota_exceeded"
+        # Gemini answers an invalid key with 400 "API key not valid"
         if exc.code in (401, 403) or "API key" in str(exc):
             return "api_key_invalid"
     return "failed"
@@ -302,6 +308,12 @@ class WorkerSettings:
     max_jobs = 5  # Max concurrent jobs
     job_timeout = 600  # Job timeout in seconds
     keep_result = 86400  # Keep results for 24 hours
+    # An interrupted job has already told the user it failed; running it again in the
+    # background would spend their Gemini quota twice and block new requests (409).
+    retry_jobs = False
+    # On shutdown (e.g. a deploy) give running jobs a chance to finish first; keep it
+    # below the worker's stop_grace_period in docker-compose.yml
+    job_completion_wait = 60
 
 
 _redis_pools: WeakKeyDictionary[asyncio.AbstractEventLoop, ArqRedis] = (
