@@ -58,9 +58,12 @@ test.describe('User › Notifications', () => {
     const expectedTimestamp = new Date(ACTIVE_NOTIFICATION.updated_at).getTime()
     await expect
       .poll(async () => {
-        return page.evaluate(() => window.localStorage.getItem('notification-last-seen'))
+        return page.evaluate(
+          (id) => JSON.parse(window.localStorage.getItem('notification-seen') || '{}')[id],
+          ACTIVE_NOTIFICATION.id
+        )
       })
-      .toBe(String(expectedTimestamp))
+      .toBe(expectedTimestamp)
   })
 
   test('opens notification center and shows detail content', async ({ page }) => {
@@ -124,8 +127,11 @@ test.describe('User › Notifications', () => {
     const expectedTimestamp = new Date(ACTIVE_NOTIFICATION.updated_at).getTime()
     await expect
       .poll(async () => {
-        return page.evaluate(() => window.localStorage.getItem('notification-last-seen'))
+        return page.evaluate(
+          (id) => JSON.parse(window.localStorage.getItem('notification-seen') || '{}')[id],
+          ACTIVE_NOTIFICATION.id
+        )
       })
-      .toBe(String(expectedTimestamp))
+      .toBe(expectedTimestamp)
   })
 })
