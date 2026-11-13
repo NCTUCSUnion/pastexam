@@ -141,6 +141,32 @@ async def test_upload_limit_applies_to_regular_users_only(
 
 
 @pytest.mark.asyncio
+async def test_failed_uploads_count_toward_the_limit(
+    client: AsyncClient, make_user, monkeypatch
+):
+    user = await make_user()
+    subject = f"Rate Limit Course {uuid.uuid4().hex[:8]}"
+    monkeypatch.setattr(settings, "UPLOAD_LIMIT_PER_HOUR", 1)
+
+    class BrokenStorage:
+        def put_object(self, **kwargs):
+            raise RuntimeError("storage down")
+
+    monkeypatch.setattr(
+        "app.api.services.archives.get_storage_client", lambda: BrokenStorage()
+    )
+    app.dependency_overrides[get_current_user] = lambda: UserRoles(
+        user_id=user.id, is_admin=False
+    )
+    try:
+        assert (await _upload(client, subject)).status_code == 500
+        assert (await _upload(client, subject)).status_code == 429
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        await get_redis().delete(f"{KEY_PREFIX}upload:{user.id}")
+
+
+@pytest.mark.asyncio
 async def test_discussion_messages_are_rate_limited(
     client, session_maker, make_user, monkeypatch
 ):
