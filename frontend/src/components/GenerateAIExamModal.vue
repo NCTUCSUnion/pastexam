@@ -214,11 +214,10 @@
             />
           </div>
           <div
-            class="whitespace-pre-wrap p-3 surface-50 border-round flex-1"
+            class="exam-content p-3 surface-50 border-round flex-1"
             style="line-height: 1.8; overflow-y: auto"
-          >
-            {{ result.generated_content }}
-          </div>
+            v-html="renderedExam"
+          ></div>
         </div>
       </div>
 
@@ -266,8 +265,8 @@
             />
             <Button
               v-if="currentStep === 'result'"
-              label="下載 TXT"
-              icon="pi pi-download"
+              label="下載 PDF"
+              icon="pi pi-file-pdf"
               severity="success"
               @click="downloadResult"
             />
@@ -390,6 +389,7 @@ import { trackEvent, EVENTS } from '../utils/analytics'
 import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 import { isUnauthorizedError } from '../utils/http'
 import { STORAGE_KEYS, getLocalJson, setLocalJson, removeLocalItem } from '../utils/storage'
+import { renderExamMarkdown, printExam } from '../utils/examMarkdown'
 
 const PdfPreviewModal = defineAsyncComponent(() => import('./PdfPreviewModal.vue'))
 
@@ -1164,26 +1164,30 @@ const copyContent = async () => {
   }
 }
 
-const downloadResult = () => {
+// Sanitized HTML of the exam; the AI writes Markdown with LaTeX math
+const renderedExam = computed(() => renderExamMarkdown(result.value?.generated_content))
+
+const examTitle = () => {
+  const parts = [form.value?.course_name, form.value?.professor].filter(Boolean)
+  return [...parts, '模擬試題'].join('_')
+}
+
+// Opens the print dialog, where the user picks "Save as PDF"
+const downloadResult = async () => {
   if (!result.value) return
 
-  const content = result.value.generated_content
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `${form.value.course_name}_${form.value.professor}_模擬試題.txt`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-
-  toast.add({
-    severity: 'success',
-    summary: '下載成功',
-    detail: '模擬試題已下載',
-    life: 3000,
-  })
+  try {
+    await printExam({ title: examTitle(), html: renderedExam.value })
+    trackEvent(EVENTS.DOWNLOAD_AI_EXAM, { format: 'pdf' })
+  } catch (error) {
+    console.error('Print exam error:', error)
+    toast.add({
+      severity: 'error',
+      summary: '無法開啟列印',
+      detail: '請改用「複製」後貼到其他文件中',
+      life: 4000,
+    })
+  }
 }
 
 const resetToSelect = () => {
@@ -1359,7 +1363,53 @@ useUnauthorizedEvent(handleUnauthorized)
 </script>
 
 <style scoped>
-.generated-content {
-  font-family: 'Courier New', monospace;
+.exam-content :deep(h1),
+.exam-content :deep(h2),
+.exam-content :deep(h3) {
+  line-height: 1.3;
+  margin: 1.2em 0 0.5em;
+}
+.exam-content :deep(h1) {
+  font-size: 1.4rem;
+}
+.exam-content :deep(h2) {
+  font-size: 1.2rem;
+}
+.exam-content :deep(h3) {
+  font-size: 1.05rem;
+}
+.exam-content :deep(p),
+.exam-content :deep(ul),
+.exam-content :deep(ol) {
+  margin: 0.5em 0;
+}
+.exam-content :deep(ol),
+.exam-content :deep(ul) {
+  padding-left: 1.5em;
+}
+.exam-content :deep(blockquote) {
+  margin: 0 0 1em;
+  padding: 0.5em 0.9em;
+  border-left: 3px solid var(--border-color);
+  color: var(--text-secondary);
+}
+.exam-content :deep(pre) {
+  padding: 0.7em;
+  border-radius: 6px;
+  background: var(--bg-primary);
+  overflow-x: auto;
+}
+.exam-content :deep(table) {
+  border-collapse: collapse;
+  margin: 0.8em 0;
+}
+.exam-content :deep(th),
+.exam-content :deep(td) {
+  border: 1px solid var(--border-color);
+  padding: 0.3em 0.6em;
+}
+.exam-content :deep(.katex-display) {
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 </style>

@@ -83,7 +83,14 @@ vi.mock('@/utils/analytics', () => ({
   trackEvent: trackEventMock,
   EVENTS: {
     GENERATE_AI_EXAM: 'generate-ai-exam',
+    DOWNLOAD_AI_EXAM: 'download-ai-exam',
   },
+}))
+
+const printExamMock = vi.hoisted(() => vi.fn(() => Promise.resolve()))
+vi.mock('@/utils/examMarkdown', async (importOriginal) => ({
+  ...(await importOriginal()),
+  printExam: printExamMock,
 }))
 
 vi.mock('@/utils/useUnauthorizedEvent.js', () => ({
@@ -461,10 +468,12 @@ describe('GenerateAIExamModal', () => {
 
     vm.result = taskResult.result
     await vm.downloadResult()
-    expect(objectUrlSpy).toHaveBeenCalled()
-    expect(appendSpy).toHaveBeenCalled()
-    expect(clickSpy).toHaveBeenCalled()
-    expect(revokeSpy).toHaveBeenCalledWith('blob:mock')
+    // The PDF comes from the print dialog; its title is the default file name
+    expect(printExamMock).toHaveBeenCalledWith({
+      title: expect.stringMatching(/_模擬試題$/),
+      html: expect.any(String),
+    })
+    expect(trackEventMock).toHaveBeenCalledWith('download-ai-exam', { format: 'pdf' })
 
     vm.confirmRegenerate()
     expect(confirmRequireMock).toHaveBeenCalled()
@@ -578,8 +587,9 @@ describe('GenerateAIExamModal', () => {
 
     // verify early return when no content for download
     vm.result = null
-    vm.downloadResult()
-    expect(objectUrlSpy).not.toHaveBeenCalled()
+    printExamMock.mockClear()
+    await vm.downloadResult()
+    expect(printExamMock).not.toHaveBeenCalled()
 
     vm.result = {
       generated_content: 'content',

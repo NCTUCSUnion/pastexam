@@ -130,7 +130,8 @@ async def test_generate_exam_content_success(monkeypatch):
     )
 
     assert result["success"] is True
-    assert result["generated_content"].startswith("⚠️ 注意事項")
+    # The disclaimer is a Markdown callout above the exam
+    assert result["generated_content"].startswith("> ⚠️ **注意事項 / NOTICE**")
     assert len(result["archives_used"]) == 1
     assert fake_client.uploads
     assert fake_client.deleted == ["uploaded-1"]
