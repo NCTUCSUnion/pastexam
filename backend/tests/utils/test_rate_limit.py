@@ -28,8 +28,8 @@ async def test_consume_allows_up_to_limit_then_blocks(key):
 @pytest.mark.asyncio
 async def test_window_starts_at_first_hit(key):
     try:
-        await rate_limit.record_hit(key, window_seconds=60)
-        await rate_limit.record_hit(key, window_seconds=600)
+        await rate_limit.hit(key, limit=10, window_seconds=60)
+        await rate_limit.hit(key, limit=10, window_seconds=600)
         # A later hit does not extend the window
         assert await get_redis().ttl(f"{rate_limit.KEY_PREFIX}{key}") <= 60
     finally:
@@ -44,8 +44,7 @@ async def test_rate_limit_fails_open_when_redis_is_down(monkeypatch, key):
 
     monkeypatch.setattr(rate_limit, "get_redis", lambda: BrokenRedis())
 
-    assert await rate_limit.get_retry_after(key, limit=1) is None
-    await rate_limit.record_hit(key, window_seconds=60)
+    assert await rate_limit.hit(key, limit=1, window_seconds=60) is None
     assert await rate_limit.consume(key, limit=1, window_seconds=60) is None
 
 

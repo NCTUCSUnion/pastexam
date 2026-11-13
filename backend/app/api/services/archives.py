@@ -13,7 +13,7 @@ from app.db.session import get_session
 from app.models.models import Archive, ArchiveType, Course, CourseCategory, User
 from app.utils.auth import get_current_user
 from app.utils.names import find_course, require_name
-from app.utils.rate_limit import get_retry_after, record_hit
+from app.utils.rate_limit import hit
 from app.utils.storage import get_storage_client
 
 logger = logging.getLogger(__name__)
@@ -50,10 +50,12 @@ async def upload_archive(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    # Admins upload in bulk, so only regular users are limited
-    upload_key = f"upload:{current_user.user_id}"
+    # Admins upload in bulk, so only regular users are limited. Every attempt
+    # counts, so failing uploads cannot be repeated without limit either.
     if not current_user.is_admin:
-        retry_after = await get_retry_after(upload_key, settings.UPLOAD_LIMIT_PER_HOUR)
+        retry_after = await hit(
+            f"upload:{current_user.user_id}", settings.UPLOAD_LIMIT_PER_HOUR, 60 * 60
+        )
         if retry_after is not None:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -94,11 +96,6 @@ async def upload_archive(
     _, file_extension = os.path.splitext(file.filename)
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     object_name = f"archives/{course.id}/{unique_filename}"
-
-    # Count the attempt before writing to storage, so failing uploads cannot be
-    # repeated without limit (each one could leave a file behind).
-    if not current_user.is_admin:
-        await record_hit(upload_key, 60 * 60)
 
     stored = False
     try:
