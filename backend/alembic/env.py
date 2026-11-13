@@ -23,7 +23,7 @@ config.set_main_option(
         "postgresql+asyncpg://"
         f"{settings.DB_USER}:{settings.DB_PASSWORD}@"
         f"{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-    ).replace("+asyncpg", ""),
+    ).replace("+asyncpg", "+psycopg2"),
 )
 
 # Interpret the config file for Python logging.
