@@ -6,6 +6,10 @@
 #
 # Restores backups made by backup.sh. Only backend and worker are stopped while restoring;
 # the database and RustFS stay up so the data can be loaded through them.
+#
+# The current data is backed up first (skip with SKIP_BACKUP=1), and the database is
+# replaced in a single transaction, so a failed restore leaves it exactly as it was.
+# Set FORCE=1 to skip the confirmation prompt.
 
 set -e
 
@@ -32,6 +36,29 @@ set -a
 . docker/.env
 set +a
 
+echo "This replaces the current database and/or files with the backup from $BACKUP_DATE."
+[ -f "$DB_DUMP" ] || echo "Warning: no database dump for $BACKUP_DATE, only files will be restored."
+[ -f "$OBJECTS_TAR" ] || echo "Warning: no file archive for $BACKUP_DATE, only the database will be restored."
+if [ "$FORCE" != "1" ]; then
+    read -r -p "Type 'restore' to continue: " answer
+    if [ "$answer" != "restore" ]; then
+        echo "Aborted"
+        exit 1
+    fi
+fi
+
+if [ "$SKIP_BACKUP" != "1" ]; then
+    echo "Backing up the current data first..."
+    if ! ./backup.sh; then
+        echo "Backup of the current data failed; nothing was restored."
+        echo "Run with SKIP_BACKUP=1 to restore anyway."
+        exit 1
+    fi
+fi
+
+# Services stay stopped if a step fails; say how to bring them back
+trap 'echo "Restore failed. Start the services again with: docker compose -f $COMPOSE_FILE up -d"' ERR
+
 echo "Starting data restore..."
 echo "Restore date: $BACKUP_DATE"
 
@@ -41,7 +68,14 @@ docker compose -f $COMPOSE_FILE up -d --wait db rustfs
 
 if [ -f "$DB_DUMP" ]; then
     echo "Restoring PostgreSQL database..."
-    docker compose -f $COMPOSE_FILE exec -T db pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner < $DB_DUMP
+    # Recreate the schema instead of pg_restore --clean, which cannot drop tables added
+    # after the backup was taken. Everything runs in one transaction: any error rolls the
+    # database back to its current state.
+    {
+        echo "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+        docker compose -f "$COMPOSE_FILE" exec -T db pg_restore --no-owner -f - < "$DB_DUMP"
+    } | docker compose -f "$COMPOSE_FILE" exec -T db \
+        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 --single-transaction -q
     echo "PostgreSQL restore completed"
 fi
 

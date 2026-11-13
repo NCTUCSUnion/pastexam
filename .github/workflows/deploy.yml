@@ -31,3 +31,20 @@ jobs:
             docker compose pull
             docker compose up -d
             docker compose restart nginx
+            # Fail the deploy (instead of reporting success) if the backend does not come
+            # up. Asks the container directly, so it works whatever compose file is on the
+            # server. Migrations run at startup, so allow a few minutes.
+            ok=no
+            for _ in $(seq 1 36); do
+              if docker exec pastexam-backend python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/statistics', timeout=5)" >/dev/null 2>&1; then
+                ok=yes
+                break
+              fi
+              sleep 5
+            done
+            if [ "$ok" != yes ]; then
+              # Backend logs stay on the server (docker compose logs backend): CI logs are public
+              echo "Backend did not respond after deploy"
+              docker ps --filter name=pastexam-backend --format '{{.Names}}: {{.Status}}'
+              exit 1
+            fi
