@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import yaml
-from sqlalchemy import text
+from sqlalchemy import or_, text
 from sqlmodel import func, select
 
 from app.core.config import settings
@@ -79,21 +79,20 @@ async def init_db():
 
 async def _seed_initial_data():
     async with AsyncSessionLocal() as session:
+        # Only create the default admin once. An existing account (even renamed,
+        # or suspended by an admin) is left alone so restarts never reset its
+        # password or lift a suspension.
         result = await session.execute(
-            select(User).where(User.name == settings.DEFAULT_ADMIN_NAME)
-        )
-        admin_user = result.scalar_one_or_none()
-
-        if admin_user and getattr(admin_user, "deleted_at", None) is not None:
-            admin_user.deleted_at = None
-            admin_user.password_hash = get_password_hash(
-                settings.DEFAULT_ADMIN_PASSWORD
+            select(User.id)
+            .where(
+                or_(
+                    User.name == settings.DEFAULT_ADMIN_NAME,
+                    User.email == settings.DEFAULT_ADMIN_EMAIL,
+                )
             )
-            admin_user.is_local = True
-            admin_user.is_admin = True
-            await session.commit()
-            await session.refresh(admin_user)
-        elif not admin_user:
+            .limit(1)
+        )
+        if result.scalar_one_or_none() is None:
             admin_user = User(
                 name=settings.DEFAULT_ADMIN_NAME,
                 email=settings.DEFAULT_ADMIN_EMAIL,

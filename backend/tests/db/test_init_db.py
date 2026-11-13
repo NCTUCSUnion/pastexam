@@ -240,3 +240,61 @@ async def test_init_db_seeds_while_holding_the_migration_lock(monkeypatch):
 
     # Other workers wait at the lock until the data is seeded
     assert events == ["lock", "migrate", "seed", "unlock"]
+
+
+@pytest.mark.asyncio
+async def test_seed_leaves_renamed_or_suspended_default_admin_alone(
+    monkeypatch, session_maker
+):
+    from datetime import UTC, datetime
+
+    from sqlmodel import select
+
+    monkeypatch.setattr(init_db, "AsyncSessionLocal", session_maker)
+    monkeypatch.setattr(init_db, "load_seed_data", lambda: {"courses": [], "memes": []})
+
+    async with session_maker() as session:
+        admin = (
+            await session.execute(
+                select(User).where(User.email == settings.DEFAULT_ADMIN_EMAIL)
+            )
+        ).scalar_one_or_none()
+        created_here = admin is None
+        if created_here:
+            admin = User(
+                name=settings.DEFAULT_ADMIN_NAME,
+                email=settings.DEFAULT_ADMIN_EMAIL,
+                password_hash="original-hash",
+                is_local=True,
+                is_admin=True,
+            )
+            session.add(admin)
+            await session.commit()
+            await session.refresh(admin)
+        original = (admin.name, admin.password_hash, admin.deleted_at)
+        admin.name = f"{settings.DEFAULT_ADMIN_NAME}-renamed"
+        admin.deleted_at = datetime.now(UTC)
+        await session.commit()
+        admin_id = admin.id
+
+    try:
+        await init_db._seed_initial_data()
+
+        async with session_maker() as session:
+            same_name = (
+                await session.execute(
+                    select(User).where(User.name == settings.DEFAULT_ADMIN_NAME)
+                )
+            ).scalar_one_or_none()
+            assert same_name is None
+            admin = await session.get(User, admin_id)
+            assert admin.deleted_at is not None
+            assert admin.password_hash == original[1]
+    finally:
+        async with session_maker() as session:
+            admin = await session.get(User, admin_id)
+            if created_here:
+                await session.delete(admin)
+            else:
+                admin.name, admin.password_hash, admin.deleted_at = original
+            await session.commit()
