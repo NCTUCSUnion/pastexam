@@ -45,6 +45,7 @@ const getUsersMock = vi.hoisted(() => vi.fn())
 const createUserMock = vi.hoisted(() => vi.fn())
 const updateUserMock = vi.hoisted(() => vi.fn())
 const deleteUserMock = vi.hoisted(() => vi.fn())
+const restoreUserMock = vi.hoisted(() => vi.fn())
 
 const notificationGetAllMock = vi.hoisted(() => vi.fn())
 const notificationCreateMock = vi.hoisted(() => vi.fn())
@@ -102,6 +103,7 @@ vi.mock('@/api', () => ({
   createUser: createUserMock,
   updateUser: updateUserMock,
   deleteUser: deleteUserMock,
+  restoreUser: restoreUserMock,
   notificationService: {
     getAllAdmin: notificationGetAllMock,
     create: notificationCreateMock,
@@ -132,6 +134,7 @@ describe('AdminView', () => {
     createUserMock.mockResolvedValue()
     updateUserMock.mockResolvedValue()
     deleteUserMock.mockResolvedValue()
+    restoreUserMock.mockResolvedValue()
 
     notificationGetAllMock.mockResolvedValue({ data: sampleNotifications })
     notificationCreateMock.mockResolvedValue()
@@ -197,7 +200,12 @@ describe('AdminView', () => {
     await wrapper.vm.handleTabChange('1')
     await flushPromises()
 
-    expect(getUsersMock).toHaveBeenCalledWith({ page: 1, page_size: 10, sort: '-is_admin,name' })
+    expect(getUsersMock).toHaveBeenCalledWith({
+      page: 1,
+      page_size: 10,
+      sort: '-is_admin,name',
+      status: 'active',
+    })
     expect(wrapper.vm.users.length).toBe(2)
     expect(wrapper.vm.usersTotal).toBe(2)
 
@@ -245,6 +253,13 @@ describe('AdminView', () => {
 
     wrapper.vm.confirmDeleteUser(sampleUsers[1])
     expect(deleteUserMock).toHaveBeenCalledWith(sampleUsers[1].id)
+    // Student ids must not be sent to analytics
+    for (const [, data] of trackEventMock.mock.calls) {
+      expect(data).not.toHaveProperty('userName')
+    }
+
+    wrapper.vm.confirmRestoreUser(sampleUsers[1])
+    expect(restoreUserMock).toHaveBeenCalledWith(sampleUsers[1].id)
 
     wrapper.vm.openNotificationCreateDialog()
     wrapper.vm.notificationForm.title = '新公告'
@@ -490,6 +505,12 @@ describe('AdminView', () => {
       expect.objectContaining({ is_admin: true, page: 1 })
     )
     expect(getUsersMock.mock.lastCall[0]).not.toHaveProperty('search')
+
+    wrapper.vm.filterUserStatus = 'suspended'
+    await flushPromises()
+    expect(getUsersMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'suspended', page: 1 })
+    )
 
     wrapper.vm.notificationSearchQuery = '維護'
     wrapper.vm.notificationSeverityFilter = 'info'

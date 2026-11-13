@@ -63,18 +63,9 @@ describe('router guard', () => {
     expect(await visit('/nowhere')).toBe('NotFound')
   })
 
-  it('stores a valid token from the OAuth callback', async () => {
-    authMocks.decodeToken.mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 60 })
-    // Storing the token logs the user in
-    authMocks.setToken.mockImplementation(() => login())
-    expect(await visit('/login/callback?token=good')).toBe('Archive')
-    expect(authMocks.setToken).toHaveBeenCalledWith('good')
-  })
-
-  it('drops an expired token from the OAuth callback', async () => {
-    authMocks.decodeToken.mockReturnValue({ exp: Math.floor(Date.now() / 1000) - 60 })
-    expect(await visit('/login/callback?token=old')).toBe('Home')
+  it('does not log in from a token in the callback URL', async () => {
+    // Tokens in links would let anyone log a victim into the attacker's account
+    expect(await visit('/login/callback?token=forged')).toBe('LoginCallback')
     expect(authMocks.setToken).not.toHaveBeenCalled()
-    expect(removeSessionItemMock).toHaveBeenCalled()
   })
 })

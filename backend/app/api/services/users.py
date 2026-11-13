@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
@@ -56,6 +57,9 @@ async def get_users(
     page_size: int = Query(10, ge=1, le=100),
     search: str | None = Query(None, max_length=100),
     is_admin: bool | None = None,
+    status_filter: Annotated[
+        Literal["active", "suspended", "all"], Query(alias="status")
+    ] = "active",
     sort: str = Query("-is_admin,name", max_length=200),
     current_user: UserRoles = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -68,7 +72,11 @@ async def get_users(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions"
         )
 
-    filters = [User.deleted_at.is_(None)]
+    filters = []
+    if status_filter == "active":
+        filters.append(User.deleted_at.is_(None))
+    elif status_filter == "suspended":
+        filters.append(User.deleted_at.is_not(None))
     if search and search.strip():
         escaped = (
             search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -254,7 +262,8 @@ async def delete_user(
     db: AsyncSession = Depends(get_session),
 ):
     """
-    Delete a user (admin only)
+    Suspend a user (admin only). The account is kept so it can be restored,
+    but it cannot log in (local or OAuth) and its existing tokens stop working.
     """
     if not current_user.is_admin:
         raise HTTPException(
@@ -263,7 +272,7 @@ async def delete_user(
 
     if current_user.user_id == user_id:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot suspend yourself"
         )
     result = await db.execute(
         select(User).where(User.id == user_id, User.deleted_at.is_(None))
@@ -275,6 +284,38 @@ async def delete_user(
         )
 
     user.deleted_at = datetime.now(UTC)
+    # Restoring brings the account back as a regular user
+    user.is_admin = False
     await db.commit()
 
-    return {"detail": "User deleted successfully"}
+    return {"detail": "User suspended successfully"}
+
+
+@router.post("/admin/users/{user_id}/restore", response_model=UserRead)
+async def restore_user(
+    user_id: int,
+    current_user: UserRoles = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    """
+    Lift a suspension (admin only). The user comes back without admin rights.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions"
+        )
+
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.deleted_at.is_not(None))
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Suspended user not found"
+        )
+
+    user.deleted_at = None
+    await db.commit()
+    await db.refresh(user)
+
+    return user
