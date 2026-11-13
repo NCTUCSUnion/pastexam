@@ -307,18 +307,38 @@ describe('ArchiveView', () => {
     await flushPromises()
     expect(deleteArchiveMock).toHaveBeenCalled()
 
+    // Picking a category clears the chosen course, so pick the course afterwards
     await vm.openEditDialog(archiveItem)
     vm.editForm.shouldTransfer = true
     vm.editForm.targetCategory = 'freshman'
+    await flushPromises()
     vm.editForm.targetCourseId = 'c2'
     await vm.handleEdit()
+    expect(updateArchiveCourseMock).toHaveBeenCalled()
+    expect(toastAddMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ detail: '考古題已更新並轉移到新課程' })
+    )
 
     await vm.openEditDialog(archiveItem)
     vm.editForm.shouldTransfer = true
     vm.editForm.targetCategory = 'freshman'
+    await flushPromises()
     vm.editForm.targetCourse = 'New Course'
     vm.editForm.targetCourseId = null
     await vm.handleEdit()
+    expect(updateArchiveCourseByCategoryAndNameMock).toHaveBeenCalled()
+
+    // Without a target nothing is moved, so it must not claim a transfer
+    await vm.openEditDialog(archiveItem)
+    vm.editForm.shouldTransfer = true
+    await flushPromises()
+    expect(vm.hasTransferTarget).toBe(false)
+    updateArchiveCourseMock.mockClear()
+    await vm.handleEdit()
+    expect(updateArchiveCourseMock).not.toHaveBeenCalled()
+    expect(toastAddMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ detail: '考古題資訊已更新' })
+    )
 
     await vm.handleUploadSuccess()
     expect(listCoursesMock.mock.calls.length).toBeGreaterThanOrEqual(3)
@@ -334,6 +354,60 @@ describe('ArchiveView', () => {
     await vm.syncArchiveDownloadCount('a1')
     expect(getCourseArchivesMock.mock.calls.length).toBeGreaterThanOrEqual(5)
 
+    wrapper.unmount()
+  })
+
+  it('ignores stale course responses and keeps download details fixed', async () => {
+    const wrapper = mount(ArchiveView, {
+      global: {
+        provide: {
+          toast: { add: toastAddMock },
+          confirm: { require: confirmRequireMock },
+          sidebarVisible: ref(true),
+        },
+        stubs: componentStubs,
+      },
+    })
+    await flushPromises()
+    const vm = wrapper.vm
+
+    // Course A answers after course B was already picked
+    let resolveSlowA
+    getCourseArchivesMock.mockReset()
+    getCourseArchivesMock
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveSlowA = resolve)))
+      .mockResolvedValueOnce({ data: [baseArchives[1]] })
+    vm.filterBySubject({ id: 'cA', label: 'Course A' })
+    vm.filterBySubject({ id: 'cB', label: 'Course B' })
+    await flushPromises()
+    resolveSlowA({ data: [baseArchives[0]] })
+    await flushPromises()
+    expect(vm.archives.map((a) => a.id)).toEqual(['a2'])
+    expect(vm.loading).toBe(false)
+
+    // Closing the preview while its download is in flight still saves the right file
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: true, blob: () => Promise.resolve(new Blob(['pdf'])) })
+    )
+    let resolveUrl
+    getArchiveDownloadUrlMock.mockImplementationOnce(
+      () => new Promise((resolve) => (resolveUrl = resolve))
+    )
+    vm.selectedArchive = { id: 'a2', year: '2022', professor: 'Prof. Wang', name: 'Final' }
+    const done = vi.fn()
+    const pending = vm.handlePreviewDownload(done)
+    vm.closePreview()
+    resolveUrl({ data: { url: 'https://example.com/a2.pdf' } })
+    await pending
+    await flushPromises()
+
+    expect(done).toHaveBeenCalled()
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summary: '下載成功',
+        detail: '已下載 2022_Course B_Prof. Wang_Final.pdf',
+      })
+    )
     wrapper.unmount()
   })
 
