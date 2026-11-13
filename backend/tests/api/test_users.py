@@ -3,7 +3,7 @@ import uuid
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from app.api.services.users import (
     create_user,
@@ -41,7 +41,7 @@ async def test_admin_can_create_and_delete_user(client):
 
         delete_response = await client.delete(f"{ADMIN_PATH}/{created['id']}")
         assert delete_response.status_code == 200
-        assert delete_response.json()["detail"] == "User deleted successfully"
+        assert delete_response.json()["detail"] == "User suspended successfully"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -184,7 +184,7 @@ async def test_delete_user_cannot_delete_self(client):
     try:
         response = await client.delete(f"{ADMIN_PATH}/5")
         assert response.status_code == 400
-        assert response.json()["detail"] == "Cannot delete yourself"
+        assert response.json()["detail"] == "Cannot suspend yourself"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -526,7 +526,7 @@ async def test_delete_user_direct_success(session_maker):
             current_user=UserRoles(user_id=1, is_admin=True),
             db=session,
         )
-        assert response["detail"] == "User deleted successfully"
+        assert response["detail"] == "User suspended successfully"
 
         remaining = await session.get(User, user.id)
         assert remaining is not None
@@ -602,3 +602,59 @@ async def test_list_users_rejects_bad_parameters(client):
     assert (await _list(client, sort="password_hash")).status_code == 400
     assert (await _list(client, page_size=101)).status_code == 422
     assert (await _list(client, page=0)).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_suspend_and_restore_user(client, paged_users, session_maker):
+    target_name = f"{paged_users}-1"  # an admin in the fixture
+    async with session_maker() as session:
+        target = (
+            await session.execute(select(User).where(User.name == target_name))
+        ).scalar_one()
+        target_id = target.id
+
+    app.dependency_overrides[get_current_user] = lambda: UserRoles(
+        user_id=-1, is_admin=True
+    )
+    try:
+        suspend = await client.delete(f"{ADMIN_PATH}/{target_id}")
+        assert suspend.status_code == 200
+
+        active = (await client.get(ADMIN_PATH, params={"search": paged_users})).json()
+        assert target_name not in [u["name"] for u in active["items"]]
+
+        suspended = (
+            await client.get(
+                ADMIN_PATH, params={"search": paged_users, "status": "suspended"}
+            )
+        ).json()
+        assert [u["name"] for u in suspended["items"]] == [target_name]
+        assert suspended["items"][0]["suspended_at"] is not None
+        assert suspended["items"][0]["is_admin"] is False
+
+        everyone = (
+            await client.get(ADMIN_PATH, params={"search": paged_users, "status": "all"})
+        ).json()
+        assert everyone["total"] == 5
+
+        restore = await client.post(f"{ADMIN_PATH}/{target_id}/restore")
+        assert restore.status_code == 200
+        assert restore.json()["suspended_at"] is None
+        assert restore.json()["is_admin"] is False
+
+        again = await client.post(f"{ADMIN_PATH}/{target_id}/restore")
+        assert again.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_restore_user_requires_admin(client):
+    app.dependency_overrides[get_current_user] = lambda: UserRoles(
+        user_id=2, is_admin=False
+    )
+    try:
+        response = await client.post(f"{ADMIN_PATH}/1/restore")
+        assert response.status_code == 403
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

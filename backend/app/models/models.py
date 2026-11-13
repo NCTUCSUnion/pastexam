@@ -3,6 +3,7 @@ from enum import Enum as PyEnum
 from typing import Optional
 
 from pydantic import BaseModel
+from pydantic import Field as PydanticField
 from sqlalchemy import Column, DateTime, Index, String, Text
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -171,6 +172,10 @@ class UserRead(BaseModel):
     is_admin: bool
     is_local: bool
     last_login: datetime | None
+    # Soft-deleted users are suspended: they cannot log in until restored
+    suspended_at: datetime | None = PydanticField(
+        default=None, validation_alias="deleted_at"
+    )
 
     class Config:
         from_attributes = True

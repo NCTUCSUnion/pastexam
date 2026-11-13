@@ -30,7 +30,18 @@
 <script>
 import { useTheme } from '../utils/useTheme'
 import { getCodeBgSvg } from '../utils/svgBg'
-import { STORAGE_KEYS, setSessionItem } from '../utils/storage'
+import { setToken } from '../utils/auth'
+import { authService } from '../api'
+
+// Error codes sent by the backend OAuth callback
+const LOGIN_ERROR_MESSAGES = {
+  denied: '已取消 NYCU 授權，請重新登入。',
+  state: '登入逾時，或已在其他分頁重新登入，請重新登入。',
+  provider: '無法向 NYCU 取得帳號資料，請稍後再試。',
+  suspended: '此帳號已被停權，如有疑問請聯絡管理員。',
+  conflict: '此 NYCU 帳號的名稱或信箱已被其他帳號使用，請聯絡管理員。',
+}
+const DEFAULT_ERROR_MESSAGE = '驗證失敗，請重試或聯絡管理員。'
 
 export default {
   data() {
@@ -57,19 +68,20 @@ export default {
   },
   async mounted() {
     this.setBg()
+    const urlParams = new URLSearchParams(window.location.search)
+    const error = urlParams.get('error')
+    const code = urlParams.get('code')
+    if (error || !code) {
+      this.errorMessage = LOGIN_ERROR_MESSAGES[error] ?? DEFAULT_ERROR_MESSAGE
+      return
+    }
     try {
-      const urlParams = new URLSearchParams(window.location.search)
-      const token = urlParams.get('token')
-
-      if (!token) {
-        throw new Error('No authentication token received')
-      }
-
-      setSessionItem(STORAGE_KEYS.session.AUTH_TOKEN, token)
+      const { access_token: token } = await authService.exchangeOAuthCode(code)
+      setToken(token)
       this.$router.replace('/archive')
-    } catch (error) {
-      console.error('Login callback error:', error)
-      this.errorMessage = '驗證失敗，請重試或聯絡管理員。'
+    } catch (err) {
+      console.error('Login callback error:', err)
+      this.errorMessage = '登入連結已失效，請重新登入。'
     }
   },
   watch: {
