@@ -748,7 +748,8 @@ async def delete_course(
         "message": (
             f"Course '{course.name}' and {len(archives)} associated "
             f"archives deleted successfully"
-        )
+        ),
+        "deleted_archives": len(archives),
     }
 
 

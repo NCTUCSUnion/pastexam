@@ -1046,7 +1046,7 @@ const saveCourse = async () => {
 
 const confirmDeleteCourse = (course) => {
   confirm.require({
-    message: `確定要刪除課程「${course.name}」嗎？`,
+    message: `確定要刪除課程「${course.name}」嗎？此課程底下的所有考古題也會一併刪除，且無法從後台復原。`,
     header: '刪除確認',
     icon: 'pi pi-exclamation-triangle',
     rejectClass: 'p-button-secondary p-button-outlined',
@@ -1059,15 +1059,19 @@ const confirmDeleteCourse = (course) => {
 
 const deleteCourseAction = async (course) => {
   try {
-    await deleteCourse(course.id)
+    const response = await deleteCourse(course.id)
     trackEvent(EVENTS.DELETE_COURSE, {
       courseName: course.name,
       category: course.category,
     })
+    const deletedArchives = response?.data?.deleted_archives
     toast.add({
       severity: 'success',
       summary: '成功',
-      detail: '課程刪除成功',
+      detail:
+        typeof deletedArchives === 'number'
+          ? `課程已刪除，連同 ${deletedArchives} 份考古題`
+          : '課程刪除成功',
       life: 3000,
     })
     await loadCourses()
