@@ -783,6 +783,17 @@ const closeTaskWebSocket = () => {
   taskWebSocket = null
 }
 
+// Error codes sent by the backend for failed or missing tasks
+const TASK_ERROR_MESSAGES = {
+  api_key_missing: '尚未設定 Gemini API Key，請先設定後再生成。',
+  api_key_invalid: 'Gemini API Key 無效或已失效，請更新 API Key 後再試。',
+  quota_exceeded: 'Gemini API 用量已達上限，請稍後再試或改用其他 API Key。',
+  timeout: '生成時間過長已逾時，請減少選取的考古題後再試。',
+  empty_response: 'AI 沒有產生內容，請稍後再試。',
+  expired: '找不到這個生成任務（結果只保留 24 小時），請重新生成。',
+}
+const DEFAULT_TASK_ERROR = '生成失敗，請稍後再試'
+
 const handleTaskStatusData = (statusData, context = {}) => {
   if (statusData.status === 'complete') {
     if (statusData.result && statusData.result.generated_content) {
@@ -825,14 +836,16 @@ const handleTaskStatusData = (statusData, context = {}) => {
     clearTaskFromStorage()
     currentTaskId.value = null
     result.value = null
-    errorMessage.value = '生成失敗，請稍後再試'
+    errorMessage.value =
+      TASK_ERROR_MESSAGES[statusData.error] ??
+      (statusData.status === 'not_found' ? TASK_ERROR_MESSAGES.expired : DEFAULT_TASK_ERROR)
     currentStep.value = 'error'
 
     toast.add({
       severity: 'error',
       summary: '生成失敗',
       detail: errorMessage.value,
-      life: 3000,
+      life: 5000,
     })
     return true
   }

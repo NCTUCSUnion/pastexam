@@ -6,7 +6,8 @@ export const aiExamService = {
     return api.post('/ai-exam/generate', {
       archive_ids: params.archive_ids,
       prompt: params.prompt || null,
-      temperature: params.temperature || 0.7,
+      // Only send a temperature when asked; Gemini 3 works best with its default
+      temperature: params.temperature ?? null,
     })
   },
 

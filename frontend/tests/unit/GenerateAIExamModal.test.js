@@ -504,6 +504,15 @@ describe('GenerateAIExamModal', () => {
     webSocketInstances[1].emitMessage({ task_id: 'task-fail', status: 'failed' })
     await flushPromises()
     expect(vm.currentStep).toBe('error')
+    expect(vm.errorMessage).toBe('生成失敗，請稍後再試')
+
+    // The reason sent by the backend is shown to the user
+    vm.handleTaskStatusData({ task_id: 't', status: 'failed', error: 'api_key_invalid' })
+    expect(vm.errorMessage).toContain('API Key 無效')
+    vm.handleTaskStatusData({ task_id: 't', status: 'failed', error: 'quota_exceeded' })
+    expect(vm.errorMessage).toContain('用量已達上限')
+    vm.handleTaskStatusData({ task_id: 't', status: 'not_found', error: 'expired' })
+    expect(vm.errorMessage).toContain('只保留 24 小時')
 
     vm.selectedArchiveIds = ['arch-1']
     vm.currentStep = 'selectArchives'
