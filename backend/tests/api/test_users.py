@@ -658,3 +658,37 @@ async def test_restore_user_requires_admin(client):
         assert response.status_code == 403
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_restore_drops_admin_rights_kept_from_before_suspensions(
+    client, session_maker
+):
+    from datetime import UTC, datetime
+
+    suffix = uuid.uuid4().hex[:8]
+    async with session_maker() as session:
+        # Deleted before "delete" meant "suspend", so is_admin was never cleared
+        legacy = User(
+            name=f"legacy-admin-{suffix}",
+            email=f"legacy-admin-{suffix}@example.com",
+            is_admin=True,
+            is_local=True,
+            deleted_at=datetime.now(UTC),
+        )
+        session.add(legacy)
+        await session.commit()
+        legacy_id = legacy.id
+
+    app.dependency_overrides[get_current_user] = lambda: UserRoles(
+        user_id=-1, is_admin=True
+    )
+    try:
+        response = await client.post(f"{ADMIN_PATH}/{legacy_id}/restore")
+        assert response.status_code == 200
+        assert response.json()["is_admin"] is False
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        async with session_maker() as session:
+            await session.execute(delete(User).where(User.id == legacy_id))
+            await session.commit()

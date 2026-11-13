@@ -315,6 +315,8 @@ async def restore_user(
         )
 
     user.deleted_at = None
+    # Users deleted before suspensions existed may still carry is_admin
+    user.is_admin = False
     await db.commit()
     await db.refresh(user)
 

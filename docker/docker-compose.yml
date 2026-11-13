@@ -28,7 +28,8 @@ services:
     env_file:
       - ../backend/.env
     healthcheck:
-      # Also fails while migrations run or when the database is unreachable
+      # Fails until startup (including migrations) has finished; /statistics answers
+      # even when the database is down, so this does not detect a lost database
       test:
         [
           "CMD",

@@ -479,3 +479,21 @@ async def test_oauth_callback_bad_state_redirects_with_error(client):
 async def test_oauth_exchange_rejects_unknown_code(client):
     response = await client.post("/auth/oauth/exchange", json={"code": "nope"})
     assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_oauth_exchange_rejects_non_ascii_code(client, monkeypatch):
+    query = await _oauth_callback_with(
+        client,
+        monkeypatch,
+        {
+            "provider": "nycu",
+            "sub": f"ascii-{uuid.uuid4().hex[:8]}",
+            "email": f"{uuid.uuid4().hex[:8]}@example.com",
+            "name": f"ascii-{uuid.uuid4().hex[:8]}",
+        },
+    )
+    assert "code" in query
+
+    response = await client.post("/auth/oauth/exchange", json={"code": "代碼"})
+    assert response.status_code == 400
