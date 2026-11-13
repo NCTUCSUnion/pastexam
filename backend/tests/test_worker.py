@@ -2,7 +2,7 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from arq.jobs import JobExecutionFailed
+from arq.worker import JobExecutionFailed
 
 from app import worker
 from app.utils.crypto import encrypt_secret

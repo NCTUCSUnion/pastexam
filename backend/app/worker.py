@@ -9,7 +9,7 @@ from weakref import WeakKeyDictionary
 
 from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
-from arq.jobs import JobExecutionFailed
+from arq.worker import JobExecutionFailed
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai.types import UploadFileConfig
