@@ -12,8 +12,8 @@ importers:
         specifier: ^13.0.1
         version: 13.0.1(semantic-release@25.0.9)
       '@semantic-release/github':
-        specifier: ^12.0.10
-        version: 12.0.10(semantic-release@25.0.9)
+        specifier: ^12.0.11
+        version: 12.0.11(semantic-release@25.0.9)
       '@semantic-release/release-notes-generator':
         specifier: ^14.1.1
         version: 14.1.1(semantic-release@25.0.9)
@@ -126,8 +126,8 @@ packages:
     resolution: {integrity: sha512-mgdxrHTLOjOddRVYIYDo0fR3/v61GNN1YGkfbrjuIKg/uMgCd+Qzo3UAXJ+woLQQpos4pl5Esuw5A7AoNlzjUQ==}
     engines: {node: '>=18'}
 
-  '@semantic-release/github@12.0.10':
-    resolution: {integrity: sha512-QskygvpX8hFx9UEbqJ+C46OIhaJjsysNQ8PYJPuRDc/ek5+dh8WYGD1ofUahCcGLAOmnnwZTcmCJCEXM8XxhRw==}
+  '@semantic-release/github@12.0.11':
+    resolution: {integrity: sha512-/8JPlFOV8he+gs+kS8Gx0tNWBboCRBd1q3y7pQhYwtrBL0CzDe9yzguZZAfnjGM2duWYB3rEYn9BdYLu9x00cg==}
     engines: {node: ^22.14.0 || >= 24.10.0}
     peerDependencies:
       semantic-release: '>=24.1.0'
@@ -175,8 +175,8 @@ packages:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
 
-  ansi-regex@6.4.0:
-    resolution: {integrity: sha512-KzTVk2tCWAHtYrvvvaP8bJKJq2pVinhLcGEQdtLIYPbmNGNyYe8QwNaTUYQp2J7/vIsUKt5QCqAfUkYyG9DkOw==}
+  ansi-regex@6.6.0:
+    resolution: {integrity: sha512-XZ5apbzreCbXSKwPjJstu8R0zOi247w3XYwWxtwBXgpZrCyc1Ka7p9/xY0A9/diMewmHbEKz+FIraWaEWjlN5g==}
     engines: {node: '>=12'}
 
   ansi-styles@3.2.1:
@@ -453,8 +453,8 @@ packages:
   graceful-fs@4.2.10:
     resolution: {integrity: sha512-9ByhssR2fPVsNZj478qUUbKfmL0+t5BDVyjShtyZZLiK7ZDAArFFfopyOTj0M05wE2tJPisA4iTnnXl2YoPvOA==}
 
-  graceful-fs@4.2.11:
-    resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+  graceful-fs@4.2.12:
+    resolution: {integrity: sha512-iuyGF2E4oafQfPsRrG2wtY2ILupMhvtdrhzrxB+0VcjsPpSPttpfYdjnGFGsTi5MaJFjI1jOKHPQ6UTbTj9TAw==}
 
   handlebars@4.7.10:
     resolution: {integrity: sha512-P5VJMVM7qgBn6vjXMw8WG9uVI+ncf2pi72j4de4yz5ZULLj2RGqLYaKOYGsgyrViQ0tePOVlN1tDCCXXtFqXKg==}
@@ -629,11 +629,11 @@ packages:
     resolution: {integrity: sha512-ayF7iT+44LXdxJLTrTd3TLQpFDDvPCBxXxbv+pMUSuHA5Q8zyAfwkRP6aHHwNVFBUFWtxAHqwNJxF8vMZLAbVg==}
     engines: {node: '>=18'}
 
-  marked-terminal@7.3.0:
-    resolution: {integrity: sha512-t4rBvPsHc57uE/2nJOLmMbZCQ4tgAccAED3ngXQqW6g+TxA488JzJ+FK3lQkzBQOI1mRV/r/Kq+1ZlJ4D0owQw==}
+  marked-terminal@7.3.1:
+    resolution: {integrity: sha512-B1eKs5mRiacjHHMlex1zn0zkVomz2/KWjD/dyA8WRQTXk2d15OzVjiK/iuPfvDFB27Gvr8p/u6MYgU0NY/O45w==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
-      marked: '>=1 <16'
+      marked: '>=1 <19'
 
   marked@15.0.12:
     resolution: {integrity: sha512-8dD6FusOQSrpv9Z1rdNMdlSgQOIP880DHqnohobOmYLElGEqAL/JvxvuxZO16r4HtjTlfPRDC1hbvxC9dPN2nA==}
@@ -651,8 +651,8 @@ packages:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
 
-  mime@4.1.1:
-    resolution: {integrity: sha512-YAApRsTpM2+gnUFHhRNGfkX8NK0V5xj1nyQLufGlwEI+eX4xRsTcel2IXDuMEGSGjBvzykNW4VuoEACgwYe7BQ==}
+  mime@4.1.2:
+    resolution: {integrity: sha512-ikRzZ2RwbUVDyL9SsU0f2Phcmav4yq5r8faH5ZZKHtOZrMBLnrQOrj0uvqZ5R1uQnj+RO7Wcklw/lAf81mP9LQ==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -699,8 +699,8 @@ packages:
     resolution: {integrity: sha512-9qny7Z9DsQU8Ou39ERsPU4OZQlSTP47ShQzuKZ6PRXpYLtIFgl/DEBYEXKlvcEa+9tHVcK8CF81Y2V72qaZhWA==}
     engines: {node: '>=18'}
 
-  npm@11.21.1:
-    resolution: {integrity: sha512-YTzL6QBEJXyHcTu0JiUc7RKMp+mzlJtl7rGLmERaXUQeFHIMc9atdr6G9M9C8vDWbv40epoTQAzNL2/PtZVDhQ==}
+  npm@11.21.2:
+    resolution: {integrity: sha512-7HPApk+AflMUavSseL1Pm6CnYqMIHk53x+KmuhqmTDqPkjPMgxIpTPcTqsE91EKNw4gFBJV9fnXiSdGm1DXq9A==}
     engines: {node: ^20.17.0 || >=22.9.0}
     hasBin: true
     bundledDependencies:
@@ -948,8 +948,8 @@ packages:
     resolution: {integrity: sha512-hunMQrEy1T6Jr2uEVjrAIqjwWcQTgOAcIM52C8MY1EZSD3DDNft04XzvYKPqjED65bNVVko0YI38nYeEHCX3yw==}
     engines: {node: '>=12'}
 
-  semver@7.8.5:
-    resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
+  semver@7.8.6:
+    resolution: {integrity: sha512-9lpSSU4Mly3mrtruwLs1eLK6+gzbzqeBFwRNjIjE+9LuDpWdYctrQlQ3ej1Ilgi7gknpsTRnPoLP8DpCHqHIJw==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -1120,8 +1120,8 @@ packages:
     resolution: {integrity: sha512-EvRlUt/QqAEvXdQeRMYUfwOQsfzpDztykrG2owGEE/rBOBoYv9uF39ZzsNDh4lTFHhTr2XOZjKkYgueD12ZmGA==}
     engines: {node: '>=18.17'}
 
-  undici@7.30.1:
-    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
+  undici@7.30.2:
+    resolution: {integrity: sha512-mLyPQnHwUxaM/rideoK/+KL8DaAJLRl4aBCfmX444aCSLnIaomqPLtNRe2jdCYcsk5wZzXrDIQC8ZeYNRAYyIA==}
     engines: {node: '>=20.18.1'}
 
   unicode-emoji-modifier-base@1.0.0:
@@ -1151,8 +1151,8 @@ packages:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
 
-  url-join@5.1.1:
-    resolution: {integrity: sha512-5+M4YX5pEFeXSdMyt3J5iXr949UC+j6yHRkZUEv6ljTusAfdCdS4pSTudnYGzYEbKkdK5xIE0E3i5xzIzoiFrQ==}
+  url-join@5.2.0:
+    resolution: {integrity: sha512-/tMVQdp/2eE90fGb6npbd2nLHH8jamzLLeZhLEKTz4Rc38wO5AeEuIhoWroWWfQJS50ZzL4Xod9JER/pJWTTEQ==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   util-deprecate@1.0.2:
@@ -1333,7 +1333,7 @@ snapshots:
 
   '@semantic-release/error@4.0.0': {}
 
-  '@semantic-release/github@12.0.10(semantic-release@25.0.9)':
+  '@semantic-release/github@12.0.11(semantic-release@25.0.9)':
     dependencies:
       '@octokit/core': 7.0.8
       '@octokit/plugin-paginate-rest': 15.0.0(@octokit/core@7.0.8)
@@ -1347,12 +1347,12 @@ snapshots:
       https-proxy-agent: 9.1.0
       issue-parser: 7.0.2
       lodash-es: 4.18.1
-      mime: 4.1.1
+      mime: 4.1.2
       p-filter: 4.1.0
       semantic-release: 25.0.9
       tinyglobby: 0.2.17
-      undici: 7.30.1
-      url-join: 5.1.1
+      undici: 7.30.2
+      url-join: 5.2.0
     transitivePeerDependencies:
       - kerberos
       - supports-color
@@ -1368,12 +1368,12 @@ snapshots:
       lodash-es: 4.18.1
       nerf-dart: 1.0.0
       normalize-url: 9.0.1
-      npm: 11.21.1
+      npm: 11.21.2
       rc: 1.2.8
       read-pkg: 10.1.0
       registry-auth-token: 5.1.1
       semantic-release: 25.0.9
-      semver: 7.8.5
+      semver: 7.8.6
       tempy: 3.2.0
 
   '@semantic-release/release-notes-generator@14.1.1(semantic-release@25.0.9)':
@@ -1411,7 +1411,7 @@ snapshots:
 
   ansi-regex@5.0.1: {}
 
-  ansi-regex@6.4.0: {}
+  ansi-regex@6.6.0: {}
 
   ansi-styles@3.2.1:
     dependencies:
@@ -1521,7 +1521,7 @@ snapshots:
       conventional-commits-filter: 5.0.0
       handlebars: 4.7.10
       meow: 13.2.0
-      semver: 7.8.5
+      semver: 7.8.6
 
   conventional-commits-filter@5.0.0: {}
 
@@ -1650,7 +1650,7 @@ snapshots:
 
   fs-extra@11.4.1:
     dependencies:
-      graceful-fs: 4.2.11
+      graceful-fs: 4.2.12
       jsonfile: 6.2.1
       universalify: 2.0.1
 
@@ -1680,7 +1680,7 @@ snapshots:
 
   graceful-fs@4.2.10: {}
 
-  graceful-fs@4.2.11: {}
+  graceful-fs@4.2.12: {}
 
   handlebars@4.7.10:
     dependencies:
@@ -1797,13 +1797,13 @@ snapshots:
     dependencies:
       universalify: 2.0.1
     optionalDependencies:
-      graceful-fs: 4.2.11
+      graceful-fs: 4.2.12
 
   lines-and-columns@1.2.4: {}
 
   load-json-file@4.0.0:
     dependencies:
-      graceful-fs: 4.2.11
+      graceful-fs: 4.2.12
       parse-json: 4.0.0
       pify: 3.0.0
       strip-bom: 3.0.0
@@ -1835,10 +1835,10 @@ snapshots:
       type-fest: 4.41.0
       web-worker: 1.5.0
 
-  marked-terminal@7.3.0(marked@15.0.12):
+  marked-terminal@7.3.1(marked@15.0.12):
     dependencies:
       ansi-escapes: 7.3.0
-      ansi-regex: 6.4.0
+      ansi-regex: 6.6.0
       chalk: 5.6.2
       cli-highlight: 2.1.11
       cli-table3: 0.6.5
@@ -1857,7 +1857,7 @@ snapshots:
       braces: 3.0.3
       picomatch: 2.3.2
 
-  mime@4.1.1: {}
+  mime@4.1.2: {}
 
   mimic-fn@4.0.0: {}
 
@@ -1885,13 +1885,13 @@ snapshots:
   normalize-package-data@6.0.2:
     dependencies:
       hosted-git-info: 7.0.2
-      semver: 7.8.5
+      semver: 7.8.6
       validate-npm-package-license: 3.0.4
 
   normalize-package-data@8.0.0:
     dependencies:
       hosted-git-info: 9.0.3
-      semver: 7.8.5
+      semver: 7.8.6
       validate-npm-package-license: 3.0.4
 
   normalize-url@9.0.1: {}
@@ -1905,7 +1905,7 @@ snapshots:
       path-key: 4.0.0
       unicorn-magic: 0.3.0
 
-  npm@11.21.1: {}
+  npm@11.21.2: {}
 
   object-assign@4.1.1: {}
 
@@ -2063,7 +2063,7 @@ snapshots:
     dependencies:
       '@semantic-release/commit-analyzer': 13.0.1(semantic-release@25.0.9)
       '@semantic-release/error': 4.0.0
-      '@semantic-release/github': 12.0.10(semantic-release@25.0.9)
+      '@semantic-release/github': 12.0.11(semantic-release@25.0.9)
       '@semantic-release/npm': 13.2.0(semantic-release@25.0.9)
       '@semantic-release/release-notes-generator': 14.1.1(semantic-release@25.0.9)
       aggregate-error: 5.1.0
@@ -2080,13 +2080,13 @@ snapshots:
       import-from-esm: 2.0.0
       lodash-es: 4.18.1
       marked: 15.0.12
-      marked-terminal: 7.3.0(marked@15.0.12)
+      marked-terminal: 7.3.1(marked@15.0.12)
       micromatch: 4.0.8
       p-each-series: 3.0.0
       p-reduce: 3.0.0
       read-package-up: 12.0.0
       resolve-from: 5.0.0
-      semver: 7.8.5
+      semver: 7.8.6
       signale: 1.4.0
       yargs: 18.2.0
     transitivePeerDependencies:
@@ -2096,7 +2096,7 @@ snapshots:
 
   semver-regex@4.0.5: {}
 
-  semver@7.8.5: {}
+  semver@7.8.6: {}
 
   shebang-command@2.0.0:
     dependencies:
@@ -2170,7 +2170,7 @@ snapshots:
 
   strip-ansi@7.2.0:
     dependencies:
-      ansi-regex: 6.4.0
+      ansi-regex: 6.6.0
 
   strip-bom@3.0.0: {}
 
@@ -2255,7 +2255,7 @@ snapshots:
 
   undici@6.29.1: {}
 
-  undici@7.30.1: {}
+  undici@7.30.2: {}
 
   unicode-emoji-modifier-base@1.0.0: {}
 
@@ -2273,7 +2273,7 @@ snapshots:
 
   universalify@2.0.1: {}
 
-  url-join@5.1.1: {}
+  url-join@5.2.0: {}
 
   util-deprecate@1.0.2: {}
 
