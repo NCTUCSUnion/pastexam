@@ -408,6 +408,22 @@ describe('ArchiveView', () => {
         detail: '已下載 2022_Course B_Prof. Wang_Final.pdf',
       })
     )
+
+    // A failed preview link still leaves a working 下載 button
+    toastAddMock.mockClear()
+    getArchivePreviewUrlMock.mockRejectedValueOnce(new Error('preview down'))
+    await vm.previewArchive({ id: 'a2', year: '2022', professor: 'Prof. Wang', name: 'Final' })
+    expect(vm.previewError).toBe(true)
+    const afterFailure = vi.fn()
+    await vm.handlePreviewDownload(afterFailure)
+    expect(afterFailure).toHaveBeenCalled()
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ summary: '下載成功' }))
+
+    // Without an archive the button still stops spinning
+    vm.closePreview()
+    const noArchive = vi.fn()
+    await vm.handlePreviewDownload(noArchive)
+    expect(noArchive).toHaveBeenCalled()
     wrapper.unmount()
   })
 

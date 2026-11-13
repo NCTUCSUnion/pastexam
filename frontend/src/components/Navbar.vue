@@ -460,7 +460,7 @@ export default {
     },
 
     handleNotificationDismiss(notification) {
-      this.notificationStore.markNotificationAsSeen(notification)
+      this.notificationStore.dismissNotification(notification)
     },
 
     handleNotificationCenterVisible(value) {

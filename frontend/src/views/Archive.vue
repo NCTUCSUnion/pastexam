@@ -1064,11 +1064,15 @@ async function previewArchive(archive) {
     previewLoading.value = true
     previewError.value = false
     showPreview.value = true
+    // Set before the request so "下載" still works when the preview link fails
+    selectedArchive.value = { ...archive, previewUrl: '' }
 
     const { data } = await archiveService.getArchivePreviewUrl(selectedCourse.value, archive.id)
 
+    // The user may have closed this preview or opened another one meanwhile
+    if (selectedArchive.value?.id !== archive.id) return
     selectedArchive.value = {
-      ...archive,
+      ...selectedArchive.value,
       previewUrl: data.url,
     }
 
@@ -1081,6 +1085,7 @@ async function previewArchive(archive) {
     })
   } catch (error) {
     console.error('Preview error:', error)
+    if (selectedArchive.value?.id !== archive.id) return
     previewError.value = true
     if (isUnauthorizedError(error)) {
       return
@@ -1092,7 +1097,10 @@ async function previewArchive(archive) {
       life: 3000,
     })
   } finally {
-    previewLoading.value = false
+    // An older request finishing must not hide the spinner of the current one
+    if (!selectedArchive.value || selectedArchive.value.id === archive.id) {
+      previewLoading.value = false
+    }
   }
 }
 
@@ -1437,7 +1445,10 @@ function toggleSidebar() {
 
 async function handlePreviewDownload(onComplete) {
   const archive = selectedArchive.value
-  if (!archive) return
+  if (!archive) {
+    onComplete()
+    return
+  }
 
   try {
     await downloadArchiveFile({ ...archive }, 'preview-modal')

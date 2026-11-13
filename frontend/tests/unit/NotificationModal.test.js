@@ -52,7 +52,8 @@ describe('NotificationModal', () => {
 
     vm.handleDismiss()
     expect(wrapper.emitted('dismiss')).toBeTruthy()
-    expect(wrapper.emitted('update:visible')).toBeTruthy()
+    // Closing is left to the store, which may show the next unread notice instead
+    expect(wrapper.emitted('update:visible')).toBeFalsy()
 
     vm.openCenter()
     expect(wrapper.emitted('open-center')).toBeTruthy()
