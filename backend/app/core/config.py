@@ -1,4 +1,9 @@
+import logging
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -39,6 +44,16 @@ class Settings(BaseSettings):
     DEFAULT_ADMIN_NAME: str
     DEFAULT_ADMIN_PASSWORD: str
     DEFAULT_ADMIN_EMAIL: str
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def _check_secret_key(cls, value: str) -> str:
+        # Signs every JWT; an empty key would make tokens forgeable
+        if not value.strip():
+            raise ValueError("SECRET_KEY must be set (e.g. `openssl rand -hex 32`)")
+        if len(value) < 32:
+            logger.warning("SECRET_KEY is shorter than 32 characters")
+        return value
 
     class Config:
         env_file = ".env"

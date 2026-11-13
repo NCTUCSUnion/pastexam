@@ -90,6 +90,28 @@ async def test_blacklist_and_check_token(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_blacklist_lasts_as_long_as_the_token(monkeypatch):
+    from datetime import UTC, datetime
+
+    import jwt as pyjwt
+
+    ttls = {}
+
+    class RecordingRedis(FakeRedis):
+        async def setex(self, key, expire, value):
+            ttls[key] = expire
+            await super().setex(key, expire, value)
+
+    monkeypatch.setattr(auth_utils, "get_redis", lambda: RecordingRedis())
+    exp = int(datetime.now(UTC).timestamp()) + 5 * 3600
+    token = pyjwt.encode({"uid": 1, "exp": exp}, "k" * 32, algorithm="HS256")
+
+    await auth_utils.blacklist_token(token)
+
+    assert 5 * 3600 - 5 <= ttls[f"blacklist:{token}"] <= 5 * 3600
+
+
+@pytest.mark.asyncio
 async def test_authenticate_user_validates_credentials(session_maker):
     password = "PlainPassword!"
     hashed = auth_utils.get_password_hash(password)

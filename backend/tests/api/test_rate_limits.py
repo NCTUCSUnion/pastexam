@@ -48,6 +48,31 @@ async def test_login_is_locked_after_repeated_failures(
 
 
 @pytest.mark.asyncio
+async def test_parallel_failed_logins_cannot_exceed_the_limit(
+    client: AsyncClient, make_user, monkeypatch
+):
+    import asyncio
+
+    user = await make_user()
+    monkeypatch.setattr(settings, "LOGIN_FAILURE_LIMIT", 3)
+    key = f"{KEY_PREFIX}login:{user.name.lower()}"
+
+    try:
+        responses = await asyncio.gather(
+            *(
+                client.post(
+                    "/auth/login", data={"username": user.name, "password": "wrong"}
+                )
+                for _ in range(12)
+            )
+        )
+        codes = sorted(r.status_code for r in responses)
+        assert codes == [401] * 3 + [429] * 9
+    finally:
+        await get_redis().delete(key)
+
+
+@pytest.mark.asyncio
 async def test_successful_login_does_not_count(
     client: AsyncClient, make_user, monkeypatch
 ):
