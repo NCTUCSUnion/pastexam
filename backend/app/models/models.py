@@ -278,7 +278,8 @@ class ArchiveRead(BaseModel):
     professor: str
     has_answers: bool
     created_at: datetime
-    uploader_id: int | None = None
+    # Uploaders stay anonymous: only "is this mine" is exposed, never who uploaded
+    is_mine: bool = False
     download_count: int = 0
 
     class Config:
