@@ -31,3 +31,15 @@ jobs:
             docker compose pull
             docker compose up -d
             docker compose restart nginx
+            # Fail the deploy (instead of reporting success) if the backend does not come up
+            status=missing
+            for _ in $(seq 1 36); do
+              status=$(docker inspect -f '{{.State.Health.Status}}' pastexam-backend 2>/dev/null || echo missing)
+              [ "$status" = healthy ] && break
+              sleep 5
+            done
+            if [ "$status" != healthy ]; then
+              echo "Backend is $status after deploy"
+              docker compose logs --tail 80 backend
+              exit 1
+            fi

@@ -1,0 +1,8 @@
+# Keep local secrets and build artifacts out of the image
+.env
+.venv
+__pycache__
+.pytest_cache
+.ruff_cache
+htmlcov
+.coverage
