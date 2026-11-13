@@ -199,7 +199,10 @@ async def oauth_exchange(request: Request, body: OAuthCodeExchange):
     Only the browser session that completed the callback can redeem it.
     """
     stored_code = request.session.pop("oauth_code", None)
-    if not stored_code or not hmac.compare_digest(stored_code, body.code):
+    # Compare bytes: compare_digest rejects non-ASCII str with a TypeError (500)
+    if not stored_code or not hmac.compare_digest(
+        stored_code.encode(), body.code.encode()
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid login code"
         )

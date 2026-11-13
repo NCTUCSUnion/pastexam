@@ -57,7 +57,7 @@ if [ "$SKIP_BACKUP" != "1" ]; then
 fi
 
 # Services stay stopped if a step fails; say how to bring them back
-trap 'echo "Restore failed. Start the services again with: docker compose -f $COMPOSE_FILE up -d"' ERR
+trap 'echo "Restore failed. If the database was already restored but the files were not, the two no longer match. Start the services again with: docker compose -f $COMPOSE_FILE up -d"' ERR
 
 echo "Starting data restore..."
 echo "Restore date: $BACKUP_DATE"
@@ -68,14 +68,21 @@ docker compose -f $COMPOSE_FILE up -d --wait db rustfs
 
 if [ -f "$DB_DUMP" ]; then
     echo "Restoring PostgreSQL database..."
+    # Convert the dump to SQL first: if the dump is empty or corrupt, pg_restore fails
+    # here and set -e stops before the database is touched. (Piping pg_restore straight
+    # into psql would let psql commit the DROP SCHEMA alone and report success.)
+    RESTORE_SQL="$BACKUP_DIR/restore-$BACKUP_DATE.sql"
+    docker compose -f "$COMPOSE_FILE" exec -T db pg_restore --no-owner -f - < "$DB_DUMP" > "$RESTORE_SQL"
+
     # Recreate the schema instead of pg_restore --clean, which cannot drop tables added
     # after the backup was taken. Everything runs in one transaction: any error rolls the
     # database back to its current state.
     {
         echo "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-        docker compose -f "$COMPOSE_FILE" exec -T db pg_restore --no-owner -f - < "$DB_DUMP"
+        cat "$RESTORE_SQL"
     } | docker compose -f "$COMPOSE_FILE" exec -T db \
         psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 --single-transaction -q
+    rm -f "$RESTORE_SQL"
     echo "PostgreSQL restore completed"
 fi
 
