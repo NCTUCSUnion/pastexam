@@ -25,7 +25,7 @@ const ARCHIVES_FIXTURE: Record<number, Array<Record<string, unknown>>> = {
       professor: '王教授',
       has_answers: true,
       download_count: 12,
-      uploader_id: 9,
+      is_mine: false,
     },
   ],
   102: [
@@ -37,7 +37,7 @@ const ARCHIVES_FIXTURE: Record<number, Array<Record<string, unknown>>> = {
       professor: '李教授',
       has_answers: false,
       download_count: 7,
-      uploader_id: 10,
+      is_mine: false,
     },
   ],
 }

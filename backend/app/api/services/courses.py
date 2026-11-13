@@ -105,7 +105,12 @@ async def get_course_archives(
     result = await db.execute(query)
     archives = result.scalars().all()
 
-    return archives
+    return [
+        ArchiveRead.model_validate(archive).model_copy(
+            update={"is_mine": archive.uploader_id == current_user.user_id}
+        )
+        for archive in archives
+    ]
 
 
 @router.get("/{course_id}/archives/{archive_id}/preview")

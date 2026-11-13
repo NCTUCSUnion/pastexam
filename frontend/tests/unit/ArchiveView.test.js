@@ -51,7 +51,7 @@ const baseArchives = [
     archive_type: 'midterm',
     professor: 'Prof. Chen',
     has_answers: true,
-    uploader_id: 10,
+    is_mine: true,
     download_count: 3,
   },
   {
@@ -61,7 +61,7 @@ const baseArchives = [
     archive_type: 'final',
     professor: 'Prof. Wang',
     has_answers: false,
-    uploader_id: 11,
+    is_mine: false,
     download_count: 1,
   },
 ]
@@ -524,6 +524,13 @@ describe('ArchiveView', () => {
     await wrapper.vm.handlePreviewDownload(onComplete)
     expect(onComplete).toHaveBeenCalled()
     expect(toastAddMock).not.toHaveBeenCalled()
+
+    // Only admins or the uploader (told by the API, never by uploader id) can delete
+    wrapper.vm.isAdmin = false
+    expect(wrapper.vm.canDeleteArchive({ isMine: true })).toBe(true)
+    expect(wrapper.vm.canDeleteArchive({ isMine: false })).toBe(false)
+    wrapper.vm.isAdmin = true
+    expect(wrapper.vm.canDeleteArchive({ isMine: false })).toBe(true)
 
     // checkAuthentication when user missing
     isAuthenticatedMock.mockReturnValueOnce(true)
