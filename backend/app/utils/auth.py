@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -70,7 +71,20 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-async def blacklist_token(token: str, expire_seconds: int = 7200):
+def _seconds_until_expiry(token: str) -> int:
+    """Seconds left on a token, so a blacklist entry lives exactly as long as it."""
+    try:
+        exp = jwt.decode(token, options={"verify_signature": False}).get("exp")
+    except PyJWTError:
+        exp = None
+    if exp is None:
+        return settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    return max(int(exp - datetime.now(UTC).timestamp()), 1)
+
+
+async def blacklist_token(token: str, expire_seconds: int | None = None):
+    if expire_seconds is None:
+        expire_seconds = _seconds_until_expiry(token)
     await get_redis().setex(f"blacklist:{token}", expire_seconds, "1")
 
 
@@ -94,7 +108,8 @@ async def authenticate_user(name: str, password: str, db: AsyncSession) -> User 
 
     if not user.password_hash:
         return None
-    if not verify_password(password, user.password_hash):
+    # bcrypt takes a few hundred ms; keep it off the event loop
+    if not await asyncio.to_thread(verify_password, password, user.password_hash):
         return None
 
     return user

@@ -47,3 +47,27 @@ async def test_rate_limit_fails_open_when_redis_is_down(monkeypatch, key):
     assert await rate_limit.get_retry_after(key, limit=1) is None
     await rate_limit.record_hit(key, window_seconds=60)
     assert await rate_limit.consume(key, limit=1, window_seconds=60) is None
+
+
+@pytest.mark.asyncio
+async def test_hit_admits_exactly_limit_concurrent_requests(key):
+    import asyncio
+
+    try:
+        results = await asyncio.gather(
+            *(rate_limit.hit(key, limit=10, window_seconds=60) for _ in range(40))
+        )
+        assert sum(r is None for r in results) == 10
+    finally:
+        await get_redis().delete(f"{rate_limit.KEY_PREFIX}{key}")
+
+
+@pytest.mark.asyncio
+async def test_reset_clears_the_count(key):
+    try:
+        assert await rate_limit.hit(key, limit=1, window_seconds=60) is None
+        assert await rate_limit.hit(key, limit=1, window_seconds=60) is not None
+        await rate_limit.reset(key)
+        assert await rate_limit.hit(key, limit=1, window_seconds=60) is None
+    finally:
+        await get_redis().delete(f"{rate_limit.KEY_PREFIX}{key}")
