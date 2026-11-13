@@ -850,6 +850,8 @@ const handleTaskStatusData = (statusData, context = {}) => {
         updateTaskInStorage(taskId, { successToastShown: true })
       }
     } else {
+      // The task is over; the heading must say failed, not a lost connection
+      currentTaskId.value = null
       errorMessage.value = '生成失敗，請稍後再試'
       currentStep.value = 'error'
 

@@ -9,6 +9,7 @@ from weakref import WeakKeyDictionary
 
 from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
+from arq.jobs import JobExecutionFailed
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai.types import UploadFileConfig
@@ -219,8 +220,9 @@ async def _delete_uploaded_files(client, uploaded_files) -> None:
 
 def classify_generation_error(exc: BaseException) -> str:
     """Map a failed generation to a code the frontend can explain to the user."""
-    # Inside the job both job_timeout and a worker shutdown arrive as CancelledError
-    if isinstance(exc, asyncio.CancelledError):
+    # Inside the job both job_timeout and a worker shutdown arrive as CancelledError;
+    # after a hard kill ARQ marks the job JobExecutionFailed instead of running it again
+    if isinstance(exc, asyncio.CancelledError | JobExecutionFailed):
         return "interrupted"
     if isinstance(exc, TimeoutError):
         return "timeout"
