@@ -87,21 +87,58 @@ describe('useNotifications composable', () => {
     expect(composable.latestUnseenNotification.value?.id).toBe(5)
   })
 
-  it('marks notification as seen and persists last seen timestamp', async () => {
+  it('marks notifications as seen one at a time', async () => {
     const composable = await importComposable()
     await composable.initNotifications()
 
-    const notification = {
-      id: 5,
-      created_at: '2025-11-01T10:00:00Z',
-      updated_at: '2025-11-01T10:00:00Z',
-    }
-    composable.markNotificationAsSeen(notification)
+    composable.markNotificationAsSeen(composable.latestUnseenNotification.value)
 
-    expect(composable.state.modalVisible).toBe(false)
     const expectedTimestamp = new Date('2025-11-01T10:00:00Z').getTime()
-    expect(composable.lastSeenTimestamp.value).toBe(expectedTimestamp)
-    expect(localStorage.getItem('notification-last-seen')).toBe(String(expectedTimestamp))
+    expect(composable.seenNotifications.value).toEqual({ 5: expectedTimestamp })
+    expect(JSON.parse(localStorage.getItem('notification-seen'))).toEqual({
+      5: expectedTimestamp,
+    })
+    // The older unread notice is shown next instead of being marked read too
+    expect(composable.state.modalVisible).toBe(true)
+    expect(composable.latestUnseenNotification.value?.id).toBe(2)
+
+    composable.markNotificationAsSeen(composable.latestUnseenNotification.value)
+    expect(composable.state.modalVisible).toBe(false)
+    expect(composable.latestUnseenNotification.value).toBeNull()
+  })
+
+  it('shows a scheduled notice when it starts even if newer notices were seen', async () => {
+    getActiveMock.mockImplementation(async () => ({
+      data: [
+        {
+          id: 7,
+          created_at: '2025-11-13T09:00:00Z',
+          updated_at: '2025-11-13T09:00:00Z',
+          starts_at: '2025-11-13T12:00:00Z',
+        },
+        { id: 8, created_at: '2025-11-13T10:00:00Z', updated_at: '2025-11-13T10:00:00Z' },
+      ],
+    }))
+    // Older versions stored only this timestamp; it covers notice 8 but not 7
+    localStorage.setItem('notification-last-seen', String(Date.parse('2025-11-13T10:30:00Z')))
+
+    const composable = await importComposable()
+    await composable.initNotifications()
+
+    expect(composable.latestUnseenNotification.value?.id).toBe(7)
+    expect(composable.state.modalVisible).toBe(true)
+  })
+
+  it('retries initialization after a failed load', async () => {
+    getActiveMock.mockRejectedValueOnce(new Error('offline'))
+    const composable = await importComposable()
+
+    await composable.initNotifications()
+    expect(composable.state.initialized).toBe(false)
+
+    await composable.initNotifications()
+    expect(getActiveMock).toHaveBeenCalledTimes(2)
+    expect(composable.state.initialized).toBe(true)
   })
 
   it('loads all notifications when opening center', async () => {
@@ -115,7 +152,7 @@ describe('useNotifications composable', () => {
     expect(composable.state.all.map((n) => n.id)).toEqual([3, 1])
   })
 
-  it('logs warning when reading stored last seen timestamp fails', async () => {
+  it('logs warning when reading stored read state fails', async () => {
     const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('read fail')
     })
@@ -123,10 +160,10 @@ describe('useNotifications composable', () => {
     const composable = await importComposable()
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to read notification last seen timestamp:'),
+      expect.stringContaining('Failed to read seen notifications:'),
       expect.any(Error)
     )
-    expect(composable.lastSeenTimestamp.value).toBe(0)
+    expect(composable.seenNotifications.value).toEqual({})
 
     getItemSpy.mockRestore()
   })
@@ -171,7 +208,7 @@ describe('useNotifications composable', () => {
     expect(getAllMock).not.toHaveBeenCalled()
   })
 
-  it('logs errors when persisting last seen timestamp fails', async () => {
+  it('logs errors when persisting read state fails', async () => {
     const composable = await importComposable()
     await composable.initNotifications()
 
@@ -188,9 +225,9 @@ describe('useNotifications composable', () => {
     composable.markNotificationAsSeen(notification)
 
     const expectedTimestamp = new Date('2025-11-02T10:00:00Z').getTime()
-    expect(composable.lastSeenTimestamp.value).toBe(expectedTimestamp)
+    expect(composable.seenNotifications.value[10]).toBe(expectedTimestamp)
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to persist notification last seen timestamp:',
+      'Failed to persist seen notifications:',
       expect.any(Error)
     )
 

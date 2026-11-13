@@ -1,7 +1,7 @@
 import { reactive, ref, computed } from 'vue'
 import { notificationService } from '../api'
 import { isUnauthorizedError } from './http'
-import { STORAGE_KEYS, getLocalItem, setLocalItem } from './storage'
+import { STORAGE_KEYS, getLocalItem, getLocalJson, setLocalJson } from './storage'
 
 const state = reactive({
   active: [],
@@ -19,31 +19,46 @@ const errors = reactive({
   all: null,
 })
 
-const lastSeenTimestamp = ref(loadLastSeenTimestamp())
+// Read state is kept per notification: { [id]: effective time when it was seen }.
+// A single "last seen" time hid scheduled notices whose updated_at predates it,
+// and dismissing one of two unread notices marked both as read.
+const seenNotifications = ref(loadSeenNotifications())
+// Read state from older versions, which only stored one timestamp
+const legacyLastSeen = loadLegacyLastSeen()
+
+// When a notice becomes visible to users: edited later, or scheduled to start later
+function effectiveTime(notification) {
+  const updated = new Date(notification.updated_at || notification.created_at).getTime() || 0
+  const starts = notification.starts_at ? new Date(notification.starts_at).getTime() || 0 : 0
+  return Math.max(updated, starts)
+}
+
+function isSeen(notification) {
+  const time = effectiveTime(notification)
+  return (seenNotifications.value[notification.id] ?? 0) >= time || legacyLastSeen >= time
+}
 
 const latestUnseenNotification = computed(() => {
-  if (!state.active.length) {
-    return null
-  }
-
-  const unseen = state.active.filter((notification) => {
-    const notificationTime = new Date(notification.updated_at || notification.created_at).getTime()
-    return notificationTime > (lastSeenTimestamp.value || 0)
-  })
-
+  const unseen = state.active.filter((notification) => !isSeen(notification))
   if (!unseen.length) {
     return null
   }
-
-  return unseen.reduce((latest, candidate) => {
-    if (!latest) return candidate
-    const latestTime = new Date(latest.updated_at || latest.created_at).getTime()
-    const candidateTime = new Date(candidate.updated_at || candidate.created_at).getTime()
-    return candidateTime > latestTime ? candidate : latest
-  }, unseen[0])
+  return unseen.reduce((latest, candidate) =>
+    effectiveTime(candidate) > effectiveTime(latest) ? candidate : latest
+  )
 })
 
-function loadLastSeenTimestamp() {
+function loadSeenNotifications() {
+  try {
+    const stored = getLocalJson(STORAGE_KEYS.local.NOTIFICATION_SEEN)
+    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {}
+  } catch (error) {
+    console.warn('Failed to read seen notifications:', error)
+    return {}
+  }
+}
+
+function loadLegacyLastSeen() {
   try {
     const raw = getLocalItem(STORAGE_KEYS.local.NOTIFICATION_LAST_SEEN)
     if (!raw) return 0
@@ -55,22 +70,23 @@ function loadLastSeenTimestamp() {
   }
 }
 
-function persistLastSeenTimestamp(timestamp) {
-  lastSeenTimestamp.value = timestamp
+function persistSeenNotifications(seen) {
+  seenNotifications.value = seen
   try {
-    setLocalItem(STORAGE_KEYS.local.NOTIFICATION_LAST_SEEN, String(timestamp))
+    setLocalJson(STORAGE_KEYS.local.NOTIFICATION_SEEN, seen)
   } catch (error) {
-    console.error('Failed to persist notification last seen timestamp:', error)
+    console.error('Failed to persist seen notifications:', error)
   }
 }
 
 function markNotificationAsSeen(notification) {
   if (!notification) return
-  const notificationTime = new Date(notification.updated_at || notification.created_at).getTime()
-  if (notificationTime > (lastSeenTimestamp.value || 0)) {
-    persistLastSeenTimestamp(notificationTime)
-  }
-  state.modalVisible = false
+  persistSeenNotifications({
+    ...seenNotifications.value,
+    [notification.id]: effectiveTime(notification),
+  })
+  // Show the next unread notice, if any
+  state.modalVisible = !!latestUnseenNotification.value
 }
 
 async function refreshActive() {
@@ -85,6 +101,14 @@ async function refreshActive() {
           return bTime - aTime
         })
       : []
+    // Forget notices that are no longer active so the map does not grow forever
+    const activeIds = new Set(state.active.map((notification) => String(notification.id)))
+    const kept = Object.fromEntries(
+      Object.entries(seenNotifications.value).filter(([id]) => activeIds.has(id))
+    )
+    if (Object.keys(kept).length !== Object.keys(seenNotifications.value).length) {
+      persistSeenNotifications(kept)
+    }
     const latest = latestUnseenNotification.value
     state.modalVisible = !!latest
   } catch (error) {
@@ -123,7 +147,8 @@ async function refreshAll() {
 async function initNotifications() {
   if (state.initialized) return
   await refreshActive()
-  state.initialized = true
+  // Try again next time if loading failed
+  state.initialized = !errors.active
 }
 
 function openModal() {
@@ -162,6 +187,6 @@ export function useNotifications() {
     openCenter,
     closeCenter,
     markNotificationAsSeen,
-    lastSeenTimestamp,
+    seenNotifications,
   }
 }

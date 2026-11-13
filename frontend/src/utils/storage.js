@@ -2,6 +2,7 @@ export const STORAGE_KEYS = {
   local: {
     THEME_PREFERENCE: 'theme-preference',
     NOTIFICATION_LAST_SEEN: 'notification-last-seen',
+    NOTIFICATION_SEEN: 'notification-seen',
     SELECTED_SUBJECT: 'selected-subject',
     ADMIN_CURRENT_TAB: 'admin-current-tab',
     AI_EXAM_CURRENT_TASK: 'ai-exam-current-task',

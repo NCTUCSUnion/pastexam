@@ -114,6 +114,8 @@
       :visible="notificationStore.state.centerVisible"
       :notifications="notificationStore.state.all"
       :loading="notificationStore.state.loadingAll"
+      :error="Boolean(notificationStore.errors.all)"
+      @retry="notificationStore.refreshAll()"
       @update:visible="handleNotificationCenterVisible"
       @mark-seen="handleNotificationDetailSeen"
     />
