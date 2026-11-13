@@ -9,6 +9,7 @@ from weakref import WeakKeyDictionary
 
 from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
+from arq.worker import JobExecutionFailed
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai.types import UploadFileConfig
@@ -219,8 +220,9 @@ async def _delete_uploaded_files(client, uploaded_files) -> None:
 
 def classify_generation_error(exc: BaseException) -> str:
     """Map a failed generation to a code the frontend can explain to the user."""
-    # Inside the job both job_timeout and a worker shutdown arrive as CancelledError
-    if isinstance(exc, asyncio.CancelledError):
+    # Inside the job both job_timeout and a worker shutdown arrive as CancelledError;
+    # after a hard kill ARQ marks the job JobExecutionFailed instead of running it again
+    if isinstance(exc, asyncio.CancelledError | JobExecutionFailed):
         return "interrupted"
     if isinstance(exc, TimeoutError):
         return "timeout"
@@ -311,6 +313,8 @@ class WorkerSettings:
     # An interrupted job has already told the user it failed; running it again in the
     # background would spend their Gemini quota twice and block new requests (409).
     retry_jobs = False
+    # Also no second try after a hard kill (SIGKILL, OOM, host reboot)
+    max_tries = 1
     # On shutdown (e.g. a deploy) give running jobs a chance to finish first; keep it
     # below the worker's stop_grace_period in docker-compose.yml
     job_completion_wait = 60

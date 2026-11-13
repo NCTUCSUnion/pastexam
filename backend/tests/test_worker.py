@@ -2,6 +2,7 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
+from arq.worker import JobExecutionFailed
 
 from app import worker
 from app.utils.crypto import encrypt_secret
@@ -338,6 +339,7 @@ def test_classify_generation_error():
     classify = worker.classify_generation_error
     assert classify(asyncio.CancelledError()) == "interrupted"
     assert classify(TimeoutError()) == "timeout"
+    assert classify(JobExecutionFailed("max 1 retries exceeded")) == "interrupted"
     assert classify(worker.EmptyGenerationError()) == "empty_response"
     assert (
         classify(ValueError("User API key not found. Please configure it"))
@@ -365,4 +367,5 @@ def test_classify_generation_error_after_result_round_trip():
 
 def test_interrupted_jobs_are_not_retried():
     assert worker.WorkerSettings.retry_jobs is False
+    assert worker.WorkerSettings.max_tries == 1
     assert 0 < worker.WorkerSettings.job_completion_wait

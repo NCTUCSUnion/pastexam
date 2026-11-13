@@ -716,4 +716,72 @@ describe('GenerateAIExamModal', () => {
     expect(webSocketInstances.length).toBe(socketsBefore + 1)
     wrapper.unmount()
   })
+
+  it('stops reconnecting when the server accepts and then closes every time', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const vm = wrapper.vm
+    await vm.resumeTask('task-gone')
+
+    // Accepted (onopen) and closed without a status message, over and over
+    for (let i = 0; i < 6; i++) {
+      const socket = webSocketInstances.at(-1)
+      socket.onopen?.()
+      socket.onclose?.({ code: 1011 })
+      vi.advanceTimersByTime(15000)
+      await flushPromises()
+    }
+
+    expect(vm.currentStep).toBe('error')
+    wrapper.unmount()
+  })
+
+  it("gives up at once on a task that is missing or not the user's (1008)", async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const vm = wrapper.vm
+    vm.saveTaskToStorage('task-other', {})
+    await vm.resumeTask('task-other')
+    const socketsBefore = webSocketInstances.length
+
+    webSocketInstances.at(-1).onclose?.({ code: 1008 })
+    vi.advanceTimersByTime(15000)
+    await flushPromises()
+
+    expect(webSocketInstances.length).toBe(socketsBefore)
+    expect(vm.currentStep).toBe('error')
+    expect(vm.currentTaskId).toBeNull()
+    expect(localStorage.getItem('ai-exam-current-task')).toBeNull()
+    wrapper.unmount()
+  })
+
+  it('names a followed task after the archives it used', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const vm = wrapper.vm
+    vm.form.course_name = 'Newly picked'
+    vm.form.professor = 'Someone else'
+    vm.selectedArchiveIds = ['arch-1']
+    aiExamServiceMock.generateMockExam.mockRejectedValueOnce({
+      response: { status: 409, headers: { 'x-active-task-id': 'task-running' } },
+    })
+
+    await vm.generateExam()
+    await flushPromises()
+    expect(vm.form.course_name).toBeNull()
+
+    webSocketInstances.at(-1).emitMessage({
+      task_id: 'task-running',
+      status: 'complete',
+      result: {
+        generated_content: '# Exam',
+        archives_used: [{ course: '演算法', professor: '王教授', name: 'Final' }],
+      },
+    })
+    await flushPromises()
+
+    expect(vm.form.course_name).toBe('演算法')
+    expect(vm.form.professor).toBe('王教授')
+    wrapper.unmount()
+  })
 })
