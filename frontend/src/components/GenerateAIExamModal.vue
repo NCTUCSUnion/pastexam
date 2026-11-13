@@ -810,6 +810,7 @@ const TASK_ERROR_MESSAGES = {
   api_key_invalid: 'Gemini API Key 無效或已失效，請更新 API Key 後再試。',
   quota_exceeded: 'Gemini API 用量已達上限，請稍後再試或改用其他 API Key。',
   timeout: '生成時間過長已逾時，請減少選取的考古題後再試。',
+  interrupted: '生成被中斷（可能逾時或系統正在更新），請重新生成。',
   empty_response: 'AI 沒有產生內容，請稍後再試。',
   expired: '找不到這個生成任務（結果只保留 24 小時），請重新生成。',
 }

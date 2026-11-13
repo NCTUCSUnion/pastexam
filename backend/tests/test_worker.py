@@ -311,7 +311,7 @@ class RecordingStreamRedis:
 
 
 @pytest.mark.asyncio
-async def test_generate_ai_exam_task_reports_timeouts(monkeypatch):
+async def test_generate_ai_exam_task_reports_interruptions(monkeypatch):
     async def cancelled(**kwargs):
         # ARQ cancels the job coroutine when job_timeout is reached
         raise asyncio.CancelledError
@@ -326,7 +326,7 @@ async def test_generate_ai_exam_task_reports_timeouts(monkeypatch):
         )
 
     assert [e["status"] for e in redis.events] == ["in_progress", "failed"]
-    assert redis.events[-1]["error"] == "timeout"
+    assert redis.events[-1]["error"] == "interrupted"
 
 
 def test_classify_generation_error():
@@ -336,7 +336,7 @@ def test_classify_generation_error():
         return genai_errors.ClientError(code, {"error": {"message": message}})
 
     classify = worker.classify_generation_error
-    assert classify(asyncio.CancelledError()) == "timeout"
+    assert classify(asyncio.CancelledError()) == "interrupted"
     assert classify(TimeoutError()) == "timeout"
     assert classify(worker.EmptyGenerationError()) == "empty_response"
     assert (
@@ -347,3 +347,22 @@ def test_classify_generation_error():
     assert classify(client_error(400, "API key not valid.")) == "api_key_invalid"
     assert classify(client_error(403, "Permission denied")) == "api_key_invalid"
     assert classify(RuntimeError("boom")) == "failed"
+
+
+def test_classify_generation_error_after_result_round_trip():
+    import pickle
+
+    from google.genai import errors as genai_errors
+
+    # ARQ stores a failed job's exception pickled; it comes back as APIError
+    stored = pickle.loads(
+        pickle.dumps(
+            genai_errors.ClientError(429, {"error": {"message": "Resource exhausted"}})
+        )
+    )
+    assert worker.classify_generation_error(stored) == "quota_exceeded"
+
+
+def test_interrupted_jobs_are_not_retried():
+    assert worker.WorkerSettings.retry_jobs is False
+    assert 0 < worker.WorkerSettings.job_completion_wait
