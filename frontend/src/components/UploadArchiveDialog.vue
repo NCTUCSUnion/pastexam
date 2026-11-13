@@ -381,6 +381,63 @@ const emit = defineEmits(['update:modelValue', 'upload-success'])
 
 const toast = useToast()
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024
+
+// Backend 400 details shown to the user in Chinese
+const UPLOAD_ERROR_MESSAGES = {
+  'File size exceeds 10MB limit': '檔案超過 10MB 上限',
+  'File is not a valid PDF': '檔案不是有效的 PDF',
+  'Only PDF files are allowed': '僅接受 PDF 檔案',
+}
+
+class PdfPrepareError extends Error {}
+
+const describeInvalidFile = (file) => {
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')
+  if (!isPdf) return '僅接受 PDF 檔案'
+  if (file.size > MAX_FILE_BYTES) return '檔案超過 10MB 上限'
+  return null
+}
+
+// Strip author and other metadata so uploads stay anonymous
+const prepareAnonymousPdf = async (file) => {
+  let pdfDoc
+  try {
+    pdfDoc = await PDFDocument.load(await file.arrayBuffer())
+  } catch (error) {
+    console.error('PDF load error:', error)
+    throw new PdfPrepareError(
+      /is encrypted/.test(error?.message || '')
+        ? '此 PDF 有密碼保護或使用限制，無法處理。請用瀏覽器開啟後「列印」另存為 PDF，再上傳新的檔案。'
+        : '無法讀取這個 PDF，請確認檔案沒有損毀。'
+    )
+  }
+  pdfDoc.setTitle('')
+  pdfDoc.setAuthor('')
+  pdfDoc.setSubject('')
+  pdfDoc.setKeywords([])
+  pdfDoc.setProducer('')
+  pdfDoc.setCreator('')
+  pdfDoc.setCreationDate(new Date())
+  pdfDoc.setModificationDate(new Date())
+  const pdfBytes = await pdfDoc.save()
+  return new File([new Blob([pdfBytes], { type: 'application/pdf' })], file.name, {
+    type: 'application/pdf',
+  })
+}
+
+const describeUploadError = (error) => {
+  if (error instanceof PdfPrepareError) return error.message
+  const status = error?.response?.status
+  if (status === 429) return '上傳次數已達上限，請稍後再試'
+  const detail = error?.response?.data?.detail
+  if (status === 400 && typeof detail === 'string') {
+    if (detail.endsWith('cannot be empty')) return '課程、教授與考試名稱不可空白'
+    if (UPLOAD_ERROR_MESSAGES[detail]) return UPLOAD_ERROR_MESSAGES[detail]
+  }
+  return '發生錯誤，請稍後再試'
+}
+
 const form = ref({
   category: null,
   subject: null,
@@ -494,31 +551,16 @@ const handleUpload = async () => {
   try {
     uploading.value = true
 
-    const fileArrayBuffer = await form.value.file.arrayBuffer()
-    const pdfDoc = await PDFDocument.load(fileArrayBuffer)
-
-    pdfDoc.setTitle('')
-    pdfDoc.setAuthor('')
-    pdfDoc.setSubject('')
-    pdfDoc.setKeywords([])
-    pdfDoc.setProducer('')
-    pdfDoc.setCreator('')
-    pdfDoc.setCreationDate(new Date())
-    pdfDoc.setModificationDate(new Date())
-    const pdfBytes = await pdfDoc.save()
-    const cleanFile = new Blob([pdfBytes], { type: 'application/pdf' })
-    const cleanFileWithName = new File([cleanFile], form.value.file.name, {
-      type: 'application/pdf',
-    })
+    const cleanFile = await prepareAnonymousPdf(form.value.file)
 
     const formData = new FormData()
-    formData.append('file', cleanFileWithName)
-    formData.append('subject', form.value.subject)
+    formData.append('file', cleanFile)
+    formData.append('subject', String(form.value.subject ?? '').trim())
     formData.append('category', form.value.category)
-    formData.append('professor', form.value.professor)
+    formData.append('professor', String(form.value.professor ?? '').trim())
     formData.append('archive_type', form.value.type)
     formData.append('has_answers', form.value.hasAnswers)
-    formData.append('filename', form.value.filename)
+    formData.append('filename', String(form.value.filename ?? '').trim())
     const year = new Date(form.value.academicYear).getFullYear()
     formData.append('academic_year', year)
 
@@ -542,9 +584,8 @@ const handleUpload = async () => {
     toast.add({
       severity: 'error',
       summary: '上傳失敗',
-      detail:
-        error?.response?.status === 429 ? '上傳次數已達上限，請稍後再試' : '發生錯誤，請稍後再試',
-      life: 3000,
+      detail: describeUploadError(error),
+      life: error instanceof PdfPrepareError ? 8000 : 3000,
     })
   } finally {
     uploading.value = false
@@ -552,13 +593,21 @@ const handleUpload = async () => {
 }
 
 const onFileSelect = (event) => {
-  const newFile = event.files[0]
+  // FileUpload drops files that fail its own checks without telling the user,
+  // so look at what was actually picked and explain why it cannot be used.
+  const picked = event.originalEvent?.dataTransfer?.files ?? event.originalEvent?.target?.files
+  const newFile = picked?.[0] ?? event.files?.[0]
 
-  if (fileUpload.value) {
-    fileUpload.value.clear()
+  fileUpload.value?.clear?.()
+  if (!newFile) return
+
+  const problem = describeInvalidFile(newFile)
+  if (problem) {
+    toast.add({ severity: 'warn', summary: '無法使用此檔案', detail: problem, life: 4000 })
+    return
   }
-  form.value.file = null
 
+  form.value.file = null
   nextTick(() => {
     form.value.file = newFile
   })

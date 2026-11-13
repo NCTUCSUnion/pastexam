@@ -37,6 +37,7 @@ from app.models.models import (
 from app.utils.auth import get_current_user, is_token_blacklisted
 from app.utils.auth_ws import get_ws_token, get_ws_token_payload
 from app.utils.discussion_hub import discussion_hub
+from app.utils.names import find_course, require_name
 from app.utils.rate_limit import consume
 from app.utils.storage import presigned_get_url
 
@@ -462,9 +463,9 @@ async def update_archive(
         )
 
     if name is not None:
-        archive.name = name
+        archive.name = require_name(name, "Archive name")
     if professor is not None:
-        archive.professor = professor
+        archive.professor = require_name(professor, "Professor")
     if archive_type is not None:
         archive.archive_type = archive_type
     if has_answers is not None:
@@ -536,13 +537,8 @@ async def update_archive_course(
             )
     elif course_update.course_name and course_update.course_category:
         # Transfer to course by name and category, create if not exists
-        new_course_query = select(Course).where(
-            Course.name == course_update.course_name,
-            Course.category == course_update.course_category,
-            Course.deleted_at.is_(None),
-        )
-        new_course_result = await db.execute(new_course_query)
-        new_course = new_course_result.scalar_one_or_none()
+        course_name = require_name(course_update.course_name, "Course name")
+        new_course = await find_course(db, course_name, course_update.course_category)
 
         if new_course:
             # Check if trying to transfer to the same course
@@ -553,9 +549,7 @@ async def update_archive_course(
                 )
         else:
             # Create new course if it doesn't exist
-            new_course = Course(
-                name=course_update.course_name, category=course_update.course_category
-            )
+            new_course = Course(name=course_name, category=course_update.course_category)
             db.add(new_course)
             await db.commit()
             await db.refresh(new_course)
@@ -633,21 +627,14 @@ async def create_course(
             detail="Only admins can create courses",
         )
 
-    query = select(Course).where(
-        Course.name == course_data.name,
-        Course.category == course_data.category,
-        Course.deleted_at.is_(None),
-    )
-    result = await db.execute(query)
-    existing_course = result.scalar_one_or_none()
-
-    if existing_course:
+    name = require_name(course_data.name, "Course name")
+    if await find_course(db, name, course_data.category):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Course with this name and category already exists",
         )
 
-    course = Course(name=course_data.name, category=course_data.category)
+    course = Course(name=name, category=course_data.category)
 
     db.add(course)
     await db.commit()
@@ -681,6 +668,8 @@ async def update_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
+    if course_data.name is not None:
+        course_data.name = require_name(course_data.name, "Course name")
     if course_data.name is not None or course_data.category is not None:
         new_name = course_data.name if course_data.name is not None else course.name
         new_category = (
@@ -689,21 +678,14 @@ async def update_course(
             else course.category
         )
 
-        if new_name != course.name or new_category != course.category:
-            check_query = select(Course).where(
-                Course.name == new_name,
-                Course.category == new_category,
-                Course.id != course_id,
-                Course.deleted_at.is_(None),
+        changed = new_name != course.name or new_category != course.category
+        if changed and await find_course(
+            db, new_name, new_category, exclude_id=course_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Course with this name and category already exists",
             )
-            check_result = await db.execute(check_query)
-            existing_course = check_result.scalar_one_or_none()
-
-            if existing_course:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Course with this name and category already exists",
-                )
 
     if course_data.name is not None:
         course.name = course_data.name

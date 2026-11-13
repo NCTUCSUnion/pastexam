@@ -376,4 +376,105 @@ describe('UploadArchiveDialog', () => {
 
     wrapper.unmount()
   })
+
+  describe('file checks and upload errors', () => {
+    const fillForm = async (vm, overrides = {}) => {
+      // Changing the category clears the subject and changing the subject clears the
+      // professor, so let those watchers run before filling the rest
+      vm.form.category = 'freshman'
+      await flushPromises()
+      Object.assign(vm.form, { subject: '  Calculus I ', subjectId: 'c1' })
+      await flushPromises()
+      Object.assign(vm.form, {
+        professor: ' Prof. Lin  ',
+        filename: ' midterm1 ',
+        type: 'midterm',
+        hasAnswers: true,
+        academicYear: new Date('2024-01-01'),
+        file: { name: 'midterm.pdf', size: 1024, arrayBuffer: async () => new ArrayBuffer(8) },
+        ...overrides,
+      })
+      await flushPromises()
+    }
+
+    it('explains why a picked file is rejected and keeps the previous one', async () => {
+      const wrapper = mountDialog()
+      const vm = wrapper.vm
+      vm.fileUpload = { clear: vi.fn() }
+      const previous = { name: 'ok.pdf', size: 10, type: 'application/pdf' }
+      vm.form.file = previous
+
+      const tooBig = { name: 'big.pdf', size: 12 * 1024 * 1024, type: 'application/pdf' }
+      vm.onFileSelect({ originalEvent: { target: { files: [tooBig] } }, files: [] })
+      await flushPromises()
+      expect(toastAddMock).toHaveBeenCalledWith(
+        expect.objectContaining({ severity: 'warn', detail: '檔案超過 10MB 上限' })
+      )
+      expect(vm.form.file).toEqual(previous)
+
+      const docx = { name: 'notes.docx', size: 10, type: 'application/msword' }
+      vm.onFileSelect({ originalEvent: { dataTransfer: { files: [docx] } }, files: [] })
+      await flushPromises()
+      expect(toastAddMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ detail: '僅接受 PDF 檔案' })
+      )
+      expect(vm.form.file).toEqual(previous)
+
+      wrapper.unmount()
+    })
+
+    it('trims names before uploading', async () => {
+      const wrapper = mountDialog()
+      const vm = wrapper.vm
+      await fillForm(vm)
+
+      await vm.handleUpload()
+      await flushPromises()
+
+      const formData = archiveServiceMock.uploadArchive.mock.calls.at(-1)[0]
+      expect(formData.get('subject')).toBe('Calculus I')
+      expect(formData.get('professor')).toBe('Prof. Lin')
+      expect(formData.get('filename')).toBe('midterm1')
+      wrapper.unmount()
+    })
+
+    it('tells the user how to handle an encrypted PDF', async () => {
+      const wrapper = mountDialog()
+      const vm = wrapper.vm
+      await fillForm(vm)
+      pdfLoadMock.mockRejectedValueOnce(
+        new Error('Input document to `PDFDocument.load` is encrypted.')
+      )
+
+      await vm.handleUpload()
+      await flushPromises()
+
+      expect(archiveServiceMock.uploadArchive).not.toHaveBeenCalled()
+      expect(toastAddMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          summary: '上傳失敗',
+          detail: expect.stringContaining('密碼保護'),
+        })
+      )
+      wrapper.unmount()
+    })
+
+    it('shows the reason for a rejected upload', async () => {
+      const wrapper = mountDialog()
+      const vm = wrapper.vm
+      await fillForm(vm)
+      archiveServiceMock.uploadArchive.mockClear()
+      archiveServiceMock.uploadArchive.mockRejectedValueOnce({
+        response: { status: 400, data: { detail: 'File is not a valid PDF' } },
+      })
+
+      await vm.handleUpload()
+      await flushPromises()
+
+      expect(toastAddMock).toHaveBeenCalledWith(
+        expect.objectContaining({ detail: '檔案不是有效的 PDF' })
+      )
+      wrapper.unmount()
+    })
+  })
 })

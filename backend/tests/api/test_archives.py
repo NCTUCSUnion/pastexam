@@ -490,7 +490,7 @@ async def test_upload_archive_function_handles_storage_error(
         lambda: FailingStorage(),
     )
 
-    upload = UploadFile(filename="fail.pdf", file=io.BytesIO(b"%PDF fail"))
+    upload = UploadFile(filename="fail.pdf", file=io.BytesIO(b"%PDF-1.4 fail"))
 
     async with session_maker() as session:
         with pytest.raises(HTTPException) as exc:
@@ -507,3 +507,165 @@ async def test_upload_archive_function_handles_storage_error(
                 db=session,
             )
         assert exc.value.status_code == 500
+
+
+class RecordingStorage:
+    def __init__(self):
+        self.put = []
+        self.removed = []
+
+    def put_object(self, **kwargs):
+        self.put.append(kwargs["object_name"])
+
+    def remove_object(self, **kwargs):
+        self.removed.append(kwargs["object_name"])
+
+
+def _upload_form(**overrides):
+    data = {
+        "subject": f"Course {uuid.uuid4().hex[:8]}",
+        "category": CourseCategory.GENERAL.value,
+        "professor": "Prof. Test",
+        "archive_type": "final",
+        "has_answers": "false",
+        "filename": "final",
+        "academic_year": 2024,
+    }
+    data.update(overrides)
+    return data
+
+
+async def _post_upload(client, user_id, content=b"%PDF-1.4 ok", **form):
+    app.dependency_overrides[get_current_user] = lambda: UserRoles(
+        user_id=user_id, is_admin=False
+    )
+    try:
+        return await client.post(
+            "/archives/upload",
+            files={"file": ("exam.pdf", io.BytesIO(content), "application/pdf")},
+            data=_upload_form(**form),
+        )
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_unknown_archive_type_before_storing(
+    client, make_user, monkeypatch
+):
+    user = await make_user()
+    storage = RecordingStorage()
+    monkeypatch.setattr(
+        "app.api.services.archives.get_storage_client", lambda: storage
+    )
+
+    response = await _post_upload(client, user.id, archive_type="exam")
+
+    assert response.status_code == 422
+    assert storage.put == []
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_non_pdf_content(client, make_user, monkeypatch):
+    user = await make_user()
+    storage = RecordingStorage()
+    monkeypatch.setattr(
+        "app.api.services.archives.get_storage_client", lambda: storage
+    )
+
+    response = await _post_upload(client, user.id, content=b"PK\x03\x04 docx")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "File is not a valid PDF"
+    assert storage.put == []
+
+
+@pytest.mark.asyncio
+async def test_upload_removes_stored_file_when_database_write_fails(
+    session_maker, make_user, monkeypatch
+):
+    user = await make_user()
+    storage = RecordingStorage()
+    monkeypatch.setattr(
+        "app.api.services.archives.get_storage_client", lambda: storage
+    )
+
+    async with session_maker() as session:
+
+        async def failing_commit():
+            raise RuntimeError("INSERT INTO archives ... secret parameters")
+
+        monkeypatch.setattr(session, "commit", failing_commit)
+        with pytest.raises(HTTPException) as exc:
+            await upload_archive(
+                file=UploadFile(filename="x.pdf", file=io.BytesIO(b"%PDF-1.4 x")),
+                subject=f"Course {uuid.uuid4().hex[:8]}",
+                category=CourseCategory.GENERAL,
+                professor="Prof",
+                archive_type="final",
+                has_answers=False,
+                filename="final",
+                academic_year=2024,
+                current_user=UserRoles(user_id=user.id, is_admin=True),
+                db=session,
+            )
+
+    assert exc.value.status_code == 500
+    assert exc.value.detail == "Failed to upload file"
+    assert storage.removed == storage.put
+    assert len(storage.put) == 1
+
+
+@pytest.mark.asyncio
+async def test_upload_matches_existing_course_ignoring_width_and_spaces(
+    client, session_maker, make_user, monkeypatch
+):
+    user = await make_user()
+    monkeypatch.setattr(
+        "app.api.services.archives.get_storage_client", lambda: RecordingStorage()
+    )
+    suffix = uuid.uuid4().hex[:6]
+    async with session_maker() as session:
+        course = Course(name=f"微積分(一){suffix}", category=CourseCategory.GENERAL)
+        session.add(course)
+        await session.commit()
+        await session.refresh(course)
+        course_id = course.id
+
+    try:
+        response = await _post_upload(
+            client,
+            user.id,
+            subject=f"  微積分（一）{suffix} ",
+            professor="  王小明 ",
+        )
+        assert response.status_code == 200
+        assert response.json()["archive"]["professor"] == "王小明"
+
+        async with session_maker() as session:
+            archive = await session.get(Archive, response.json()["archive"]["id"])
+            assert archive.course_id == course_id
+            count = await session.scalar(
+                select(func.count())
+                .select_from(Course)
+                .where(Course.name.like(f"%{suffix}%"))
+            )
+            assert count == 1
+    finally:
+        async with session_maker() as session:
+            await session.execute(delete(Archive).where(Archive.course_id == course_id))
+            await session.execute(delete(Course).where(Course.id == course_id))
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_blank_names(client, make_user, monkeypatch):
+    user = await make_user()
+    monkeypatch.setattr(
+        "app.api.services.archives.get_storage_client", lambda: RecordingStorage()
+    )
+
+    response = await _post_upload(client, user.id, professor="   ")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Professor cannot be empty"

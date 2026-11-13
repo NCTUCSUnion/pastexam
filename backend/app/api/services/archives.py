@@ -1,5 +1,6 @@
 import asyncio
 import io
+import logging
 import os
 import uuid
 
@@ -9,12 +10,17 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
-from app.models.models import Archive, Course, CourseCategory, User
+from app.models.models import Archive, ArchiveType, Course, CourseCategory, User
 from app.utils.auth import get_current_user
+from app.utils.names import find_course, require_name
 from app.utils.rate_limit import get_retry_after, record_hit
 from app.utils.storage import get_storage_client
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 @router.post("/upload")
@@ -23,7 +29,7 @@ async def upload_archive(
     subject: str = Form(...),
     category: CourseCategory = Form(...),
     professor: str = Form(...),
-    archive_type: str = Form(...),
+    archive_type: ArchiveType = Form(...),
     has_answers: bool = Form(False),
     filename: str = Form(...),
     academic_year: int = Form(...),
@@ -60,22 +66,25 @@ async def upload_archive(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Only PDF files are allowed"
         )
 
+    subject = require_name(subject, "Course name")
+    professor = require_name(professor, "Professor")
+    filename = require_name(filename, "Archive name")
+
     file_content = await file.read()
     file_size = len(file_content)
 
-    max_size = 10 * 1024 * 1024  # 10MB
-    if file_size > max_size:
+    if file_size > MAX_UPLOAD_BYTES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File size exceeds 10MB limit",
         )
+    # The PDF header may follow some junk bytes, but must be near the start
+    if b"%PDF-" not in file_content[:1024]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="File is not a valid PDF"
+        )
 
-    query = select(Course).where(
-        Course.name == subject, Course.category == category, Course.deleted_at.is_(None)
-    )
-    result = await db.execute(query)
-    course = result.scalar_one_or_none()
-
+    course = await find_course(db, subject, category)
     if not course:
         # Flush only to get an id; the course is committed together with the archive
         course = Course(name=subject, category=category)
@@ -86,6 +95,12 @@ async def upload_archive(
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     object_name = f"archives/{course.id}/{unique_filename}"
 
+    # Count the attempt before writing to storage, so failing uploads cannot be
+    # repeated without limit (each one could leave a file behind).
+    if not current_user.is_admin:
+        await record_hit(upload_key, 60 * 60)
+
+    stored = False
     try:
         storage_client = await asyncio.to_thread(get_storage_client)
         file_data = io.BytesIO(file_content)
@@ -98,6 +113,7 @@ async def upload_archive(
             length=file_size,
             content_type="application/pdf",
         )
+        stored = True
 
         archive = Archive(
             course_id=course.id,
@@ -113,9 +129,6 @@ async def upload_archive(
         db.add(archive)
         await db.commit()
         await db.refresh(archive)
-
-        if not current_user.is_admin:
-            await record_hit(upload_key, 60 * 60)
 
         return {
             "success": True,
@@ -133,9 +146,28 @@ async def upload_archive(
 
     except HTTPException:
         raise
-    except Exception as e:  # noqa: BLE001 - translate storage and database failures
+    # Storage and database failures both end up here
+    except Exception:
+        logger.exception("Failed to upload archive %s", object_name)
         await db.rollback()
+        if stored:
+            await _remove_orphan(storage_client, object_name)
+        # Details stay in the log: database errors include SQL and parameters
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload file: {e!s}",
+            detail="Failed to upload file",
+        )
+
+
+async def _remove_orphan(storage_client, object_name: str) -> None:
+    """Delete a stored file whose database row could not be written."""
+    try:
+        await asyncio.to_thread(
+            storage_client.remove_object,
+            bucket_name=settings.RUSTFS_BUCKET_NAME,
+            object_name=object_name,
+        )
+    except Exception:
+        logger.warning(
+            "Could not remove orphaned upload %s", object_name, exc_info=True
         )
