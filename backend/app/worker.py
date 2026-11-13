@@ -311,6 +311,8 @@ class WorkerSettings:
     # An interrupted job has already told the user it failed; running it again in the
     # background would spend their Gemini quota twice and block new requests (409).
     retry_jobs = False
+    # Also no second try after a hard kill (SIGKILL, OOM, host reboot)
+    max_tries = 1
     # On shutdown (e.g. a deploy) give running jobs a chance to finish first; keep it
     # below the worker's stop_grace_period in docker-compose.yml
     job_completion_wait = 60

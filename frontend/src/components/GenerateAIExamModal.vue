@@ -181,7 +181,9 @@
         class="flex flex-column align-items-center justify-content-center p-6"
       >
         <i class="pi pi-exclamation-triangle text-6xl text-red-500 mb-4"></i>
-        <p class="text-lg font-semibold text-red-600 mb-2">生成失敗</p>
+        <p class="text-lg font-semibold text-red-600 mb-2">
+          {{ currentTaskId ? '連線中斷' : '生成失敗' }}
+        </p>
         <p class="text-500">{{ errorMessage }}</p>
       </div>
 
@@ -397,6 +399,7 @@ import { useUnauthorizedEvent } from '../utils/useUnauthorizedEvent'
 import { isUnauthorizedError } from '../utils/http'
 import { STORAGE_KEYS, getLocalJson, setLocalJson, removeLocalItem } from '../utils/storage'
 import { renderExamMarkdown, printExam } from '../utils/examMarkdown'
+import { getCurrentUser } from '../utils/auth'
 
 const PdfPreviewModal = defineAsyncComponent(() => import('./PdfPreviewModal.vue'))
 
@@ -820,6 +823,12 @@ const handleTaskStatusData = (statusData, context = {}) => {
   if (statusData.status === 'complete') {
     if (statusData.result && statusData.result.generated_content) {
       result.value = statusData.result
+      // A followed task (409) has no stored course; take it from the archives used
+      const usedArchive = statusData.result.archives_used?.[0]
+      if (!form.value.course_name && usedArchive) {
+        form.value.course_name = usedArchive.course
+        form.value.professor = usedArchive.professor
+      }
       currentStep.value = 'result'
 
       const taskId = statusData.task_id
@@ -892,7 +901,6 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
 
   socket.onopen = () => {
     taskStatus.value = 'pending'
-    reconnectAttempts = 0
   }
 
   socket.onmessage = (event) => {
@@ -909,6 +917,9 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
           `Invalid status payload: task_id mismatch (expected ${taskId}, got ${statusData.task_id})`
         )
       }
+      // Only a real status update proves the connection works; the server accepts
+      // sockets before checking the task, so onopen alone must not reset the count
+      reconnectAttempts = 0
       if (statusData.status) {
         taskStatus.value = statusData.status
       }
@@ -935,11 +946,21 @@ const startTaskWebSocketStream = (taskId, context = {}) => {
     }
   }
 
-  const handleDisconnect = () => {
+  const handleDisconnect = (event) => {
     if (socket.__manualClose || socket.__disconnectHandled || finished) return
     socket.__disconnectHandled = true
     if (currentStep.value !== 'generating') return
     if (taskWebSocket === socket) taskWebSocket = null
+
+    // 1008: the task does not exist or belongs to someone else; retrying cannot help
+    if (event?.code === 1008) {
+      clearTaskFromStorage()
+      currentTaskId.value = null
+      taskStatus.value = ''
+      errorMessage.value = TASK_ERROR_MESSAGES.expired
+      currentStep.value = 'error'
+      return
+    }
 
     if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
       const delay = Math.min(1000 * 2 ** reconnectAttempts, 15000)
@@ -974,6 +995,8 @@ const saveTaskToStorage = (taskId, displayInfo = {}) => {
   try {
     setLocalJson(TASK_STORAGE_KEY, {
       taskId,
+      // Another account logging in on this browser must not resume this task
+      userId: getCurrentUser()?.id ?? null,
       displayInfo, // Store only the presentation-ready fields
       timestamp: Date.now(),
       successToastShown: false,
@@ -1141,7 +1164,10 @@ const generateExam = async () => {
     // Handle specific error cases
     const activeTaskId = error.response?.headers?.['x-active-task-id']
     if (error.response?.status === 409 && activeTaskId) {
-      // Follow the task that is already running instead of failing
+      // Follow the task that is already running instead of failing. It may be for
+      // another course, so drop the current choice; the result fills it in.
+      form.value.course_name = null
+      form.value.professor = null
       saveTaskToStorage(activeTaskId, {})
       toast.add({
         severity: 'info',
@@ -1251,7 +1277,11 @@ const handleVisibleChange = async (newVal) => {
     loadApiKeyStatus()
 
     // Check for unfinished task when modal opens
-    const savedTask = loadTaskFromStorage()
+    let savedTask = loadTaskFromStorage()
+    if (savedTask?.userId && savedTask.userId !== getCurrentUser()?.id) {
+      clearTaskFromStorage()
+      savedTask = null
+    }
     if (savedTask && savedTask.taskId) {
       if (
         currentStep.value === 'result' &&

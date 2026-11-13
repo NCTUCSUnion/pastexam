@@ -56,6 +56,10 @@ if [ "$SKIP_BACKUP" != "1" ]; then
     fi
 fi
 
+# The SQL converted from the dump holds the data in plain text; never leave it behind
+RESTORE_SQL="$BACKUP_DIR/restore-$BACKUP_DATE.sql"
+trap 'rm -f "$RESTORE_SQL"' EXIT
+
 # Services stay stopped if a step fails; say how to bring them back
 trap 'echo "Restore failed. If the database was already restored but the files were not, the two no longer match. Start the services again with: docker compose -f $COMPOSE_FILE up -d"' ERR
 
@@ -71,7 +75,6 @@ if [ -f "$DB_DUMP" ]; then
     # Convert the dump to SQL first: if the dump is empty or corrupt, pg_restore fails
     # here and set -e stops before the database is touched. (Piping pg_restore straight
     # into psql would let psql commit the DROP SCHEMA alone and report success.)
-    RESTORE_SQL="$BACKUP_DIR/restore-$BACKUP_DATE.sql"
     docker compose -f "$COMPOSE_FILE" exec -T db pg_restore --no-owner -f - < "$DB_DUMP" > "$RESTORE_SQL"
 
     # Recreate the schema instead of pg_restore --clean, which cannot drop tables added
@@ -82,7 +85,6 @@ if [ -f "$DB_DUMP" ]; then
         cat "$RESTORE_SQL"
     } | docker compose -f "$COMPOSE_FILE" exec -T db \
         psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 --single-transaction -q
-    rm -f "$RESTORE_SQL"
     echo "PostgreSQL restore completed"
 fi
 

@@ -365,4 +365,5 @@ def test_classify_generation_error_after_result_round_trip():
 
 def test_interrupted_jobs_are_not_retried():
     assert worker.WorkerSettings.retry_jobs is False
+    assert worker.WorkerSettings.max_tries == 1
     assert 0 < worker.WorkerSettings.job_completion_wait
