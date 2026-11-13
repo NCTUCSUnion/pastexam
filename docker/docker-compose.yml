@@ -50,6 +50,8 @@ services:
     container_name: pastexam-worker
     restart: always
     command: arq app.worker.WorkerSettings
+    # Lets running AI jobs finish (job_completion_wait in app/worker.py) before a kill
+    stop_grace_period: 75s
     depends_on:
       db:
         condition: service_healthy
